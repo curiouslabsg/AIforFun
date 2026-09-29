@@ -3,7 +3,10 @@ import {
   doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, writeBatch, collection, onSnapshot, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, studentId, pinHash, normaliseCode } from './firebase.js';
-import { STAGES, LEARNING_TAGS, TRACK_LABEL, promptFor } from './prompts.js';
+import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor } from './prompts.js';
+import { PROBLEMS, OWN_IDEA, CATEGORY, problemLabel, findProblem } from './problems.js';
+import { icon } from './icons.js';
+import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'journal.session';
@@ -111,9 +114,11 @@ async function saveStage(stageId, answers) {
   const answered = stage.prompts.filter((p) => (answers[p.id] ?? '').trim()).length;
   const progress = { ...(state.student.progress ?? {}) };
   if (progress[stageId] !== answered) {
+    const justFinished = answered >= stage.prompts.length && (progress[stageId] ?? 0) < stage.prompts.length;
     progress[stageId] = answered;
     state.student.progress = progress;
     renderNav();
+    if (justFinished) celebrate(stage.color, `${stage.title} complete!`);
     saving(updateDoc(doc(db, `workshops/${state.code}/students/${state.sid}`), { progress, lastActive: serverTimestamp() }));
   }
 }
@@ -189,7 +194,7 @@ async function openJournal(code, sid) {
 
   Object.assign(state, { code, sid, workshop: ws.data(), student: st.data(), entries: new Map(), current: LOG_ID });
   document.body.dataset.track = track();
-  $('me-name').textContent = state.student.name;
+  $('me-name').textContent = `Hi, ${state.student.name.split(' ')[0]}!`;
   $('me-meta').textContent = `Team ${state.student.team} · ${state.workshop.name} · ${TRACK_LABEL[track()]}`;
   $('closed').hidden = isOpen();
   setSave('');
@@ -228,21 +233,33 @@ function stageCount(stage) {
 function renderNav() {
   const nav = $('stages');
   const logCount = [...state.entries.values()].filter((e) => e.kind === 'learning').length;
-  const btn = (id, title, sub, dotClass, dotText) => h('button', {
-    class: 'stage-btn', type: 'button', 'aria-current': String(state.current === id),
+  const btn = (id, title, sub, dotClass, style) => h('button', {
+    class: 'stage-btn', type: 'button', 'aria-current': String(state.current === id), style: `--c:${style.color}`,
     onclick: () => { state.current = id; renderNav(); renderPanel(); },
-  }, h('span', { class: `dot ${dotClass}` }, dotText), h('span', {}, title, h('small', {}, sub)));
+  }, h('span', { class: `dot ${dotClass}` }, icon(dotClass === 'done' ? 'check' : style.icon, 16)), h('span', {}, title, h('small', {}, sub)));
 
   const items = [h('div', { class: 'stage-sep' }, 'Anytime'),
-    btn(LOG_ID, 'Learning log', `${logCount} ${logCount === 1 ? 'entry' : 'entries'}`, logCount ? 'part' : '', '✎')];
+    btn(LOG_ID, 'Learning log', `${logCount} ${logCount === 1 ? 'entry' : 'entries'}`, logCount ? 'part' : '', LOG_STYLE)];
   let day = null;
-  STAGES.forEach((s, i) => {
+  let done = 0;
+  let answeredAll = 0;
+  let totalAll = 0;
+  STAGES.forEach((s) => {
     if (s.day !== day) { day = s.day; items.push(h('div', { class: 'stage-sep' }, day)); }
-    const n = stageCount(s);
+    const n = Math.min(stageCount(s), s.prompts.length);
     const total = s.prompts.length;
-    items.push(btn(s.id, s.title, `${n}/${total} answered`, n >= total ? 'done' : n ? 'part' : '', n >= total ? '✓' : String(i + 1)));
+    if (n >= total) done++;
+    answeredAll += n;
+    totalAll += total;
+    items.push(btn(s.id, s.title, n >= total ? 'Complete!' : `${n}/${total} answered`, n >= total ? 'done' : n ? 'part' : '', s));
   });
   nav.replaceChildren(...items);
+
+  const pct = Math.round((answeredAll / totalAll) * 100);
+  $('progress-fill').style.width = `${pct}%`;
+  $('progress-text').textContent = done === STAGES.length
+    ? 'Journal complete. Amazing work!'
+    : `${pct}% · ${done} of ${STAGES.length} stages complete`;
 }
 
 function renderPanel() {
@@ -258,6 +275,7 @@ function renderStage(stage) {
   const fields = stage.prompts.map((raw) => {
     const p = promptFor(raw, track());
     const id = `q-${stage.id}-${p.id}`;
+    if (p.type === 'problem') return problemPicker(stage, p, id, answers);
     return h('label', { class: 'field', for: id },
       h('span', {}, p.q),
       p.hint ? h('small', {}, p.hint) : null,
@@ -267,13 +285,57 @@ function renderStage(stage) {
       }));
   });
   const go = (j) => { state.current = STAGES[j].id; renderNav(); renderPanel(); };
+  $('panel').style.setProperty('--stage', stage.color);
   $('panel').replaceChildren(
-    h('header', {}, h('span', { class: 'label' }, `${stage.day} · Worksheet ${stage.sheet}`), h('h2', {}, stage.title), h('p', { class: 'muted' }, stage.blurb)),
+    stageHeader(stage.icon, `${stage.day} · Worksheet ${stage.sheet} · Stage ${i + 1} of ${STAGES.length}`, stage.title, stage.blurb),
     ...fields,
     h('div', { class: 'nav' },
       i > 0 ? h('button', { class: 'btn ghost', type: 'button', onclick: () => go(i - 1) }, `← ${STAGES[i - 1].title}`) : h('span'),
       i < STAGES.length - 1 ? h('button', { class: 'btn', type: 'button', onclick: () => go(i + 1) }, `${STAGES[i + 1].title} →`) : null),
   );
+}
+
+function stageHeader(iconName, label, title, blurb) {
+  return h('header', { class: 'stage-head' },
+    h('span', { class: 'stage-badge' }, icon(iconName, 30)),
+    h('div', {}, h('span', { class: 'label' }, label), h('h2', {}, title), h('p', {}, blurb)));
+}
+
+function problemCard(p) {
+  if (!p) {
+    return h('div', { class: 'pcard empty' }, icon('sparkle', 28),
+      h('p', {}, 'Pick your team’s problem from the list to see its details here.'));
+  }
+  const cat = CATEGORY[p.cat];
+  return h('div', { class: 'pcard', style: `--pc:${cat.color}` },
+    h('span', { class: 'pcard-icon' }, icon(p.icon, 34)),
+    h('div', { class: 'pcard-body' },
+      h('span', { class: 'pill-cat' }, p.id === 'own' ? cat.label : `${cat.label} · #${p.id}`),
+      h('h3', {}, p.title),
+      h('p', {}, p.text),
+      p.hmw ? h('p', { class: 'hmw' }, p.hmw) : null,
+      p.tech ? h('p', { class: 'tech' }, h('b', {}, track() === 'ai' ? 'Model: ' : 'Sensors: '), p.tech) : null));
+}
+
+function problemPicker(stage, p, id, answers) {
+  const list = PROBLEMS[track()] ?? [];
+  const current = findProblem(track(), answers[p.id]);
+  const card = h('div', { class: 'pcard-slot' }, problemCard(current));
+  const group = (cat) => h('optgroup', { label: CATEGORY[cat].label },
+    ...list.filter((x) => x.cat === cat).map((x) => h('option', { value: problemLabel(x) }, `#${x.id}  ${x.title}`)));
+  const select = h('select', {
+    id, class: 'problem-select', 'data-prompt': p.id, disabled: !isOpen(),
+    onchange: (e) => {
+      answers[p.id] = e.target.value;
+      card.replaceChildren(problemCard(findProblem(track(), e.target.value)));
+      queueStageSave(stage.id, answers);
+    },
+  },
+  h('option', { value: '' }, 'Choose a problem statement…'),
+  group('food'), group('health'),
+  h('optgroup', { label: 'Something else' }, h('option', { value: OWN_IDEA.title }, OWN_IDEA.title)));
+  select.value = answers[p.id] ?? '';
+  return h('div', { class: 'field' }, h('label', { for: id }, h('span', {}, p.q)), select, card);
 }
 
 function renderLog() {
@@ -305,9 +367,9 @@ function renderLog() {
     }));
   };
 
+  $('panel').style.setProperty('--stage', LOG_STYLE.color);
   $('panel').replaceChildren(
-    h('header', {}, h('span', { class: 'label' }, 'Anytime'), h('h2', {}, 'Learning log'),
-      h('p', { class: 'muted' }, 'Add an entry whenever you learn something new or collect evidence for your project. Aim for at least 3 of each by the end of Day 2.')),
+    stageHeader(LOG_STYLE.icon, 'Anytime', 'Learning log', 'Add an entry whenever you learn something new or collect evidence for your project. Aim for at least 3 of each by the end of Day 2.'),
     h('div', { class: 'log-add' },
       h('div', { class: 'field' }, h('span', {}, 'Type'), toggle),
       h('label', { class: 'field', for: 'log-tag' }, h('span', {}, 'Topic'), tag),
@@ -349,6 +411,13 @@ function refreshFromRemote() {
   renderNav();
   if (state.current === LOG_ID) { renderLogList(); return; }
   const answers = state.entries.get(state.current)?.answers ?? {};
+  for (const sel of $('panel').querySelectorAll('select[data-prompt]')) {
+    const v = answers[sel.dataset.prompt] ?? '';
+    if (sel !== document.activeElement && !timers.has(state.current) && sel.value !== v) {
+      sel.value = v;
+      sel.closest('.field').querySelector('.pcard-slot')?.replaceChildren(problemCard(findProblem(track(), v)));
+    }
+  }
   for (const ta of $('panel').querySelectorAll('textarea[data-prompt]')) {
     if (ta !== document.activeElement && !timers.has(state.current) && (answers[ta.dataset.prompt] ?? '') !== ta.value) {
       ta.value = answers[ta.dataset.prompt] ?? '';
@@ -358,6 +427,13 @@ function refreshFromRemote() {
 
 // ---------- boot ----------
 
+$('hero-art').append(...[...STAGES, LOG_STYLE].map((st) => {
+  const b = document.createElement('span');
+  b.className = 'hero-dot';
+  b.style.setProperty('--c', st.color);
+  b.append(icon(st.icon, 22));
+  return b;
+}));
 $('join-form').addEventListener('submit', onJoin);
 $('switch').addEventListener('click', switchStudent);
 $('j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });

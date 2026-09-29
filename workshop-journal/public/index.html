@@ -17,10 +17,11 @@
   </main>
 
   <main id="join" class="join" hidden>
-    <div>
+    <div class="hero">
+      <div id="hero-art" class="hero-art" aria-hidden="true"></div>
       <span class="label">Code for Fun · AI for Fun</span>
       <h1>My Workshop Journal</h1>
-      <p class="muted">Keep track of what you find out, build and learn over the two days.</p>
+      <p>Empathise, define, ideate, build and test. Track every step of your project over the two days.</p>
     </div>
     <form id="join-form" novalidate>
       <label class="field">
@@ -44,7 +45,7 @@
         <small>First time? Make one up and remember it. You'll need it if you switch laptops.</small>
       </label>
       <p id="j-msg" class="msg" hidden></p>
-      <button id="j-btn" class="btn" type="submit">Open my journal</button>
+      <button id="j-btn" class="btn big" type="submit">Open my journal →</button>
     </form>
     <p class="small muted">Only you and your teachers can read your journal. Don't write anything you wouldn't want your teacher to see.</p>
   </main>
@@ -59,6 +60,10 @@
         <span class="spacer"></span>
         <span id="save" class="save" aria-live="polite"></span>
         <button id="switch" class="btn ghost" type="button">Switch student</button>
+      </div>
+      <div class="progress" aria-label="Journal progress">
+        <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+        <span id="progress-text" class="progress-text"></span>
       </div>
     </div>
     <div class="shell">

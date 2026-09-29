@@ -5,12 +5,14 @@ import { firebaseConfig } from './firebase-config.js';
 
 export const configured = !String(firebaseConfig.apiKey).startsWith('REPLACE_ME');
 
-const app = initializeApp(configured ? firebaseConfig : { apiKey: 'demo', projectId: 'demo-journal', authDomain: 'localhost' });
+// `firebase emulators:start` serves the site on localhost. There, always use the local
+// emulators and a demo project, so testing can never touch the live database.
+const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const app = initializeApp(local || !configured ? { apiKey: 'demo', projectId: 'demo-journal', authDomain: 'localhost' } : firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// `firebase emulators:start` serves the site on localhost; talk to the local emulators there.
-if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+if (local) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
 }

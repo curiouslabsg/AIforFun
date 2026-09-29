@@ -1,15 +1,20 @@
-// Journal stages follow the workshop loop. Each prompt is one text box.
+// Journal stages follow the workshop loop. Each prompt is one text box, except
+// `type: 'problem'`, which is the problem statement picker.
 // `ai` replaces `q`/`hint` for AI for Fun (Sec 2) workshops.
+// `color` and `icon` style each stage (icons live in icons.js).
 
 export const STAGES = [
   {
     id: 'empathise',
+    color: '#e11d48',
+    icon: 'empathise',
     day: 'Day 1',
     title: 'Empathise',
     blurb: 'Who has this problem, and what did you find out from them?',
     sheet: 'W2 · W3',
     prompts: [
-      { id: 'problem', q: 'Which problem statement did your team choose, and why?', hint: 'e.g. #6 Posture, because three of us get neck pain after homework' },
+      { id: 'problem', type: 'problem', q: 'Which problem statement did your team choose?' },
+      { id: 'why', q: 'Why did your team choose this one?', hint: 'e.g. three of us get neck pain after homework' },
       { id: 'user', q: 'Who did you interview? Where and when does the problem happen for them?', hint: 'Role, not full name. e.g. "Sec 3 student, during self-study in the library"' },
       { id: 'quotes', q: 'Write down 2–3 things they actually said.', hint: 'Copy their words exactly, in quotes' },
       { id: 'surprise', q: 'What surprised you most from the interviews?' },
@@ -17,6 +22,8 @@ export const STAGES = [
   },
   {
     id: 'define',
+    color: '#b45309',
+    icon: 'define',
     day: 'Day 1',
     title: 'Define',
     blurb: 'Turn what you heard into a question your team can answer.',
@@ -28,6 +35,8 @@ export const STAGES = [
   },
   {
     id: 'ideate',
+    color: '#7c3aed',
+    icon: 'ideate',
     day: 'Day 1',
     title: 'Ideate',
     blurb: 'Go wide first, then pick one idea you can build.',
@@ -40,6 +49,8 @@ export const STAGES = [
   },
   {
     id: 'design',
+    color: '#2563eb',
+    icon: 'design',
     day: 'Day 1',
     title: 'Design brief',
     blurb: 'Plan exactly what goes in, what the code decides, and what comes out.',
@@ -65,6 +76,8 @@ export const STAGES = [
   },
   {
     id: 'prototype',
+    color: '#0d9488',
+    icon: 'prototype',
     day: 'Day 2',
     title: 'Prototype',
     blurb: 'Log what you built and what went wrong along the way.',
@@ -81,6 +94,8 @@ export const STAGES = [
   },
   {
     id: 'test',
+    color: '#db2777',
+    icon: 'test',
     day: 'Day 2',
     title: 'Test & feedback',
     blurb: 'Record your test results and what visitors told you in the gallery walk.',
@@ -97,6 +112,8 @@ export const STAGES = [
   },
   {
     id: 'reflect',
+    color: '#16a34a',
+    icon: 'reflect',
     day: 'Day 2',
     title: 'Reflect',
     blurb: 'Close the loop: what would you change, and what did you learn?',
@@ -119,6 +136,8 @@ export const LEARNING_TAGS = {
   code: ['Sensors', 'IF / ELSE', 'Variables', 'Loops', 'Debugging', 'Health science', 'Food science', 'Teamwork', 'Other'],
   ai: ['Training data', 'Classes', 'Accuracy', 'Bias', 'Privacy', 'Health science', 'Food science', 'Teamwork', 'Other'],
 };
+
+export const LOG_STYLE = { color: '#4f46e5', icon: 'log' };
 
 export function promptFor(p, track) {
   return track === 'ai' && p.ai ? { ...p, ...p.ai } : p;
