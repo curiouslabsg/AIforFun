@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Workshop Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main id="loading" class="center"><p class="muted">Loading your journal…</p></main>
+
+  <main id="setup" class="center" hidden>
+    <h1>Almost ready</h1>
+    <p class="msg warn">This journal hasn't been connected to Firebase yet. Your teacher needs to paste the project settings into <code>js/firebase-config.js</code>. The README explains how.</p>
+  </main>
+
+  <main id="join" class="join" hidden>
+    <div>
+      <span class="label">Code for Fun · AI for Fun</span>
+      <h1>My Workshop Journal</h1>
+      <p class="muted">Keep track of what you find out, build and learn over the two days.</p>
+    </div>
+    <form id="join-form" novalidate>
+      <label class="field">
+        <span>Workshop code</span>
+        <input id="j-code" class="code-input" type="text" autocomplete="off" autocapitalize="characters" maxlength="10" placeholder="CFF7K2P" required>
+        <small>Your teacher shows this on the screen.</small>
+      </label>
+      <div class="row">
+        <label class="field">
+          <span>Team</span>
+          <input id="j-team" type="number" min="1" max="40" inputmode="numeric" required>
+        </label>
+        <label class="field">
+          <span>Name + initial</span>
+          <input id="j-name" type="text" autocomplete="off" maxlength="40" placeholder="e.g. Aisha R" required>
+        </label>
+      </div>
+      <label class="field">
+        <span>4-digit PIN</span>
+        <input id="j-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required>
+        <small>First time? Make one up and remember it. You'll need it if you switch laptops.</small>
+      </label>
+      <p id="j-msg" class="msg" hidden></p>
+      <button id="j-btn" class="btn" type="submit">Open my journal</button>
+    </form>
+    <p class="small muted">Only you and your teachers can read your journal. Don't write anything you wouldn't want your teacher to see.</p>
+  </main>
+
+  <div id="journal" hidden>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="who">
+          <b id="me-name"></b>
+          <span class="label" id="me-meta"></span>
+        </div>
+        <span class="spacer"></span>
+        <span id="save" class="save" aria-live="polite"></span>
+        <button id="switch" class="btn ghost" type="button">Switch student</button>
+      </div>
+    </div>
+    <div class="shell">
+      <nav id="stages" class="stages" aria-label="Journal sections"></nav>
+      <div class="stack" style="display:flex;flex-direction:column;gap:1rem;min-width:0">
+        <p id="closed" class="msg warn" hidden>This workshop is closed. You can still read your journal, but you can't change it.</p>
+        <section id="panel" class="panel"></section>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/student.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+rules_version = '2';
+
+// Data layout
+//   teachers/{email}                                   added by hand in the Firebase console
+//   workshops/{code}                                   created by a teacher from teacher.html
+//   workshops/{code}/students/{sid}                    one per student (sid = team + name slug)
+//   workshops/{code}/students/{sid}/claims/{uid}       proves this device knew the student's PIN
+//   workshops/{code}/students/{sid}/entries/{entryId}  journal entries
+//
+// Students sign in anonymously. A device owns a journal once it has written a
+// claim doc whose pinHash matches the student's pinHash. Teachers sign in with
+// Google and must have a doc in /teachers named after their email.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isTeacher() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email));
+    }
+
+    function workshopPath(code) {
+      return /databases/$(database)/documents/workshops/$(code);
+    }
+
+    function workshopOpen(code) {
+      return get(workshopPath(code)).data.open == true;
+    }
+
+    function studentPath(code, sid) {
+      return /databases/$(database)/documents/workshops/$(code)/students/$(sid);
+    }
+
+    function ownsJournal(code, sid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/workshops/$(code)/students/$(sid)/claims/$(request.auth.uid));
+    }
+
+    function shortString(v, max) {
+      return v is string && v.size() > 0 && v.size() <= max;
+    }
+
+    match /teachers/{email} {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
+
+    match /workshops/{code} {
+      // Students check a code with a single get; only teachers can list codes.
+      allow get: if signedIn();
+      allow list: if isTeacher();
+      allow create: if isTeacher()
+        && request.resource.data.keys().hasOnly(['name', 'track', 'open', 'createdAt', 'createdBy'])
+        && shortString(request.resource.data.name, 80)
+        && request.resource.data.track in ['code', 'ai']
+        && request.resource.data.open is bool
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow update: if isTeacher()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'open']);
+      allow delete: if false;
+
+      match /students/{sid} {
+        // resource == null lets a student check whether a name is free before joining.
+        allow get: if signedIn()
+          && (resource == null || ownsJournal(code, sid) || isTeacher());
+        allow list: if isTeacher();
+        allow create: if signedIn()
+          && workshopOpen(code)
+          && request.resource.data.keys().hasOnly(['name', 'team', 'pinHash', 'createdAt', 'progress', 'lastActive'])
+          && shortString(request.resource.data.name, 40)
+          && request.resource.data.team is int
+          && request.resource.data.team >= 1 && request.resource.data.team <= 40
+          && request.resource.data.pinHash is string
+          && request.resource.data.pinHash.size() == 64
+          && request.resource.data.progress is map;
+        allow update: if ownsJournal(code, sid)
+          && workshopOpen(code)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive'])
+          && request.resource.data.progress is map
+          && request.resource.data.progress.size() <= 20;
+        allow delete: if false;
+
+        match /claims/{uid} {
+          // getAfter() also covers the first claim, written in the same batch as the student doc.
+          allow create: if signedIn()
+            && uid == request.auth.uid
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['pinHash', 'at'])
+            && request.resource.data.pinHash == getAfter(studentPath(code, sid)).data.pinHash;
+          allow read: if isTeacher();
+          allow update, delete: if false;
+        }
+
+        match /entries/{entryId} {
+          allow read: if ownsJournal(code, sid) || isTeacher();
+          allow create, update: if ownsJournal(code, sid)
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['kind', 'stage', 'answers', 'type', 'tag', 'text', 'createdAt', 'updatedAt'])
+            && request.resource.data.kind in ['stage', 'learning']
+            && (!('type' in request.resource.data) || request.resource.data.type in ['learnt', 'gathered'])
+            && (!('text' in request.resource.data) || request.resource.data.text.size() <= 2000)
+            && (!('answers' in request.resource.data)
+                || (request.resource.data.answers is map && request.resource.data.answers.size() <= 20));
+          allow delete: if ownsJournal(code, sid)
+            && workshopOpen(code)
+            && resource.data.kind == 'learning';
+        }
+      }
+    }
+  }
+}

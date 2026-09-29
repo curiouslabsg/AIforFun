@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Journal Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main id="t-loading" class="center"><p class="muted">Loading…</p></main>
+
+  <main id="t-signin" class="center" hidden>
+    <span class="label">Teachers only</span>
+    <h1>Journal Dashboard</h1>
+    <p class="muted">Sign in with the Google account your admin added as a teacher.</p>
+    <p id="t-signin-msg" class="msg err" hidden></p>
+    <div><button id="t-google" class="btn" type="button">Sign in with Google</button></div>
+  </main>
+
+  <div id="t-app" hidden>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="who"><b>Journal Dashboard</b><span class="label" id="t-email"></span></div>
+        <span class="spacer"></span>
+        <button id="t-signout" class="btn ghost" type="button">Sign out</button>
+      </div>
+    </div>
+
+    <main id="t-list" class="t-wrap">
+      <h2>Workshops</h2>
+      <form id="t-create" class="create" novalidate>
+        <label class="field"><span>Class / group name</span><input id="c-name" type="text" maxlength="80" placeholder="1E1 Code for Fun" required></label>
+        <label class="field" style="flex:0 1 220px"><span>Track</span>
+          <select id="c-track"><option value="code">Code for Fun · Sec 1</option><option value="ai">AI for Fun · Sec 2</option></select>
+        </label>
+        <button class="btn" type="submit">Create workshop code</button>
+      </form>
+      <p id="t-create-msg" class="msg err" hidden></p>
+      <div id="t-cards" class="cards"></div>
+    </main>
+
+    <main id="t-ws" class="t-wrap" hidden>
+      <div><button id="t-back" class="btn quiet" type="button">← All workshops</button></div>
+      <div style="display:flex;flex-wrap:wrap;gap:1rem 2rem;align-items:end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:.4rem">
+          <span class="label" id="ws-track"></span>
+          <h2 id="ws-name"></h2>
+          <span class="bigcode" id="ws-code"></span>
+        </div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+          <button id="ws-toggle" class="btn ghost" type="button"></button>
+          <button id="ws-export" class="btn" type="button">Download CSV</button>
+        </div>
+      </div>
+      <p id="ws-status" class="small muted"></p>
+      <div class="tablewrap">
+        <table>
+          <thead id="ws-head"></thead>
+          <tbody id="ws-rows"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <aside id="drawer" class="drawer" hidden aria-label="Student journal"></aside>
+
+  <script type="module" src="js/teacher.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+# Workshop Journal
+
+A web journal for the **Code for Fun (Sec 1)** and **AI for Fun (Sec 2)** design thinking workshops. Students record what they find out, build and learn at each stage of the 2-day loop. Teachers watch progress live and export everything to CSV.
+
+- **Students** open the site, enter the workshop code, their team number, name + surname initial, and a 4-digit PIN. No accounts or emails are needed.
+- **Teachers** sign in with Google at `/teacher.html`, create a code for each class, and project it on the screen.
+
+## What students fill in
+
+| Section | When | Matches worksheet |
+|---|---|---|
+| Learning log: "I learnt" and "I gathered" entries, tagged by topic | Anytime | — |
+| Empathise: problem chosen, interview notes, quotes, surprises | Day 1 | W2, W3 |
+| Define: How Might We question | Day 1 | W3 |
+| Ideate: best Crazy 8s ideas, chosen idea and why | Day 1 | W4 |
+| Design brief: input, rule, output, success test | Day 1 | W5 |
+| Prototype: what I built, bugs, fixes, the concept I used | Day 2 | W6 |
+| Test & feedback: results, gallery walk feedback | Day 2 | W6, W8 |
+| Reflect: what we'd change, 3-2-1 | Day 2 | W9 |
+
+AI for Fun workshops show AI-specific versions of the design brief, prototype and test prompts (classes, training data, accuracy). Edit the prompts in `public/js/prompts.js`.
+
+## Setup (about 20 minutes, once)
+
+1. **Create a Firebase project** at <https://console.firebase.google.com>. The free Spark plan is enough.
+2. **Add a web app** (Project settings → General → Your apps → `</>`). Copy the config values into `public/js/firebase-config.js`.
+3. **Turn on sign-in methods** (Build → Authentication → Sign-in method): enable **Anonymous** (for students) and **Google** (for teachers).
+4. **Create the database** (Build → Firestore Database → Create database). Choose **production mode** and the region **asia-southeast1 (Singapore)**.
+5. **Add each teacher** (Firestore → Start collection):
+   - Collection ID: `teachers`
+   - Document ID: the teacher's Google email, exactly as Google shows it, for example `ms.tan@school.edu.sg`
+   - Add any field, for example `name` = `Ms Tan`
+6. **Deploy** from this folder:
+   ```bash
+   npm install
+   npx firebase login
+   npx firebase use --add        # pick your project
+   npm run deploy                # uploads the site and the security rules
+   ```
+   The site is then live at `https://<project-id>.web.app`, and the dashboard at `https://<project-id>.web.app/teacher.html`.
+
+## Before Day 1
+
+- **Test on the school Wi-Fi.** School firewalls sometimes block Firebase. From a student laptop, open the site and join a test workshop. The site needs `*.web.app`, `www.gstatic.com`, `firestore.googleapis.com`, `identitytoolkit.googleapis.com` and `securetoken.googleapis.com`.
+- **Create one code per class** on the dashboard. Codes start with `CFF` (Code for Fun) or `AIF` (AI for Fun).
+- **Tell students to write down their PIN.** They'll need it on Day 2 if they get a different laptop.
+
+## During and after the workshop
+
+- The dashboard updates live. Each square is one stage: empty, partly answered, or complete. Click a student to read their journal.
+- **Download CSV** gives one row per student with every answer and all learning log entries. It opens in Excel and Google Sheets.
+- **Close workshop** makes every journal in that class read-only. Students can still open and read theirs. **Reopen** undoes it.
+
+## Privacy and safety
+
+- Stored per student: name + surname initial, team number, a hashed PIN, and their journal text. No emails, photos or full names are collected from students.
+- Only the student (on a device that entered their PIN) and teachers listed in `teachers` can read a journal. The security rules in `firestore.rules` enforce this, and `tests/rules.test.mjs` checks them.
+- "Switch student" signs the laptop out completely, so the next student on a shared laptop can't open the previous one's journal.
+- A 4-digit PIN protects against casual snooping, not a determined attacker. The journal is meant for workshop reflections, so tell students not to write anything personal or sensitive.
+- Check your school's data protection (PDPA) requirements before use. After the workshop, export the CSV, then delete the workshop's data in the Firebase console (Firestore → `workshops` → the code → delete) once you no longer need it.
+
+## Free plan limits
+
+The Spark plan allows 20,000 writes and 50,000 reads per day. Autosave waits for a 1.5-second pause in typing, so one student usually makes 100–200 writes a day. That covers about 100 students writing at the same time. If you run more classes on the same day, watch Usage in the Firebase console or switch to the Blaze plan (pay as you go, still cents at this size).
+
+## Development
+
+```bash
+npm install
+npm run dev      # local emulators: site on http://127.0.0.1:5000, emulator UI on http://127.0.0.1:4000
+npm test         # runs the security rules tests against the Firestore emulator (needs Java 11+)
+```
+
+Locally, the site talks to the emulators, so no real data is touched. To try the teacher dashboard locally, add a `teachers/<email>` document in the emulator UI, then sign in with the emulator's fake Google account using the same email.
+
+## Files
+
+```
+firestore.rules          who can read and write what
+firebase.json            hosting + emulator config
+public/index.html        student journal
+public/teacher.html      teacher dashboard
+public/js/prompts.js     journal stages and questions (edit these)
+public/js/student.js     student logic
+public/js/teacher.js     dashboard logic
+public/js/firebase.js    Firebase setup, shared helpers
+tests/rules.test.mjs     security rules tests
+```
