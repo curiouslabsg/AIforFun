@@ -20,16 +20,35 @@ A web journal for the **Code for Fun (Sec 1)** and **AI for Fun (Sec 2)** design
 
 AI for Fun workshops show AI-specific versions of the design brief, prototype and test prompts (classes, training data, accuracy). Edit the prompts in `public/js/prompts.js`.
 
-## Setup (about 20 minutes, once)
+## Live project
+
+| | |
+|---|---|
+| Student journal | https://aiforfun-sg.web.app |
+| Teacher dashboard | https://aiforfun-sg.web.app/teacher.html |
+| Firebase console | https://console.firebase.google.com/project/aiforfun-sg/overview |
+| Database region | asia-southeast1 (Singapore) |
+| First admin | lloydgoh@gmail.com |
+
+To deploy changes: `npm install`, `npx firebase login`, then `npx firebase deploy --project aiforfun-sg --only hosting,firestore:rules`.
+
+## Managing teachers
+
+Admins see a **Teachers** button on the dashboard. From there they can add a teacher by Google email, make someone an admin, or remove access. An admin can't remove or demote themselves, so there is always at least one admin.
+
+Add the address exactly as the teacher's Google account reports it. Gmail ignores dots, but Firebase doesn't, so `lloydgoh@gmail.com` and `lloyd.goh@gmail.com` count as different teachers. If a teacher can't get in, the sign-in screen shows the exact address to add.
+
+## Setting up a new project from scratch (about 20 minutes)
 
 1. **Create a Firebase project** at <https://console.firebase.google.com>. The free Spark plan is enough.
 2. **Add a web app** (Project settings → General → Your apps → `</>`). Copy the config values into `public/js/firebase-config.js`.
 3. **Turn on sign-in methods** (Build → Authentication → Sign-in method): enable **Anonymous** (for students) and **Google** (for teachers).
 4. **Create the database** (Build → Firestore Database → Create database). Choose **production mode** and the region **asia-southeast1 (Singapore)**.
-5. **Add each teacher** (Firestore → Start collection):
+5. **Add the first admin** (Firestore → Start collection):
    - Collection ID: `teachers`
-   - Document ID: the teacher's Google email, exactly as Google shows it, for example `ms.tan@school.edu.sg`
-   - Add any field, for example `name` = `Ms Tan`
+   - Document ID: the admin's Google email in lowercase, for example `ms.tan@school.edu.sg`
+   - Field `role` = `admin`
+   Everyone else can then be added from the dashboard's Teachers page.
 6. **Deploy** from this folder:
    ```bash
    npm install

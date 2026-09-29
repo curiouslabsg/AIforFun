@@ -16,6 +16,7 @@ const hash = (sid, pin) => createHash('sha256').update(`${sid}:${pin}`).digest('
 
 let env;
 const teacher = () => env.authenticatedContext('teacher', { email: 'teacher@school.test', email_verified: true }).firestore();
+const admin = () => env.authenticatedContext('admin', { email: 'admin@school.test', email_verified: true }).firestore();
 const stranger = () => env.authenticatedContext('stranger', { email: 'someone@else.test', email_verified: true }).firestore();
 const device = (uid) => env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
 
@@ -31,7 +32,8 @@ beforeEach(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
-    await setDoc(doc(db, 'teachers/teacher@school.test'), { name: 'T' });
+    await setDoc(doc(db, 'teachers/teacher@school.test'), { name: 'T', role: 'teacher' });
+    await setDoc(doc(db, 'teachers/admin@school.test'), { name: 'A', role: 'admin' });
     await setDoc(doc(db, `workshops/${CODE}`), { name: '1E1', track: 'code', open: true, createdAt: 1, createdBy: 'teacher@school.test' });
   });
 });
@@ -143,4 +145,41 @@ test('teacher creates a workshop; students cannot', async () => {
   await assertSucceeds(setDoc(doc(teacher(), 'workshops/AIF9Q3M'), { name: '2E3', track: 'ai', open: true, createdAt: 1, createdBy: 'teacher@school.test' }));
   await assertFails(setDoc(doc(device('a'), 'workshops/AIF1111'), { name: 'x', track: 'ai', open: true, createdAt: 1, createdBy: 'teacher@school.test' }));
   await assertFails(deleteDoc(doc(teacher(), 'workshops/AIF9Q3M')));
+});
+
+const newTeacher = (by = 'admin@school.test', role = 'teacher') => ({ name: 'Ms Tan', role, addedBy: by, addedAt: 1 });
+
+test('admin adds, promotes and removes teachers', async () => {
+  const db = admin();
+  await assertSucceeds(setDoc(doc(db, 'teachers/ms.tan@school.test'), newTeacher()));
+  await assertSucceeds(getDocs(collection(db, 'teachers')));
+  await assertSucceeds(updateDoc(doc(db, 'teachers/ms.tan@school.test'), { role: 'admin' }));
+  await assertSucceeds(deleteDoc(doc(db, 'teachers/ms.tan@school.test')));
+});
+
+test('admin cannot remove or demote themselves', async () => {
+  const db = admin();
+  await assertFails(deleteDoc(doc(db, 'teachers/admin@school.test')));
+  await assertFails(updateDoc(doc(db, 'teachers/admin@school.test'), { role: 'teacher' }));
+});
+
+test('ordinary teachers and students cannot manage teachers', async () => {
+  await assertFails(setDoc(doc(teacher(), 'teachers/new@school.test'), newTeacher('teacher@school.test')));
+  await assertFails(deleteDoc(doc(teacher(), 'teachers/admin@school.test')));
+  await assertFails(updateDoc(doc(teacher(), 'teachers/teacher@school.test'), { role: 'admin' }));
+  await assertFails(setDoc(doc(device('a'), 'teachers/new@school.test'), newTeacher()));
+  await assertFails(getDocs(collection(device('a'), 'teachers')));
+});
+
+test('teacher emails must be lowercase and well formed', async () => {
+  await assertFails(setDoc(doc(admin(), 'teachers/Ms.Tan@school.test'), newTeacher()));
+  await assertFails(setDoc(doc(admin(), 'teachers/not-an-email'), newTeacher()));
+  await assertFails(setDoc(doc(admin(), 'teachers/x@school.test'), newTeacher('someone@else.test')));
+  await assertFails(setDoc(doc(admin(), 'teachers/x@school.test'), newTeacher(undefined, 'owner')));
+});
+
+test('a newly added teacher can use the dashboard', async () => {
+  await setDoc(doc(admin(), 'teachers/new@school.test'), newTeacher());
+  const db = env.authenticatedContext('new', { email: 'new@school.test', email_verified: true }).firestore();
+  await assertSucceeds(getDocs(collection(db, 'workshops')));
 });

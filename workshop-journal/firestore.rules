@@ -25,6 +25,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email));
     }
 
+    function isAdmin() {
+      return isTeacher()
+        && get(/databases/$(database)/documents/teachers/$(request.auth.token.email)).data.role == 'admin';
+    }
+
     function workshopPath(code) {
       return /databases/$(database)/documents/workshops/$(code);
     }
@@ -46,9 +51,22 @@ service cloud.firestore {
       return v is string && v.size() > 0 && v.size() <= max;
     }
 
+    // Admins manage the teacher list from teacher.html. The first admin is added in the console.
+    // An admin can't remove or demote themselves, so there is always at least one admin.
     match /teachers/{email} {
       allow read: if isTeacher();
-      allow write: if false;
+      allow create: if isAdmin()
+        && email == email.lower()
+        && email.matches('^[^@/ ]+@[^@/ ]+[.][^@/ ]+$')
+        && request.resource.data.keys().hasOnly(['name', 'role', 'addedBy', 'addedAt'])
+        && request.resource.data.role in ['teacher', 'admin']
+        && (!('name' in request.resource.data) || request.resource.data.name.size() <= 60)
+        && request.resource.data.addedBy == request.auth.token.email;
+      allow update: if isAdmin()
+        && email != request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'name'])
+        && request.resource.data.role in ['teacher', 'admin'];
+      allow delete: if isAdmin() && email != request.auth.token.email;
     }
 
     match /workshops/{code} {

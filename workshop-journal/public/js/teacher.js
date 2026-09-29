@@ -2,13 +2,13 @@ import {
   GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, collection, onSnapshot, serverTimestamp,
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, onSnapshot, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured } from './firebase.js';
 import { STAGES, TRACK_LABEL, promptFor } from './prompts.js';
 
 const $ = (id) => document.getElementById(id);
-const state = { email: null, workshops: [], ws: null, students: [], unsub: null };
+const state = { email: null, role: null, workshops: [], ws: null, students: [], unsub: null };
 
 function h(tag, props = {}, ...children) {
   const el = document.createElement(tag);
@@ -72,16 +72,18 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     try {
       const me = await getDoc(doc(db, `teachers/${user.email}`));
       if (!me.exists()) throw Object.assign(new Error('not teacher'), { code: 'permission-denied' });
+      state.role = me.data().role ?? 'teacher';
     } catch (err) {
       screen('t-signin');
       msg('t-signin-msg', err.code === 'permission-denied'
-        ? `${user.email} isn't set up as a teacher. Ask your admin to add a document named ${user.email} to the "teachers" collection.`
+        ? `${user.email} isn't on the teacher list yet. Ask an admin to add this exact address on the dashboard's Teachers page.`
         : "Can't reach the database. Check your connection.");
       await signOut(auth);
       return;
     }
     state.email = user.email;
-    $('t-email').textContent = user.email;
+    $('t-email').textContent = `${user.email}${state.role === 'admin' ? ' · admin' : ''}`;
+    $('t-manage').hidden = state.role !== 'admin';
     screen('t-app');
     await loadWorkshops();
   });
@@ -100,8 +102,11 @@ async function loadWorkshops() {
   h('h3', {}, w.name),
   h('span', { class: 'code' }, w.code),
   h('span', { class: 'small muted' }, w.open ? 'Open for writing' : 'Closed (read-only)'))) : [h('p', { class: 'muted' }, 'No workshops yet. Create one above, then show its code to the class.')]));
-  $('t-list').hidden = false;
-  $('t-ws').hidden = true;
+  view('t-list');
+}
+
+function view(id) {
+  for (const v of ['t-list', 't-ws', 't-team']) $(v).hidden = v !== id;
 }
 
 $('t-create').addEventListener('submit', async (e) => {
@@ -140,8 +145,7 @@ function openWorkshop(code) {
   $('ws-head').replaceChildren(h('tr', {},
     h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'Progress'),
     ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Last active')));
-  $('t-list').hidden = true;
-  $('t-ws').hidden = false;
+  view('t-ws');
 
   state.unsub?.();
   state.unsub = onSnapshot(collection(db, `workshops/${code}/students`), (snap) => {
@@ -269,3 +273,91 @@ $('ws-export').addEventListener('click', async () => {
     btn.textContent = 'Download CSV';
   }
 });
+
+// ---------- teachers (admins only) ----------
+
+$('t-manage').addEventListener('click', () => { state.unsub?.(); closeDrawer(); loadTeachers(); });
+$('t-team-back').addEventListener('click', () => loadWorkshops());
+
+function addMsg(text, kind = 'err') {
+  $('t-add-msg').textContent = text;
+  $('t-add-msg').className = `msg ${kind}`;
+  $('t-add-msg').hidden = !text;
+}
+
+async function loadTeachers() {
+  view('t-team');
+  addMsg('');
+  let snap;
+  try {
+    snap = await getDocs(collection(db, 'teachers'));
+  } catch (err) {
+    console.error(err);
+    addMsg('Could not load the teacher list. Only admins can see it.');
+    return;
+  }
+  const rows = snap.docs.map((d) => ({ email: d.id, ...d.data() }))
+    .sort((a, b) => (a.role === b.role ? a.email.localeCompare(b.email) : a.role === 'admin' ? -1 : 1));
+  $('t-team-rows').replaceChildren(...rows.map((t) => {
+    const self = t.email === state.email;
+    const role = h('select', { 'aria-label': `Role for ${t.email}`, disabled: self ? true : null, onchange: (e) => changeRole(t.email, e.target.value) },
+      h('option', { value: 'teacher' }, 'Teacher'), h('option', { value: 'admin' }, 'Admin'));
+    role.value = t.role ?? 'teacher';
+    const remove = self ? h('span', { class: 'small muted' }, 'You') : h('button', {
+      class: 'btn quiet', type: 'button',
+      onclick: (ev) => {
+        const b = ev.currentTarget;
+        if (b.dataset.armed) { removeTeacher(t.email); return; }
+        b.dataset.armed = '1';
+        b.textContent = 'Click again to remove';
+        setTimeout(() => { delete b.dataset.armed; b.textContent = 'Remove'; }, 3000);
+      },
+    }, 'Remove');
+    return h('tr', { style: 'cursor:default' },
+      h('td', {}, t.email), h('td', {}, t.name || '–'), h('td', {}, role),
+      h('td', { class: 'small muted' }, t.addedBy || 'set up in console'), h('td', {}, remove));
+  }));
+}
+
+$('t-add').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  addMsg('');
+  const email = $('a-email').value.trim().toLowerCase();
+  const name = $('a-name').value.trim();
+  const role = $('a-role').value;
+  if (!/^[^@/\s]+@[^@/\s]+\.[^@/\s]+$/.test(email)) { addMsg('Enter a full email address, like ms.tan@school.edu.sg.'); return; }
+  try {
+    if ((await getDoc(doc(db, `teachers/${email}`))).exists()) { addMsg(`${email} is already on the list.`, 'warn'); return; }
+    const data = { role, addedBy: state.email, addedAt: serverTimestamp() };
+    if (name) data.name = name;
+    await setDoc(doc(db, `teachers/${email}`), data);
+    $('t-add').reset();
+    await loadTeachers();
+    addMsg(`Added ${email}. They can now sign in to this dashboard with that Google account.`, 'info');
+  } catch (err) {
+    console.error(err);
+    addMsg('Could not add that teacher. Check the email and try again.');
+  }
+});
+
+async function changeRole(email, role) {
+  try {
+    await updateDoc(doc(db, `teachers/${email}`), { role });
+    addMsg(`${email} is now ${role === 'admin' ? 'an admin' : 'a teacher'}.`, 'info');
+  } catch (err) {
+    console.error(err);
+    addMsg('Could not change the role. Try again.');
+    await loadTeachers();
+  }
+}
+
+async function removeTeacher(email) {
+  try {
+    await deleteDoc(doc(db, `teachers/${email}`));
+    await loadTeachers();
+    addMsg(`Removed ${email}. They can no longer open the dashboard.`, 'info');
+  } catch (err) {
+    console.error(err);
+    addMsg('Could not remove that teacher. Try again.');
+  }
+}

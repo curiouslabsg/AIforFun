@@ -24,6 +24,7 @@
       <div class="topbar-inner">
         <div class="who"><b>Journal Dashboard</b><span class="label" id="t-email"></span></div>
         <span class="spacer"></span>
+        <button id="t-manage" class="btn quiet" type="button" hidden>Teachers</button>
         <button id="t-signout" class="btn ghost" type="button">Sign out</button>
       </div>
     </div>
@@ -59,6 +60,30 @@
         <table>
           <thead id="ws-head"></thead>
           <tbody id="ws-rows"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <main id="t-team" class="t-wrap" hidden>
+      <div><button id="t-team-back" class="btn quiet" type="button">← All workshops</button></div>
+      <div>
+        <h2>Teachers</h2>
+        <p class="muted">People on this list can sign in to the dashboard and read every journal. Admins can also add and remove teachers.</p>
+      </div>
+      <form id="t-add" class="create" novalidate>
+        <label class="field"><span>Google email</span><input id="a-email" type="text" inputmode="email" autocomplete="off" maxlength="120" placeholder="ms.tan@school.edu.sg" required></label>
+        <label class="field"><span>Name</span><input id="a-name" type="text" maxlength="60" placeholder="Ms Tan"></label>
+        <label class="field" style="flex:0 1 180px"><span>Role</span>
+          <select id="a-role"><option value="teacher">Teacher</option><option value="admin">Admin</option></select>
+        </label>
+        <button class="btn" type="submit">Add teacher</button>
+      </form>
+      <p class="small muted">Use the address exactly as the teacher's Google account shows it. For Gmail, check whether it has dots, e.g. lloydgoh@gmail.com vs lloyd.goh@gmail.com.</p>
+      <p id="t-add-msg" class="msg" hidden></p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Added by</th><th></th></tr></thead>
+          <tbody id="t-team-rows"></tbody>
         </table>
       </div>
     </main>

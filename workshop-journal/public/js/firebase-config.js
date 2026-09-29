@@ -1,11 +1,10 @@
-// Paste your web app config from Firebase console →
-// Project settings → General → Your apps → SDK setup and configuration.
+// Firebase web config for the aiforfun-sg project.
 // These values are safe to publish; access is controlled by firestore.rules.
 export const firebaseConfig = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'REPLACE_ME.firebaseapp.com',
-  projectId: 'REPLACE_ME',
-  storageBucket: 'REPLACE_ME.appspot.com',
-  messagingSenderId: 'REPLACE_ME',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyD7j9rfHXpVvMYJfVahb7_KdSda3uDYVdM',
+  authDomain: 'aiforfun-sg.firebaseapp.com',
+  projectId: 'aiforfun-sg',
+  storageBucket: 'aiforfun-sg.firebasestorage.app',
+  messagingSenderId: '902697161492',
+  appId: '1:902697161492:web:bd2a968f182ea319bfe801',
 };
