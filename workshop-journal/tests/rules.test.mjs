@@ -41,7 +41,8 @@ beforeEach(async () => {
 async function join(db, uid, sid = SID, pin = PIN) {
   const batch = writeBatch(db);
   batch.set(doc(db, `workshops/${CODE}/students/${sid}`), {
-    name: 'Aisha R', team: 3, pinHash: hash(sid, pin), createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp(),
+    name: 'Aisha', team: 3, level: 1, class: '1A', teacher: 'Mr Lloyd Goh', pin,
+    pinHash: hash(sid, pin), createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp(),
   });
   batch.set(doc(db, `workshops/${CODE}/students/${sid}/claims/${uid}`), { pinHash: hash(sid, pin), at: serverTimestamp() });
   return batch.commit();
@@ -78,7 +79,7 @@ test('another device cannot read or write a journal without the PIN', async () =
   await assertFails(getDoc(doc(other, `workshops/${CODE}/students/${SID}/entries/define`)));
   await assertFails(setDoc(doc(other, `workshops/${CODE}/students/${SID}/entries/define`), entry('hacked')));
   await assertFails(setDoc(doc(other, `workshops/${CODE}/students/${SID}/claims/b`), { pinHash: hash(SID, '0000'), at: 1 }));
-  await assertFails(setDoc(doc(other, `workshops/${CODE}/students/${SID}`), { name: 'x', team: 3, pinHash: hash(SID, '0000'), createdAt: 1, progress: {} }));
+  await assertFails(setDoc(doc(other, `workshops/${CODE}/students/${SID}`), { name: 'x', team: 3, level: 1, class: '1A', teacher: 'T', pin: '0000', pinHash: hash(SID, '0000'), createdAt: 1, progress: {} }));
 });
 
 test('student reclaims their journal on a new device with the right PIN', async () => {
@@ -182,4 +183,81 @@ test('a newly added teacher can use the dashboard', async () => {
   await setDoc(doc(admin(), 'teachers/new@school.test'), newTeacher());
   const db = env.authenticatedContext('new', { email: 'new@school.test', email_verified: true }).firestore();
   await assertSucceeds(getDocs(collection(db, 'workshops')));
+});
+
+const sref = (db, sub = '') => doc(db, `workshops/${CODE}/students/${SID}${sub}`);
+const img = (extra = {}) => ({ stage: 'prototype', source: 'sketch', caption: 'v1', data: 'data:image/jpeg;base64,AAAA', createdAt: 1, ...extra });
+const note = (extra = {}) => ({ from: 'Ben, team 2', like: 'Loud buzzer', wish: '', whatif: '', use: 'yes', createdAt: 1, ...extra });
+
+test('join requires level, class, teacher and a 4-digit PIN', async () => {
+  const db = device('a');
+  const bad = (fields) => setDoc(doc(db, `workshops/${CODE}/students/t9-x`), { name: 'X', team: 9, level: 1, class: '1A', teacher: 'T', pin: '1234', pinHash: hash('t9-x', '1234'), createdAt: 1, progress: {}, ...fields });
+  await assertFails(bad({ level: 3 }));
+  await assertFails(bad({ pin: '12a4' }));
+  await assertFails(bad({ class: '' }));
+  await assertSucceeds(bad({}));
+});
+
+test('teacher sees the PIN and can reset it; other students cannot', async () => {
+  await join(device('a'), 'a');
+  const t = teacher();
+  const snap = await getDoc(sref(t));
+  if (snap.data().pin !== PIN) throw new Error('teacher should see pin');
+  await assertSucceeds(updateDoc(sref(t), { pin: '9999', pinHash: hash(SID, '9999') }));
+  await assertSucceeds(updateDoc(sref(t), { class: '1B', teacher: 'Ms Sabrina Tay' }));
+  await assertFails(updateDoc(sref(t), { name: 'Renamed' }));
+  await assertFails(getDoc(sref(device('b'))));
+  // The new PIN works on another device, the old one doesn't.
+  await assertFails(setDoc(doc(device('c'), `workshops/${CODE}/students/${SID}/claims/c`), { pinHash: hash(SID, PIN), at: 1 }));
+  await assertSucceeds(setDoc(doc(device('d'), `workshops/${CODE}/students/${SID}/claims/d`), { pinHash: hash(SID, '9999'), at: 1 }));
+});
+
+test('students cannot change their own PIN or class after joining', async () => {
+  await join(device('a'), 'a');
+  await assertFails(updateDoc(sref(device('a')), { pin: '0000', pinHash: hash(SID, '0000') }));
+  await assertFails(updateDoc(sref(device('a')), { class: '1F' }));
+});
+
+test('prototype images: owner adds and deletes, teacher reads, others blocked', async () => {
+  const db = device('a');
+  await join(db, 'a');
+  await assertSucceeds(setDoc(sref(db, '/images/i1'), img()));
+  await assertFails(setDoc(sref(db, '/images/i2'), img({ data: 'javascript:alert(1)' })));
+  await assertFails(setDoc(sref(db, '/images/i3'), img({ data: 'data:image/jpeg;base64,' + 'A'.repeat(900001) })));
+  await assertFails(setDoc(sref(db, '/images/i4'), img({ source: 'upload-anything' })));
+  await assertSucceeds(getDocs(collection(teacher(), `workshops/${CODE}/students/${SID}/images`)));
+  await assertFails(getDoc(sref(device('b'), '/images/i1')));
+  await assertFails(setDoc(sref(device('b'), '/images/i5'), img()));
+  await assertSucceeds(deleteDoc(sref(db, '/images/i1')));
+});
+
+test('peer feedback notes: owner device writes, cannot delete; teacher can', async () => {
+  const db = device('a');
+  await join(db, 'a');
+  await assertSucceeds(setDoc(sref(db, '/feedback/n1'), note()));
+  await assertFails(setDoc(sref(db, '/feedback/n2'), note({ like: '', wish: '', whatif: '' })));
+  await assertFails(setDoc(sref(db, '/feedback/n3'), note({ use: 'definitely' })));
+  await assertFails(setDoc(sref(device('b'), '/feedback/n4'), note()));
+  await assertFails(deleteDoc(sref(db, '/feedback/n1')));
+  await assertSucceeds(deleteDoc(sref(teacher(), '/feedback/n1')));
+});
+
+test('school settings: everyone signed in reads, only admins write', async () => {
+  await assertSucceeds(setDoc(doc(admin(), 'settings/school'), { teachers: ['Mr Lloyd Goh', 'Ms Sabrina Tay'], updatedBy: 'admin@school.test', updatedAt: 1 }));
+  await assertSucceeds(getDoc(doc(device('a'), 'settings/school')));
+  await assertFails(setDoc(doc(teacher(), 'settings/school'), { teachers: ['Me'] }));
+  await assertFails(setDoc(doc(device('a'), 'settings/school'), { teachers: ['Me'] }));
+});
+
+test('teachers can set their own display name but not their role', async () => {
+  await assertSucceeds(updateDoc(doc(teacher(), 'teachers/teacher@school.test'), { name: 'Ms Sabrina Tay' }));
+  await assertFails(updateDoc(doc(teacher(), 'teachers/teacher@school.test'), { role: 'admin' }));
+  await assertFails(updateDoc(doc(teacher(), 'teachers/admin@school.test'), { name: 'x' }));
+});
+
+test('custom workshop codes must be 4-12 capital letters or digits', async () => {
+  const w = { name: 'Demo', track: 'code', open: true, createdAt: 1, createdBy: 'teacher@school.test' };
+  await assertSucceeds(setDoc(doc(teacher(), 'workshops/ESSS26'), w));
+  await assertFails(setDoc(doc(teacher(), 'workshops/es-26'), w));
+  await assertFails(setDoc(doc(teacher(), 'workshops/ABC'), w));
 });

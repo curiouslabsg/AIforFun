@@ -7,6 +7,7 @@ import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor } from './prom
 import { PROBLEMS, OWN_IDEA, CATEGORY, problemLabel, findProblem } from './problems.js';
 import { icon } from './icons.js';
 import { celebrate } from './confetti.js';
+import { LEVELS, DEFAULT_TEACHERS, trackForLevel } from './school.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'journal.session';
@@ -14,7 +15,7 @@ const LOG_ID = 'log';
 
 const state = {
   code: null, sid: null, workshop: null, student: null,
-  entries: new Map(), current: LOG_ID, unsub: null, logType: 'learnt',
+  entries: new Map(), images: new Map(), feedback: new Map(), current: LOG_ID, unsubs: [], logType: 'learnt',
 };
 
 // ---------- small helpers ----------
@@ -56,7 +57,8 @@ function joinMessage(text, kind = 'err') {
 }
 
 const isOpen = () => state.workshop?.open === true;
-const track = () => state.workshop?.track ?? 'code';
+// Sec 1 students get Code for Fun, Sec 2 get AI for Fun; older journals fall back to the workshop's track.
+const track = () => (state.student?.level ? trackForLevel(state.student.level) : state.workshop?.track ?? 'code');
 
 // ---------- saving ----------
 
@@ -132,10 +134,16 @@ async function onJoin(e) {
   const team = Number.parseInt($('j-team').value, 10);
   const name = $('j-name').value.trim().replace(/\s+/g, ' ');
   const pin = $('j-pin').value.trim();
+  const level = Number.parseInt($('j-level').value, 10);
+  const klass = $('j-class').value;
+  const teacher = $('j-teacher').value;
 
   if (code.length < 4) return joinMessage('Enter the workshop code from the screen.');
+  if (!LEVELS[level]) return joinMessage('Choose your level (Sec 1 or Sec 2).');
+  if (!klass) return joinMessage('Choose your class.');
+  if (!teacher) return joinMessage('Choose your teacher.');
   if (!(team >= 1 && team <= 40)) return joinMessage('Enter your team number (1–40).');
-  if (!/[a-z]/i.test(name) || name.length < 2) return joinMessage('Enter your first name and the first letter of your surname.');
+  if (!/[a-z]/i.test(name) || name.length < 2) return joinMessage('Enter your name.');
   if (!/^\d{4}$/.test(pin)) return joinMessage('Your PIN must be exactly 4 digits.');
 
   const sid = studentId(team, name);
@@ -160,7 +168,10 @@ async function onJoin(e) {
     } else if (snap) {
       if (!open) return joinMessage('This workshop is closed, so new journals can’t be started.');
       const batch = writeBatch(db);
-      batch.set(studentRef, { name, team, pinHash: hash, createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp() });
+      batch.set(studentRef, {
+        name, team, level, class: klass, teacher, pin, pinHash: hash,
+        createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp(),
+      });
       batch.set(claimRef, { pinHash: hash, at: serverTimestamp() });
       await batch.commit();
     } else {
@@ -170,7 +181,7 @@ async function onJoin(e) {
         await setDoc(claimRef, { pinHash: hash, at: serverTimestamp() });
       } catch (err) {
         if (err.code !== 'permission-denied') throw err;
-        return joinMessage(`Someone called "${name}" in team ${team} already has a journal, and that PIN doesn't match. If it's you, check your PIN. If it isn't, add your surname initial to your name.`);
+        return joinMessage(`Someone called "${name}" in team ${team} already has a journal, and that PIN doesn't match. If it's you, check your PIN or ask your teacher, who can see it. If it isn't you, add your surname initial to your name.`);
       }
     }
     writeSession({ code, sid });
@@ -192,36 +203,46 @@ async function openJournal(code, sid) {
   ]);
   if (!ws.exists() || !st.exists()) throw new Error('journal missing');
 
-  Object.assign(state, { code, sid, workshop: ws.data(), student: st.data(), entries: new Map(), current: LOG_ID });
+  Object.assign(state, { code, sid, workshop: ws.data(), student: st.data(), entries: new Map(), images: new Map(), feedback: new Map(), current: LOG_ID });
   document.body.dataset.track = track();
   $('me-name').textContent = `Hi, ${state.student.name.split(' ')[0]}!`;
-  $('me-meta').textContent = `Team ${state.student.team} · ${state.workshop.name} · ${TRACK_LABEL[track()]}`;
+  $('me-meta').textContent = [state.student.class, `Team ${state.student.team}`, state.workshop.name, TRACK_LABEL[track()]].filter(Boolean).join(' · ');
   $('closed').hidden = isOpen();
   setSave('');
 
-  state.unsub?.();
-  state.unsub = onSnapshot(collection(db, `workshops/${code}/students/${sid}/entries`), (snap) => {
+  unsubscribeAll();
+  const watch = (sub, map, after) => onSnapshot(collection(db, `workshops/${code}/students/${sid}/${sub}`), (snap) => {
     for (const change of snap.docChanges()) {
-      if (change.type === 'removed') state.entries.delete(change.doc.id);
-      else state.entries.set(change.doc.id, { id: change.doc.id, ...change.doc.data({ serverTimestamps: 'estimate' }) });
+      if (change.type === 'removed') map.delete(change.doc.id);
+      else map.set(change.doc.id, { id: change.doc.id, ...change.doc.data({ serverTimestamps: 'estimate' }) });
     }
-    refreshFromRemote();
+    after();
   }, (err) => { console.error(err); setSave('Lost connection to your journal. Reload the page', true); });
+  state.unsubs = [
+    watch('entries', state.entries, refreshFromRemote),
+    watch('images', state.images, renderImages),
+    watch('feedback', state.feedback, renderNotes),
+  ];
 
   show('journal');
   renderNav();
   renderPanel();
 }
 
+function unsubscribeAll() {
+  for (const u of state.unsubs) u();
+  state.unsubs = [];
+}
+
 async function switchStudent() {
   flushSaves();
   await Promise.allSettled([...inflight]);
-  state.unsub?.();
-  state.unsub = null;
+  unsubscribeAll();
   writeSession(null);
   // A fresh anonymous account means the next student on this laptop can't open the last one's journal.
   await signOut(auth);
   $('join-form').reset();
+  fillClasses();
   joinMessage('');
   show('loading');
 }
@@ -289,10 +310,13 @@ function renderStage(stage) {
   $('panel').replaceChildren(
     stageHeader(stage.icon, `${stage.day} · Worksheet ${stage.sheet} · Stage ${i + 1} of ${STAGES.length}`, stage.title, stage.blurb),
     ...fields,
+    ...(stage.id === 'prototype' ? [imagesSection()] : []),
+    ...(stage.id === 'test' ? [notesSection()] : []),
     h('div', { class: 'nav' },
       i > 0 ? h('button', { class: 'btn ghost', type: 'button', onclick: () => go(i - 1) }, `← ${STAGES[i - 1].title}`) : h('span'),
       i < STAGES.length - 1 ? h('button', { class: 'btn', type: 'button', onclick: () => go(i + 1) }, `${STAGES[i + 1].title} →`) : null),
-  );
+  );  if (stage.id === 'prototype') renderImages();
+  if (stage.id === 'test') renderNotes();
 }
 
 function stageHeader(iconName, label, title, blurb) {
@@ -434,6 +458,25 @@ $('hero-art').append(...[...STAGES, LOG_STYLE].map((st) => {
   b.append(icon(st.icon, 22));
   return b;
 }));
+function fillClasses() {
+  const classes = LEVELS[$('j-level').value] ?? [];
+  $('j-class').replaceChildren(h('option', { value: '' }, classes.length ? 'Choose…' : 'Pick level first'),
+    ...classes.map((c) => h('option', { value: c }, c)));
+  $('j-class').disabled = !classes.length;
+}
+
+async function loadTeacherNames() {
+  let names = DEFAULT_TEACHERS;
+  try {
+    const snap = await getDoc(doc(db, 'settings/school'));
+    if (snap.exists() && snap.data().teachers?.length) names = snap.data().teachers;
+  } catch (err) { console.warn('Using default teacher list', err); }
+  const current = $('j-teacher').value;
+  $('j-teacher').replaceChildren(h('option', { value: '' }, 'Choose your teacher…'), ...names.map((n) => h('option', { value: n }, n)));
+  $('j-teacher').value = names.includes(current) ? current : '';
+}
+
+$('j-level').addEventListener('change', fillClasses);
 $('join-form').addEventListener('submit', onJoin);
 $('switch').addEventListener('click', switchStudent);
 $('j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
@@ -450,6 +493,303 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     if (saved?.code && saved?.sid) {
       try { await openJournal(saved.code, saved.sid); return; } catch (err) { console.warn('Saved journal could not be opened', err); writeSession(null); }
     }
+    await loadTeacherNames();
     show('join');
   });
+}
+
+// ---------- prototype images: photo upload + sketch pad ----------
+
+const MAX_IMAGE_CHARS = 880000; // Firestore docs max out at 1 MiB; rules allow 900,000 characters.
+
+function imagesSection() {
+  const file = h('input', {
+    type: 'file', accept: 'image/png,image/jpeg,image/webp', id: 'img-file', hidden: true,
+    onchange: async (e) => {
+      const f = e.target.files?.[0];
+      e.target.value = '';
+      if (!f) return;
+      try {
+        await saveImage(await compressImage(f), 'photo');
+      } catch (err) {
+        console.error(err);
+        imageMessage(err.message || 'That picture could not be added. Try a JPG or PNG.');
+      }
+    },
+  });
+  return h('section', { class: 'extra' },
+    h('div', { class: 'extra-head' },
+      h('h3', {}, 'Sketches and photos'),
+      h('p', { class: 'muted small' }, 'Draw your prototype and label the sensor, the micro:bit (or model) and where the user is. Draw on paper and take a photo, or draw right here.')),
+    h('div', { class: 'extra-actions' },
+      h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openSketchPad() }, icon('design', 18), ' Draw here'),
+      h('button', { class: 'btn ghost', type: 'button', disabled: !isOpen(), onclick: () => file.click() }, icon('prototype', 18), ' Upload a photo'),
+      file),
+    h('p', { id: 'img-msg', class: 'msg err', hidden: true }),
+    h('div', { id: 'img-grid', class: 'img-grid' }));
+}
+
+function imageMessage(text) {
+  const m = $('img-msg');
+  if (!m) return;
+  m.textContent = text;
+  m.hidden = !text;
+}
+
+function renderImages() {
+  const grid = $('img-grid');
+  if (!grid) return;
+  const items = [...state.images.values()].sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+  if (!items.length) {
+    grid.replaceChildren(h('p', { class: 'muted small' }, 'No sketches yet. Your drawings and photos will show here.'));
+    return;
+  }
+  grid.replaceChildren(...items.map((im) => h('figure', { class: 'img-card' },
+    h('button', { class: 'img-open', type: 'button', 'aria-label': 'Open full size', onclick: () => lightbox(im.data, im.caption) },
+      h('img', { src: im.data, alt: im.caption || 'Prototype sketch', loading: 'lazy' })),
+    h('figcaption', {},
+      h('span', {}, im.caption || (im.source === 'sketch' ? 'Sketch' : 'Photo')),
+      isOpen() ? h('button', {
+        class: 'btn quiet', type: 'button',
+        onclick: (ev) => {
+          const b = ev.currentTarget;
+          if (b.dataset.armed) saving(deleteDoc(doc(db, `workshops/${state.code}/students/${state.sid}/images/${im.id}`)));
+          else { b.dataset.armed = '1'; b.textContent = 'Tap again'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete'; }, 3000); }
+        },
+      }, 'Delete') : null))));
+}
+
+async function saveImage(dataUrl, source) {
+  imageMessage('');
+  await saving(addDoc(collection(db, `workshops/${state.code}/students/${state.sid}/images`), {
+    stage: 'prototype', source, caption: `${source === 'sketch' ? 'Sketch' : 'Photo'} ${state.images.size + 1}`,
+    data: dataUrl, createdAt: serverTimestamp(),
+  }));
+}
+
+// Shrink photos so each one fits comfortably in a Firestore document.
+async function compressImage(fileObj) {
+  if (!/^image\/(png|jpeg|webp)$/.test(fileObj.type)) throw new Error('Please choose a JPG or PNG picture.');
+  const url = URL.createObjectURL(fileObj);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('That picture could not be opened. Try a JPG or PNG.'));
+      i.src = url;
+    });
+    for (const [maxSide, quality] of [[1400, 0.82], [1100, 0.75], [900, 0.68], [700, 0.6]]) {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * scale);
+      c.height = Math.round(img.naturalHeight * scale);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const data = c.toDataURL('image/jpeg', quality);
+      if (data.length <= MAX_IMAGE_CHARS) return data;
+    }
+    throw new Error('That picture is too big. Try a smaller photo or a screenshot.');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function lightbox(src, caption) {
+  const close = () => box.remove();
+  const box = h('div', { class: 'lightbox', role: 'dialog', 'aria-label': caption || 'Image', onclick: close },
+    h('img', { src, alt: caption || '' }),
+    h('button', { class: 'btn', type: 'button', onclick: close }, 'Close'));
+  document.body.append(box);
+}
+
+function openSketchPad() {
+  const W = 1200;
+  const H = 800;
+  const COLORS = ['#15231f', '#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed'];
+  let color = COLORS[0];
+  let size = 5;
+  let erasing = false;
+  const history = [];
+
+  const canvas = h('canvas', { width: W, height: H, class: 'sketch-canvas', 'aria-label': 'Drawing area' });
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const snapshot = () => { history.push(ctx.getImageData(0, 0, W, H)); if (history.length > 25) history.shift(); };
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)];
+  };
+  let drawing = false;
+  canvas.addEventListener('pointerdown', (e) => {
+    drawing = true;
+    canvas.setPointerCapture(e.pointerId);
+    snapshot();
+    const [x, y] = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 0.01, y);
+    ctx.strokeStyle = erasing ? '#fff' : color;
+    ctx.lineWidth = erasing ? size * 5 : size;
+    ctx.stroke();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drawing) return;
+    const [x, y] = pos(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  });
+  const stop = () => { drawing = false; };
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+
+  const swatches = COLORS.map((c) => h('button', {
+    class: 'swatch', type: 'button', style: `--c:${c}`, 'aria-label': `Colour ${c}`, 'aria-pressed': String(c === color),
+    onclick: () => { color = c; erasing = false; syncTools(); },
+  }));
+  const sizes = [3, 6, 12].map((n) => h('button', {
+    class: 'size-btn', type: 'button', 'aria-label': `Pen size ${n}`, 'aria-pressed': String(n === size),
+    onclick: () => { size = n; syncTools(); },
+  }, h('i', { style: `width:${n + 4}px;height:${n + 4}px` })));
+  const eraser = h('button', { class: 'btn ghost', type: 'button', onclick: () => { erasing = !erasing; syncTools(); } }, 'Eraser');
+  function syncTools() {
+    swatches.forEach((b, i) => b.setAttribute('aria-pressed', String(!erasing && COLORS[i] === color)));
+    sizes.forEach((b, i) => b.setAttribute('aria-pressed', String([3, 6, 12][i] === size)));
+    eraser.setAttribute('aria-pressed', String(erasing));
+    eraser.classList.toggle('on', erasing);
+  }
+
+  const status = h('span', { class: 'small muted' });
+  const close = () => overlay.remove();
+  const overlay = h('div', { class: 'sketch-overlay', role: 'dialog', 'aria-label': 'Sketch pad' },
+    h('div', { class: 'sketch-box' },
+      h('div', { class: 'sketch-tools' },
+        h('b', {}, 'Sketch your prototype'),
+        h('div', { class: 'tool-group' }, ...swatches),
+        h('div', { class: 'tool-group' }, ...sizes),
+        eraser,
+        h('button', { class: 'btn ghost', type: 'button', onclick: () => { const last = history.pop(); if (last) ctx.putImageData(last, 0, 0); } }, 'Undo'),
+        h('button', { class: 'btn ghost', type: 'button', onclick: () => { snapshot(); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); } }, 'Clear')),
+      canvas,
+      h('div', { class: 'sketch-foot' },
+        status,
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'btn ghost', type: 'button', onclick: close }, 'Cancel'),
+        h('button', {
+          class: 'btn', type: 'button',
+          onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            status.textContent = 'Saving…';
+            try {
+              let q = 0.85;
+              let data = canvas.toDataURL('image/jpeg', q);
+              while (data.length > MAX_IMAGE_CHARS && q > 0.4) { q -= 0.15; data = canvas.toDataURL('image/jpeg', q); }
+              await saveImage(data, 'sketch');
+              close();
+            } catch (err) {
+              console.error(err);
+              status.textContent = 'Could not save. Check the Wi-Fi and try again.';
+              e.currentTarget.disabled = false;
+            }
+          },
+        }, 'Save sketch'))));
+  syncTools();
+  document.body.append(overlay);
+}
+
+// ---------- peer feedback wall (gallery walk) ----------
+
+const NOTE_COLORS = ['#fff3a3', '#ffd6e0', '#cdeafe', '#d6f5d0', '#ffe2c2', '#e6dcff'];
+const USE_LABEL = { yes: 'Would use it', maybe: 'Maybe', no: 'Wouldn’t use it' };
+
+function notesSection() {
+  return h('section', { class: 'extra' },
+    h('div', { class: 'extra-head' },
+      h('h3', {}, 'Peer feedback wall'),
+      h('p', { class: 'muted small' }, 'During the gallery walk, tap Visitor mode and hand your laptop to each visitor. Their note sticks to your wall. You can’t delete notes, so your teacher sees everything.')),
+    h('div', { class: 'extra-actions' },
+      h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openVisitorMode() }, icon('test', 18), ' Visitor mode'),
+      h('span', { id: 'note-tally', class: 'tally' })),
+    h('div', { id: 'note-wall', class: 'note-wall' }));
+}
+
+function renderNotes() {
+  const wall = $('note-wall');
+  if (!wall) return;
+  const notes = [...state.feedback.values()].sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
+  const count = (u) => notes.filter((n) => n.use === u).length;
+  $('note-tally').textContent = notes.length
+    ? `${notes.length} ${notes.length === 1 ? 'note' : 'notes'} · Would use it: ${count('yes')} · Maybe: ${count('maybe')} · Wouldn’t: ${count('no')}`
+    : '';
+  if (!notes.length) {
+    wall.replaceChildren(h('p', { class: 'muted small' }, 'No feedback yet. Notes from visitors will appear here.'));
+    return;
+  }
+  wall.replaceChildren(...notes.map((n, i) => h('article', { class: 'note', style: `--nc:${NOTE_COLORS[i % NOTE_COLORS.length]};--tilt:${[-2, 1.5, -1, 2, -1.5, 1][i % 6]}deg` },
+    n.like ? h('p', {}, h('b', {}, 'I like '), n.like) : null,
+    n.wish ? h('p', {}, h('b', {}, 'I wish '), n.wish) : null,
+    n.whatif ? h('p', {}, h('b', {}, 'What if '), n.whatif) : null,
+    h('footer', {}, h('span', {}, `— ${n.from}`), n.use ? h('span', { class: `use use-${n.use}` }, USE_LABEL[n.use]) : null))));
+}
+
+function openVisitorMode() {
+  const problem = findProblem(track(), state.entries.get('empathise')?.answers?.problem);
+  const field = (id, label, placeholder) => h('label', { class: 'field' },
+    h('span', {}, label), h('textarea', { id, maxLength: 300, rows: 2, placeholder }));
+  let use = '';
+  const useBtns = ['yes', 'maybe', 'no'].map((u) => h('button', {
+    type: 'button', class: 'chip-btn', 'aria-pressed': 'false',
+    onclick: () => { use = use === u ? '' : u; useBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(['yes', 'maybe', 'no'][i] === use))); },
+  }, { yes: 'Yes', maybe: 'Maybe', no: 'No' }[u]));
+  const msg = h('p', { class: 'msg err', hidden: true });
+  const form = h('form', { class: 'visitor-form', novalidate: true },
+    h('label', { class: 'field' }, h('span', {}, 'Your name and team'), h('input', { id: 'v-from', type: 'text', maxLength: 60, placeholder: 'e.g. Ben, 2B team 4', autocomplete: 'off' })),
+    field('v-like', 'I like…', 'Something that works well'),
+    field('v-wish', 'I wish…', 'Something to improve, and why'),
+    field('v-whatif', 'What if…', 'A new idea to try'),
+    h('div', { class: 'field' }, h('span', {}, 'Would the user use it?'), h('div', { class: 'chip-row' }, ...useBtns)),
+    msg,
+    h('button', { class: 'btn big', type: 'submit' }, 'Stick my note on the wall'));
+  const thanks = h('div', { class: 'visitor-thanks', hidden: true },
+    icon('check', 48), h('h2', {}, 'Thanks for your feedback!'), h('p', {}, 'Pass the laptop to the next visitor.'),
+    h('div', { class: 'extra-actions' },
+      h('button', { class: 'btn big', type: 'button', onclick: () => { form.reset(); use = ''; useBtns.forEach((b) => b.setAttribute('aria-pressed', 'false')); thanks.hidden = true; form.hidden = false; form.querySelector('#v-from').focus(); } }, 'Next visitor'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => overlay.remove() }, 'Back to my journal')));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const val = (id) => form.querySelector(`#${id}`).value.trim();
+    const note = { from: val('v-from'), like: val('v-like'), wish: val('v-wish'), whatif: val('v-whatif'), use, createdAt: serverTimestamp() };
+    msg.hidden = true;
+    if (!note.from) { msg.textContent = 'Add your name and team.'; msg.hidden = false; return; }
+    if (!note.like && !note.wish && !note.whatif) { msg.textContent = 'Write at least one of I like, I wish or What if.'; msg.hidden = false; return; }
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try {
+      await saving(addDoc(collection(db, `workshops/${state.code}/students/${state.sid}/feedback`), note));
+      form.hidden = true;
+      thanks.hidden = false;
+    } catch {
+      msg.textContent = 'Could not save your note. Check the Wi-Fi and try again.';
+      msg.hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  const overlay = h('div', { class: 'visitor-overlay', role: 'dialog', 'aria-label': 'Leave feedback' },
+    h('div', { class: 'visitor-box' },
+      h('div', { class: 'visitor-head' },
+        h('span', { class: 'label' }, `Gallery walk · Team ${state.student.team}${state.student.class ? ` · ${state.student.class}` : ''}`),
+        h('h2', {}, problem ? problem.title : 'Leave feedback for this project'),
+        h('p', { class: 'muted' }, 'Try the prototype first, then write your note. Be specific: say what and why.')),
+      form, thanks,
+      h('button', { class: 'btn quiet visitor-exit', type: 'button', onclick: () => overlay.remove() }, 'Exit visitor mode')));
+  document.body.append(overlay);
+  form.querySelector('#v-from').focus();
 }

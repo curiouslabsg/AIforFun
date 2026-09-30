@@ -8,7 +8,11 @@ export const configured = !String(firebaseConfig.apiKey).startsWith('REPLACE_ME'
 // `firebase emulators:start` serves the site on localhost. There, always use the local
 // emulators and a demo project, so testing can never touch the live database.
 const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const app = initializeApp(local || !configured ? { apiKey: 'demo', projectId: 'demo-journal', authDomain: 'localhost' } : firebaseConfig);
+// The student journal and the teacher dashboard use separately named apps, so each keeps
+// its own sign-in. Otherwise opening the journal in a teacher's browser would replace the
+// teacher's Google sign-in with an anonymous student one and log the teacher out.
+const appName = document.documentElement.dataset.app === 'teacher' ? 'teacher' : 'student';
+const app = initializeApp(local || !configured ? { apiKey: 'demo', projectId: 'demo-journal', authDomain: 'localhost' } : firebaseConfig, appName);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 

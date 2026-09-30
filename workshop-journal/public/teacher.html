@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app="teacher">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -33,7 +33,8 @@
       <h2>Workshops</h2>
       <form id="t-create" class="create" novalidate>
         <label class="field"><span>Class / group name</span><input id="c-name" type="text" maxlength="80" placeholder="1E1 Code for Fun" required></label>
-        <label class="field" style="flex:0 1 220px"><span>Track</span>
+        <label class="field" style="flex:0 1 170px"><span>Code (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. ESSS26" autocomplete="off" style="text-transform:uppercase"></label>
+        <label class="field" style="flex:0 1 220px"><span>Default track</span>
           <select id="c-track"><option value="code">Code for Fun · Sec 1</option><option value="ai">AI for Fun · Sec 2</option></select>
         </label>
         <button class="btn" type="submit">Create workshop code</button>
@@ -55,6 +56,7 @@
           <button id="ws-export" class="btn" type="button">Download CSV</button>
         </div>
       </div>
+      <div id="ws-filters" class="filters"></div>
       <p id="ws-status" class="small muted"></p>
       <div class="tablewrap">
         <table>
@@ -80,6 +82,13 @@
       </form>
       <p class="small muted">Use the address exactly as the teacher's Google account shows it. For Gmail, check whether it has dots, e.g. lloydgoh@gmail.com vs lloyd.goh@gmail.com.</p>
       <p id="t-add-msg" class="msg" hidden></p>
+      <section class="create" style="flex-direction:column;align-items:stretch">
+        <label class="field"><span>Teacher names in the student sign-up list</span>
+          <textarea id="s-teachers" rows="4" placeholder="One name per line, e.g. Mr Lloyd Goh"></textarea>
+          <small>Students pick one of these when they join. A teacher sees "My students" when the Name on their row below matches one of these exactly.</small>
+        </label>
+        <div><button id="s-save" class="btn" type="button">Save list</button> <span id="s-msg" class="small muted"></span></div>
+      </section>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Added by</th><th></th></tr></thead>

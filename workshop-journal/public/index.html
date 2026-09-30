@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app="student">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,14 +29,32 @@
         <input id="j-code" class="code-input" type="text" autocomplete="off" autocapitalize="characters" maxlength="10" placeholder="CFF7K2P" required>
         <small>Your teacher shows this on the screen.</small>
       </label>
+      <div class="row3">
+        <label class="field">
+          <span>Level</span>
+          <select id="j-level" required>
+            <option value="">Choose…</option>
+            <option value="1">Sec 1</option>
+            <option value="2">Sec 2</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Class</span>
+          <select id="j-class" required disabled><option value="">Pick level first</option></select>
+        </label>
+      </div>
+      <label class="field">
+        <span>Teacher</span>
+        <select id="j-teacher" required><option value="">Choose your teacher…</option></select>
+      </label>
       <div class="row">
         <label class="field">
           <span>Team</span>
           <input id="j-team" type="number" min="1" max="40" inputmode="numeric" required>
         </label>
         <label class="field">
-          <span>Name + initial</span>
-          <input id="j-name" type="text" autocomplete="off" maxlength="40" placeholder="e.g. Aisha R" required>
+          <span>Your name</span>
+          <input id="j-name" type="text" autocomplete="off" maxlength="40" placeholder="e.g. Aisha" required>
         </label>
       </div>
       <label class="field">

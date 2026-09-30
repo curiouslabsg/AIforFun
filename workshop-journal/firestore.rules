@@ -6,6 +6,9 @@ rules_version = '2';
 //   workshops/{code}/students/{sid}                    one per student (sid = team + name slug)
 //   workshops/{code}/students/{sid}/claims/{uid}       proves this device knew the student's PIN
 //   workshops/{code}/students/{sid}/entries/{entryId}  journal entries
+//   workshops/{code}/students/{sid}/images/{imageId}   prototype photos and sketches (JPEG data URLs)
+//   workshops/{code}/students/{sid}/feedback/{noteId}  peer feedback sticky notes from the gallery walk
+//   settings/school                                    teacher names for the student sign-up list
 //
 // Students sign in anonymously. A device owns a journal once it has written a
 // claim doc whose pinHash matches the student's pinHash. Teachers sign in with
@@ -62,11 +65,25 @@ service cloud.firestore {
         && request.resource.data.role in ['teacher', 'admin']
         && (!('name' in request.resource.data) || request.resource.data.name.size() <= 60)
         && request.resource.data.addedBy == request.auth.token.email;
-      allow update: if isAdmin()
-        && email != request.auth.token.email
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'name'])
-        && request.resource.data.role in ['teacher', 'admin'];
+      allow update: if (isAdmin()
+          && email != request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'name'])
+          && request.resource.data.role in ['teacher', 'admin'])
+        // Any teacher can set their own name, which links them to "their" students.
+        || (isTeacher()
+          && email == request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 60);
       allow delete: if isAdmin() && email != request.auth.token.email;
+    }
+
+    match /settings/school {
+      allow get: if signedIn();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['teachers', 'updatedAt', 'updatedBy'])
+        && request.resource.data.teachers is list
+        && request.resource.data.teachers.size() <= 50;
     }
 
     match /workshops/{code} {
@@ -74,6 +91,7 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if isTeacher();
       allow create: if isTeacher()
+        && code.matches('^[A-Z0-9]{4,12}$')
         && request.resource.data.keys().hasOnly(['name', 'track', 'open', 'createdAt', 'createdBy'])
         && shortString(request.resource.data.name, 80)
         && request.resource.data.track in ['code', 'ai']
@@ -90,18 +108,27 @@ service cloud.firestore {
         allow list: if isTeacher();
         allow create: if signedIn()
           && workshopOpen(code)
-          && request.resource.data.keys().hasOnly(['name', 'team', 'pinHash', 'createdAt', 'progress', 'lastActive'])
+          && request.resource.data.keys().hasOnly(['name', 'team', 'level', 'class', 'teacher', 'pin', 'pinHash', 'createdAt', 'progress', 'lastActive'])
           && shortString(request.resource.data.name, 40)
+          && request.resource.data.level in [1, 2]
+          && shortString(request.resource.data['class'], 6)
+          && shortString(request.resource.data.teacher, 60)
+          && request.resource.data.pin.matches('^[0-9]{4}$')
           && request.resource.data.team is int
           && request.resource.data.team >= 1 && request.resource.data.team <= 40
           && request.resource.data.pinHash is string
           && request.resource.data.pinHash.size() == 64
           && request.resource.data.progress is map;
-        allow update: if ownsJournal(code, sid)
-          && workshopOpen(code)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive'])
-          && request.resource.data.progress is map
-          && request.resource.data.progress.size() <= 20;
+        allow update: if (ownsJournal(code, sid)
+            && workshopOpen(code)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive'])
+            && request.resource.data.progress is map
+            && request.resource.data.progress.size() <= 20)
+          // Teachers can reset a forgotten PIN or fix a wrong class / teacher choice.
+          || (isTeacher()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'level', 'class', 'teacher'])
+            && request.resource.data.pin.matches('^[0-9]{4}$')
+            && request.resource.data.pinHash.size() == 64);
         allow delete: if false;
 
         match /claims/{uid} {
@@ -128,6 +155,37 @@ service cloud.firestore {
           allow delete: if ownsJournal(code, sid)
             && workshopOpen(code)
             && resource.data.kind == 'learning';
+        }
+
+        match /images/{imageId} {
+          allow read: if ownsJournal(code, sid) || isTeacher();
+          allow create: if ownsJournal(code, sid)
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['stage', 'source', 'caption', 'data', 'createdAt'])
+            && request.resource.data.source in ['photo', 'sketch']
+            && request.resource.data.data is string
+            && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')
+            && request.resource.data.data.size() <= 900000
+            && (!('caption' in request.resource.data) || request.resource.data.caption.size() <= 200);
+          allow delete: if (ownsJournal(code, sid) && workshopOpen(code)) || isTeacher();
+          allow update: if false;
+        }
+
+        // Visitors type on the owner's laptop, so notes are written by the owner's device.
+        // Students can't delete them (so teachers see everything); teachers can.
+        match /feedback/{noteId} {
+          allow read: if ownsJournal(code, sid) || isTeacher();
+          allow create: if ownsJournal(code, sid)
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['from', 'like', 'wish', 'whatif', 'use', 'createdAt'])
+            && shortString(request.resource.data.from, 60)
+            && request.resource.data.like.size() <= 300
+            && request.resource.data.wish.size() <= 300
+            && request.resource.data.whatif.size() <= 300
+            && (request.resource.data.like.size() + request.resource.data.wish.size() + request.resource.data.whatif.size()) > 0
+            && request.resource.data.use in ['yes', 'maybe', 'no', ''];
+          allow delete: if isTeacher();
+          allow update: if false;
         }
       }
     }
