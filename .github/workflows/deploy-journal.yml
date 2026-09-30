@@ -66,5 +66,11 @@ jobs:
         with:
           workload_identity_provider: projects/902697161492/locations/global/workloadIdentityPools/github/providers/aiforfun
           service_account: github-deploy@aiforfun-sg.iam.gserviceaccount.com
+      # firebase-tools hides the reason when sign-in fails; this prints it.
+      - name: Check Google access
+        run: >
+          node -e "const {GoogleAuth}=require('google-auth-library');
+          new GoogleAuth({scopes:['https://www.googleapis.com/auth/cloud-platform']}).getAccessToken()
+          .then(()=>console.log('Google access OK'),e=>{console.error('Google access failed:',e.message);process.exit(1)})"
       - name: Deploy site and security rules
         run: npx firebase deploy --project aiforfun-sg --only hosting,firestore:rules --non-interactive
