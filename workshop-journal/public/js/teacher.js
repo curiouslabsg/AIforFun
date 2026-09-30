@@ -173,9 +173,11 @@ function openWorkshop(code) {
   $('ws-code').textContent = code;
   renderToggle();
   $('ws-head').replaceChildren(h('tr', {},
+    h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
     h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'Teacher'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
     ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Last active')));
   state.cls = '';
+  state.selected = new Set();
   renderFilters();
   view('t-ws');
 
@@ -261,20 +263,29 @@ function stageDone(st, s) {
 }
 
 function renderRows() {
+  // Forget selections for students who were deleted or are now filtered out.
+  const shownIds = new Set(visibleStudents().map((x) => x.sid));
+  for (const sid of [...(state.selected ?? [])]) if (!shownIds.has(sid)) state.selected.delete(sid);
+  renderBulk();
   const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
   const list = visibleStudents();
   const teams = new Set(list.map((s) => s.team)).size;
-  $('ws-status').textContent = `Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · click a row to read a journal`;
+  $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · click a row to read a journal`;
   if (!list.length) {
     const why = state.students.length
       ? (state.scope === 'mine' ? 'None of your students have joined yet. Switch to Whole school to see everyone.' : 'No students in this class yet.')
       : `No one has joined yet. Students go to this site and enter ${state.ws.code}.`;
-    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 7), class: 'muted' }, why)));
+    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 8), class: 'muted' }, why)));
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
     const answered = STAGES.reduce((n, s) => n + stageDone(st, s), 0);
     return h('tr', { onclick: () => openStudent(st), tabindex: '0', onkeydown: (e) => { if (e.key === 'Enter') openStudent(st); } },
+      h('td', { class: 'sel', onclick: (e) => e.stopPropagation() },
+        h('input', {
+          type: 'checkbox', 'aria-label': `Select ${st.name}`, ...(state.selected.has(st.sid) ? { checked: true } : {}),
+          onchange: (e) => { if (e.target.checked) state.selected.add(st.sid); else state.selected.delete(st.sid); renderBulk(); },
+        })),
       h('td', {}, st.class ?? '–'),
       h('td', { class: 'num' }, String(st.team)),
       h('td', {}, st.name),
@@ -467,14 +478,15 @@ async function deleteCollections(paths) {
   }
 }
 
-async function deleteStudent(st, { keepTeam = false } = {}) {
+async function deleteStudent(st, { keepTeam = false, removing = new Set() } = {}) {
   const base = `workshops/${state.ws.code}/students/${st.sid}`;
   await deleteCollections(['entries', 'images', 'feedback', 'claims'].map((c) => `${base}/${c}`));
   const key = teamKeyOf(st);
   const teamBase = `workshops/${state.ws.code}/teams/${key}`;
   const members = await getDocs(collection(db, `${teamBase}/members`));
   for (const m of members.docs) if (m.data().sid === st.sid) await deleteDoc(m.ref);
-  const othersInTeam = state.students.some((x) => x.sid !== st.sid && teamKeyOf(x) === key);
+  // Teammates being deleted in the same batch don't count as staying.
+  const othersInTeam = state.students.some((x) => x.sid !== st.sid && !removing.has(x.sid) && teamKeyOf(x) === key);
   if (!othersInTeam && !keepTeam) {
     await deleteCollections(['entries', 'images', 'feedback', 'locks', 'members'].map((c) => `${teamBase}/${c}`));
     await deleteDoc(doc(db, teamBase));
@@ -498,7 +510,7 @@ function deleteStudentSection(st) {
       try {
         await deleteStudent(st);
         closeDrawer();
-        $('ws-status').textContent = `Deleted ${st.name}'s journal.`;
+        flash(`Deleted ${st.name}'s journal`);
       } catch (err) {
         console.error(err);
         note.textContent = 'Could not delete everything. Try again.';
@@ -706,3 +718,68 @@ $('s-save').addEventListener('click', async () => {
     $('s-msg').textContent = 'Could not save the list. Only admins can change it.';
   }
 });
+
+// ---------- select and delete several journals ----------
+
+function toggleAll(on) {
+  state.selected = new Set(on ? visibleStudents().map((x) => x.sid) : []);
+  renderRows();
+}
+
+function renderBulk() {
+  const bar = $('ws-bulk');
+  const n = state.selected?.size ?? 0;
+  const shown = visibleStudents().length;
+  const all = $('sel-all');
+  if (all) {
+    all.checked = n > 0 && n === shown;
+    all.indeterminate = n > 0 && n < shown;
+  }
+  bar.hidden = n === 0;
+  if (!n) { bar.replaceChildren(); return; }
+  const names = state.students.filter((x) => state.selected.has(x.sid)).map((x) => x.name);
+  const del = h('button', {
+    class: 'btn ghost danger-ghost', type: 'button',
+    onclick: async () => {
+      if (!del.dataset.armed) {
+        del.dataset.armed = '1';
+        del.textContent = `Click again to delete ${n} ${n === 1 ? 'journal' : 'journals'} for good`;
+        del.classList.add('danger');
+        setTimeout(() => { if (del.isConnected) { delete del.dataset.armed; del.textContent = `Delete ${n} selected`; del.classList.remove('danger'); } }, 5000);
+        return;
+      }
+      del.disabled = true;
+      const removing = new Set(state.selected);
+      const targets = state.students.filter((x) => removing.has(x.sid));
+      let done = 0;
+      try {
+        for (const st of targets) {
+          del.textContent = `Deleting ${done + 1} of ${targets.length}…`;
+          await deleteStudent(st, { removing });
+          done++;
+        }
+        state.selected.clear();
+        closeDrawer();
+        flash(`Deleted ${done} ${done === 1 ? 'journal' : 'journals'}`);
+      } catch (err) {
+        console.error(err);
+        $('ws-status').textContent = `Deleted ${done} of ${targets.length}. Something went wrong; try again for the rest.`;
+      }
+      renderRows();
+    },
+  }, `Delete ${n} selected`);
+  bar.replaceChildren(
+    h('b', {}, `${n} selected`),
+    h('span', { class: 'small muted' }, names.slice(0, 6).join(', ') + (names.length > 6 ? ` +${names.length - 6} more` : '')),
+    h('span', { class: 'spacer' }),
+    h('button', { class: 'btn quiet', type: 'button', onclick: () => toggleAll(false) }, 'Clear selection'),
+    del);
+}
+
+// A short message shown in front of the live student count for a few seconds.
+function flash(text) {
+  state.flash = text;
+  renderRows();
+  clearTimeout(flash.timer);
+  flash.timer = setTimeout(() => { state.flash = ''; if (!$('t-ws').hidden) renderRows(); }, 6000);
+}

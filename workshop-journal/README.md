@@ -44,7 +44,7 @@ To deploy changes: `npm install`, `npx firebase login`, then `npx firebase deplo
 **Teachers** sign in with Google at `/teacher.html`.
 - *My students* shows students who chose your name when joining; *Whole school* shows everyone. Filter by class.
 - PINs are hidden until clicked. Open a student to set a new PIN or fix their class and teacher.
-- Delete a student's journal from their panel (their teammates keep the shared team pages). Admins can delete a whole workshop.
+- Delete journals: tick students in the table (or the header box to tick everyone shown) and press **Delete selected**, or delete one from a student's panel. Teammates who stay keep the shared team pages. Admins can also delete a whole workshop.
 - Create workshops with your own code (e.g. `ESSS26`) or a random one. Download a CSV of everything.
 - The dashboard keeps its own sign-in, separate from the student journal, so opening the journal in the same browser never logs a teacher out. Teachers stay signed in until they press Sign out.
 

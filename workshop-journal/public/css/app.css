@@ -285,3 +285,9 @@ body:has(#journal:not([hidden])), body:has(#join:not([hidden])) {
 .panel textarea:disabled { cursor: not-allowed; }
 .danger { background: #b3261e !important; color: #fff !important; border-color: #b3261e !important; }
 .btn.ghost.danger-ghost { color: #b3261e; border-color: #b3261e; }
+
+/* Bulk select */
+th.sel, td.sel { width: 2.4rem; text-align: center; cursor: default; }
+th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; accent-color: var(--accent); }
+.bulk-bar { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; background: #fff7ed; border: 1.5px solid #fdba74; border-radius: 10px; padding: 0.6rem 0.9rem; }
+.bulk-bar .spacer { flex: 1; }
