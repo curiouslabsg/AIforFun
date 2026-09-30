@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 210" font-family="Nunito, sans-serif" role="img" aria-label="An imaginary column of liquid of height h and base area A inside a tank">
+  <defs><marker id="lc-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#d4533b"/></marker>
+  <marker id="lc-k" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#1d2433"/></marker></defs>
+  <rect x="20" y="50" width="220" height="130" fill="#d6ebf7"/>
+  <path d="M20 20 V180 H240 V20" fill="none" stroke="#1d2433" stroke-width="2"/>
+  <line x1="20" y1="50" x2="240" y2="50" stroke="#3563c9" stroke-width="1.5"/>
+  <rect x="110" y="50" width="50" height="130" fill="#b9dcf1" stroke="#3563c9" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <line x1="135" y1="80" x2="135" y2="150" stroke="#d4533b" stroke-width="3" marker-end="url(#lc-a)"/>
+  <text x="135" y="72" font-size="10.5" font-weight="800" fill="#d4533b" text-anchor="middle">weight W</text>
+  <line x1="185" y1="54" x2="185" y2="176" stroke="#1d2433" stroke-width="1.2" marker-start="url(#lc-k)" marker-end="url(#lc-k)"/>
+  <text x="192" y="120" font-size="13" font-weight="900" fill="#1d2433">h</text>
+  <text x="135" y="196" font-size="10.5" fill="#1d2433" text-anchor="middle">base area A</text>
+  <text x="62" y="120" font-size="10.5" fill="#1d2433" text-anchor="middle">density ρ</text>
+  <text x="248" y="54" font-size="9.5" fill="#3563c9">surface</text>
+</svg>

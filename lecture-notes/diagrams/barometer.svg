@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 240" font-family="Nunito, sans-serif" role="img" aria-label="Mercury barometer: a tube of mercury inverted in a dish. The mercury column stands about 760 mm above the dish surface with a vacuum above it">
+  <defs>
+    <marker id="bm-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#d4533b"/></marker>
+    <marker id="bm-k" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#1d2433"/></marker>
+  </defs>
+  <!-- dish -->
+  <path d="M30 195 H210 V225 H30 Z" fill="#aeb6c4"/>
+  <path d="M30 180 V225 H210 V180" fill="none" stroke="#1d2433" stroke-width="2"/>
+  <!-- tube -->
+  <rect x="106" y="60" width="18" height="155" fill="#aeb6c4"/>
+  <path d="M105 215 V28 A10 10 0 0 1 125 28 V215" fill="none" stroke="#1d2433" stroke-width="2"/>
+  <line x1="106" y1="60" x2="124" y2="60" stroke="#5d6577" stroke-width="1.2"/>
+  <text x="96" y="42" font-size="10" font-weight="800" fill="#1d2433" text-anchor="end">vacuum</text>
+  <line x1="98" y1="39" x2="112" y2="42" stroke="#1d2433" stroke-width="0.9"/>
+  <text x="96" y="100" font-size="10" fill="#1d2433" text-anchor="end">mercury</text>
+  <!-- height -->
+  <line x1="150" y1="60" x2="232" y2="60" stroke="#5d6577" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="212" y1="195" x2="232" y2="195" stroke="#5d6577" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="226" y1="64" x2="226" y2="191" stroke="#1d2433" stroke-width="1.3" marker-start="url(#bm-k)" marker-end="url(#bm-k)"/>
+  <text x="222" y="120" font-size="11" font-weight="900" fill="#1d2433" text-anchor="end">h ≈</text>
+  <text x="222" y="134" font-size="11" font-weight="900" fill="#1d2433" text-anchor="end">760 mm</text>
+  <!-- atmosphere pushing on dish -->
+  <line x1="50" y1="150" x2="50" y2="190" stroke="#d4533b" stroke-width="2.5" marker-end="url(#bm-a)"/>
+  <line x1="170" y1="150" x2="170" y2="190" stroke="#d4533b" stroke-width="2.5" marker-end="url(#bm-a)"/>
+  <text x="22" y="132" font-size="10.5" font-weight="800" fill="#d4533b">air pushes</text><text x="22" y="145" font-size="10.5" font-weight="800" fill="#d4533b">down</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 270" font-family="Nunito, sans-serif" role="img" aria-label="Three points in water at 10 m, 20 m and 30 m. The arrows pushing on each point get bigger with depth">
+  <defs>
+    <linearGradient id="cv-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4ecf8"/><stop offset="1" stop-color="#2f6fa8"/></linearGradient>
+    <marker id="cv-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#d4533b"/></marker>
+  </defs>
+  <rect x="0" y="40" width="480" height="230" rx="10" fill="url(#cv-w)"/>
+  <path d="M0 40 Q30 32 60 40 T120 40 T180 40 T240 40 T300 40 T360 40 T420 40 T480 40" fill="none" stroke="#3563c9" stroke-width="2"/>
+  <text x="20" y="28" font-size="12" font-weight="800" fill="#1d2433">surface · 100 kPa of air above</text>
+  <g font-size="10" font-weight="700" fill="#1d2433"><text x="36" y="104" text-anchor="end">10 m</text><text x="36" y="164" text-anchor="end">20 m</text><text x="36" y="224" text-anchor="end" fill="#ffffff">30 m</text></g>
+  <g stroke="#1d2433" stroke-width="1.2"><line x1="40" y1="40" x2="40" y2="260"/><line x1="40" y1="100" x2="48" y2="100"/><line x1="40" y1="160" x2="48" y2="160"/><line x1="40" y1="220" x2="48" y2="220"/></g>
+  <g stroke="#d4533b" marker-end="url(#cv-a)" stroke-linecap="round">
+    <g stroke-width="3"><line x1="140" y1="68" x2="140" y2="84"/><line x1="140" y1="132" x2="140" y2="116"/><line x1="108" y1="100" x2="124" y2="100"/><line x1="172" y1="100" x2="156" y2="100"/></g>
+    <g stroke-width="4"><line x1="260" y1="123" x2="260" y2="144"/><line x1="260" y1="197" x2="260" y2="176"/><line x1="223" y1="160" x2="244" y2="160"/><line x1="297" y1="160" x2="276" y2="160"/></g>
+    <g stroke-width="5"><line x1="380" y1="178" x2="380" y2="204"/><line x1="380" y1="262" x2="380" y2="236"/><line x1="338" y1="220" x2="364" y2="220"/><line x1="422" y1="220" x2="396" y2="220"/></g>
+  </g>
+  <g stroke="#ffffff" stroke-width="2"><circle cx="140" cy="100" r="11" fill="#f4b740"/><circle cx="260" cy="160" r="11" fill="#f4b740"/><circle cx="380" cy="220" r="11" fill="#f4b740"/></g>
+  <g font-size="11" font-weight="900"><text x="180" y="96" fill="#1d2433">200 kPa</text><text x="302" y="156" fill="#1d2433">300 kPa</text><text x="428" y="216" fill="#ffffff">400 kPa</text></g>
+</svg>

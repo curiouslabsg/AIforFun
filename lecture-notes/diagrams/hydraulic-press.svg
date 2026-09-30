@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 175" font-family="Nunito, sans-serif" role="img" aria-label="Hydraulic press: a small effort on a small piston produces a large force on a large piston">
+  <defs>
+    <marker id="hp-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#d4533b"/></marker>
+  </defs>
+  <g fill="#f7d58a"><rect x="40" y="70" width="30" height="80"/><rect x="170" y="80" width="90" height="70"/><rect x="40" y="125" width="220" height="25"/></g>
+  <path d="M40 30 V150 H260 V30 M70 30 V125 H170 V30" fill="none" stroke="#1d2433" stroke-width="2"/>
+  <rect x="41" y="62" width="28" height="8" fill="#0f6e74"/>
+  <rect x="171" y="72" width="88" height="8" fill="#0f6e74"/>
+  <rect x="190" y="44" width="50" height="28" rx="2" fill="#e5f3f2" stroke="#0f6e74" stroke-width="1.5"/>
+  <text x="215" y="62" font-size="10" font-weight="800" fill="#0f6e74" text-anchor="middle">load</text>
+  <line x1="55" y1="12" x2="55" y2="58" stroke="#d4533b" stroke-width="3" marker-end="url(#hp-a)"/>
+  <text x="62" y="22" font-size="10.5" font-weight="800" fill="#1d2433">effort F<tspan baseline-shift="sub" font-size="8">1</tspan></text>
+  <text x="76" y="92" font-size="9.5" fill="#5d6577">small area A<tspan baseline-shift="sub" font-size="7">1</tspan></text>
+  <line x1="285" y1="92" x2="285" y2="36" stroke="#d4533b" stroke-width="3.5" marker-end="url(#hp-a)"/>
+  <text x="278" y="52" font-size="10.5" font-weight="800" fill="#1d2433" text-anchor="end">F<tspan baseline-shift="sub" font-size="8">2</tspan></text>
+  <text x="215" y="112" font-size="9.5" fill="#5d6577" text-anchor="middle">large area A<tspan baseline-shift="sub" font-size="7">2</tspan></text>
+  <text x="150" y="142" font-size="9.5" font-weight="700" fill="#8a5a00" text-anchor="middle">oil: same pressure everywhere</text>
+</svg>

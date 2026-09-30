@@ -1,0 +1,543 @@
+# Pressure: lecture notes for O-Level Physics (SEAB 6091), Sec 3–4.
+# Each item under `elements:` is one piece. Move, delete or copy pieces to re-jigsaw the note.
+# Solutions from every worked example, question, error hunt, predict and activity
+# are collected automatically into the `annex` piece, so keep `annex` last.
+# Inline markup: **bold**, *italic*, ==highlight==, m^{2} (superscript), F_{1} (subscript), ~~strike~~.
+
+meta:
+  title: Pressure Lecture Notes
+  course: O-Level Physics 6091 · Pressure
+  series: CuriousLab Lecture Notes
+
+elements:
+
+  # ================================================================ COVER
+  - type: cover
+    chapter: Newtonian Mechanics · Pressure
+    title: Why your ears hurt at the bottom of a ==deep pool==
+    hook: A stiletto heel can dent a floor that an elephant walks across safely. Car brakes turn a light push of your foot into a force that stops a tonne of metal. This chapter explains both, with one idea.
+    chips: [Sec 3–4 · Express, "Exam weight: high", 5 worked examples, 11 practice questions]
+    art: cover-depth.svg
+    outcomes_title: SEAB 6091 learning outcomes · by the end you can
+    outcomes:
+      - define the term **pressure** in terms of force and area
+      - recall and apply **p = F / A** to new situations and problems
+      - describe and explain the **transmission of pressure in hydraulic systems**, with particular reference to the hydraulic press
+      - recall and apply **p = hρg** for the pressure due to a liquid column
+      - describe how the **height of a liquid column** may be used to measure atmospheric pressure
+      - describe the use of a **manometer** to measure pressure difference
+
+  # ================================================================ 1 · SOLIDS
+  - type: heading
+    title: Pressure in solids
+    intro: Same force, different area, very different effect.
+
+  - type: predict
+    title: Who would you rather be stepped on by?
+    text: "A 60 kg person in stiletto heels, standing on one heel (heel area about 1 cm^{2}). Or a 5000 kg elephant standing on four feet (each foot about 0.1 m^{2})."
+    options: [The person in stilettos hurts more, The elephant hurts more, "They hurt about the same"]
+    lines: 2
+    answer:
+      - "**The stiletto hurts far more.** Pressure, not weight, decides how much a surface gets dented."
+      - "Stiletto: p = 600 N ÷ (1 × 10^{-4} m^{2}) = **6 000 000 Pa**."
+      - "Elephant: p = 50 000 N ÷ (4 × 0.1 m^{2}) = **125 000 Pa**."
+      - "The heel presses about **48 times** harder on the floor, even though the elephant is over 80 times heavier."
+
+  - type: concept
+    cues:
+      - Define pressure.
+      - What is 1 Pa?
+      - Why must the force be *normal* to the surface?
+    text: |
+      **Pressure** is the ==force acting normally (at right angles) per unit area== of a surface.
+
+      The SI unit of pressure is the **pascal (Pa)**. One pascal is a force of one newton spread over one square metre, so 1 Pa = 1 N/m^{2}. That is tiny: a sheet of paper lying on a desk exerts about 1 Pa. So you will mostly meet **kPa** (× 10^{3}) and sometimes **MPa** (× 10^{6}).
+
+  - type: formula
+    eq: p = F / A
+    where:
+      - [p, pressure, "Pa or N/m^{2}"]
+      - [F, "force acting normally on the surface", N]
+      - [A, "area the force acts on", "m^{2}"]
+    note: "Rearrange as needed: F = pA, A = F / p. Convert cm^{2} to m^{2} first: 1 cm^{2} = 1 × 10^{-4} m^{2}."
+    cues:
+      - "How many m^{2} is 1 cm^{2}?"
+
+  - type: examiner
+    title: Examiner’s tip · the most common lost mark in this chapter
+    text: |
+      1 m = 100 cm, but **1 m^{2} = 10 000 cm^{2}**. Students divide by 100 instead of 10 000 and get an answer 100 times too big.
+
+      Safer habit: convert each length to metres *before* you multiply. 20 cm × 10 cm becomes 0.20 m × 0.10 m = 0.020 m^{2}.
+
+  - type: compare
+    cues:
+      - Give two examples where we want high pressure, and two where we want low pressure.
+    left:
+      title: We want HIGH pressure (small area)
+      items:
+        - Knife blades and scissors cut with a thin edge
+        - Nails and drawing pins have sharp points
+        - Injection needles pierce skin easily
+        - Ice-skate blades press hard on the ice
+    right:
+      title: We want LOW pressure (large area)
+      items:
+        - Tractors and tanks use wide tyres or tracks so they don’t sink into mud
+        - Snowshoes and skis spread your weight on snow
+        - Building foundations are wider than the walls above them
+        - School bags have wide padded straps
+
+  - type: row
+    cols: 1.15fr 1fr
+    items:
+      - type: figure
+        src: solid-block.svg
+        caption: The same block rests on two different faces. Its weight is 20 N either way.
+      - type: fact
+        big: "≈ 3 ×"
+        text: A camel’s wide padded feet let it walk on soft sand. A horse of the same weight sinks in, because its hooves press on about a third of the area.
+
+  - type: worked-example
+    text: "The block above weighs 20 N and measures 20 cm × 10 cm × 5 cm. Calculate the **greatest** and the **least** pressure it can exert on the ground."
+    marks: 3
+    space: 45
+    solution:
+      - do: "Greatest pressure needs the smallest face: 10 cm × 5 cm."
+        work: "A = 0.10 m × 0.050 m = 0.0050 m^{2}"
+        note: Convert to metres before multiplying.
+      - do: Apply p = F / A.
+        work: "p_{max} = 20 N ÷ 0.0050 m^{2} = 4000 Pa"
+      - do: "Least pressure uses the largest face: 20 cm × 10 cm."
+        work: "p_{min} = 20 N ÷ (0.20 m × 0.10 m) = 20 ÷ 0.020 = 1000 Pa"
+        note: Same force, 4 × the area, so ¼ of the pressure.
+    final: "4000 Pa (standing on end) and 1000 Pa (lying flat)"
+
+  - type: question
+    level: warm-up
+    text: A student of weight 600 N stands on one foot. The area of the sole touching the floor is 150 cm^{2}. Calculate the pressure on the floor. Give your answer in kPa.
+    marks: 2
+    space: 28
+    answer:
+      - do: Convert the area.
+        work: "A = 150 cm^{2} = 150 × 10^{-4} m^{2} = 0.015 m^{2}"
+      - do: Apply p = F / A.
+        work: "p = 600 ÷ 0.015 = 40 000 Pa = **40 kPa**"
+
+  - type: question
+    level: exam
+    text: A tractor of mass 3000 kg has four tyres. Each tyre touches the ground over an area of 0.15 m^{2}. Take g = 10 N/kg.
+    parts:
+      - text: Calculate the pressure the tractor exerts on the ground.
+        marks: 2
+        space: 24
+        answer:
+          - do: Weight and total area.
+            work: "F = mg = 3000 × 10 = 30 000 N ; A = 4 × 0.15 = 0.60 m^{2}"
+          - do: Apply p = F / A.
+            work: "p = 30 000 ÷ 0.60 = **50 000 Pa** (50 kPa)"
+      - text: Explain why tractors used on muddy farms have very wide tyres.
+        marks: 2
+        lines: 2
+        answer: "Wide tyres give a **larger area** for the same weight, so the **pressure on the ground is lower** and the tractor does not sink into the soft mud."
+
+  # ================================================================ 2 · LIQUIDS
+  - type: heading
+    title: Pressure in liquids
+    intro: Why deep water squeezes you, whatever shape the container is.
+
+  - type: concept
+    cues:
+      - List four facts about pressure in a liquid.
+      - Does a wider tank give more pressure at the bottom?
+    text: The liquid above any point has weight. That weight pushes on everything below it. Pressure in a liquid at rest has four properties.
+    bullets:
+      - "It acts ==in all directions== at any point: up, down and sideways."
+      - "It ==increases with depth==, because there is more liquid above pushing down."
+      - "It ==increases with density==. A denser liquid has more weight in the same height."
+      - "It ==does not depend on the shape or width== of the container, only on the vertical depth."
+
+  - type: row
+    cols: 1fr 1.3fr
+    items:
+      - type: figure
+        src: depth-jets.svg
+        caption: Water leaves the **deepest hole fastest** because the pressure there is greatest.
+      - type: figure
+        src: vases.svg
+        caption: Connected vessels of any shape fill to the **same level**. If one level were higher, the pressure at the bottom would be bigger on that side and push the liquid back until the levels matched.
+
+  - type: row
+    cols: 1fr 1.25fr
+    cues:
+      - Derive p = hρg in four lines.
+    items:
+      - type: figure
+        src: liquid-column.svg
+        caption: Imagine a column of liquid of height h standing on area A.
+      - type: concept
+        title: Where p = hρg comes from
+        text: |
+          Volume of the column: **V = Ah**
+
+          Mass of the column: **m = ρV = ρAh**
+
+          Weight of the column: **W = mg = ρAhg**
+
+          Pressure on the base: **p = W / A = ρAhg / A = hρg**
+
+          The area A cancels out. That is why the width of the container does not matter.
+
+  - type: formula
+    eq: p = hρg
+    where:
+      - [p, pressure due to the liquid column, Pa]
+      - [h, "vertical depth below the surface", m]
+      - [ρ, "density of the liquid", "kg/m^{3}"]
+      - [g, gravitational field strength, "10 N/kg"]
+    note: "This is the pressure due to the liquid only. Pressure at a depth in an open container is p_{total} = p_{atm} + hρg."
+    cues:
+      - "What does h measure, exactly?"
+
+  - type: row
+    cols: 1.1fr 1fr
+    items:
+      - type: figure
+        src: pressure-depth-graph.svg
+        caption: "Seawater, ρ = 1030 kg/m^{3}. Both lines are straight because p is directly proportional to h. The gap between them is always 100 kPa of air pressure."
+      - type: examiner
+        text: |
+          "Pressure **due to the water**" means hρg only.
+
+          "**Total** pressure" or "pressure **at** the diver" means hρg + atmospheric pressure.
+
+          Underline these words in the question before you calculate.
+
+  - type: worked-example
+    text: "A diver swims 20 m below the surface of the sea. The density of seawater is 1030 kg/m^{3} and atmospheric pressure is 1.0 × 10^{5} Pa. Calculate the **total** pressure on the diver."
+    marks: 3
+    space: 42
+    solution:
+      - do: Pressure due to the seawater.
+        work: "p = hρg = 20 × 1030 × 10 = 206 000 Pa"
+        note: Formula stated and substituted. Usually worth a mark each.
+      - do: "The question says total, so add the air above the sea."
+        work: "p_{total} = 206 000 + 100 000 = 306 000 Pa"
+        note: Stopping at 206 000 Pa is the classic slip.
+    final: "3.06 × 10^{5} Pa (306 kPa)"
+
+  - type: fact
+    big: "Over 1100 ×"
+    text: "At the bottom of the Mariana Trench, about 11 000 m down, the water pressure is roughly 11 000 × 1030 × 10 ≈ 1.1 × 10^{8} Pa. That is more than a thousand times the air pressure on you right now. Every 10 m of water adds about one extra atmosphere."
+
+  - type: error-hunt
+    text: "A student calculated the pressure due to the water 50 cm below the surface of a pond (ρ = 1000 kg/m^{3})."
+    working:
+      - p = hρg
+      - p = 50 × 1000 × 10
+      - p = 500 000 Pa
+    space: 22
+    answer:
+      - "**L2 is wrong.** The depth was left in centimetres."
+      - "h = 50 cm = 0.50 m, so p = 0.50 × 1000 × 10 = **5000 Pa**."
+      - "500 000 Pa would be the pressure 50 **m** down. Sanity check: 50 cm of water is nowhere near five atmospheres."
+
+  - type: question
+    level: exam
+    text: A water tank is filled to a depth of 3.0 m. The density of water is 1000 kg/m^{3}.
+    parts:
+      - text: Calculate the pressure on the base due to the water.
+        marks: 2
+        space: 18
+        answer: "p = hρg = 3.0 × 1000 × 10 = **30 000 Pa**"
+      - text: The base has an area of 2.0 m^{2}. Calculate the force of the water on the base.
+        marks: 2
+        space: 18
+        answer: "F = pA = 30 000 × 2.0 = **60 000 N**"
+      - text: Explain why water comes out of a tap at the bottom of the tank faster than from a tap near the top.
+        marks: 1
+        lines: 2
+        answer: "The bottom tap is **deeper**, so the **water pressure there is greater** and it pushes the water out faster."
+
+  - type: question
+    level: stretch
+    text: A tall thin vase and a wide bowl are both filled with water to a depth of 12 cm. Your friend says the bowl holds more water, so the pressure on its base must be bigger. Is your friend right? Explain, and state what **is** bigger for the bowl.
+    marks: 3
+    lines: 4
+    answer:
+      - "**No.** Pressure due to a liquid depends only on depth and density: p = hρg = 0.12 × 1000 × 10 = 1200 Pa for **both** bases."
+      - "The bowl’s base has a **larger area**, so the total **force** on its base (F = pA) is bigger."
+
+  - type: question
+    level: stretch
+    text: Dams are built much thicker at the bottom than at the top. Explain why, using ideas about pressure.
+    marks: 2
+    lines: 3
+    answer: "Water pressure **increases with depth**, so the water pushes hardest on the **bottom** of the dam. The wall must be thickest there to withstand the greatest pressure."
+
+  # ================================================================ 3 · HYDRAULICS
+  - type: heading
+    title: Hydraulic systems
+    intro: How a push from your foot stops a car.
+
+  - type: concept
+    cues:
+      - What happens to pressure applied to an enclosed liquid?
+      - Why must a hydraulic liquid have no air bubbles?
+    text: |
+      Liquids are almost **incompressible**. When you push on a liquid trapped in a closed system, the pressure you add is ==transmitted equally to every part of the liquid==.
+
+      A hydraulic press connects a **small piston** to a **large piston** through a pipe of oil. A small effort on the small piston makes a pressure p = F_{1} / A_{1}. The same pressure acts on the large piston, which has a much larger area, so it produces a much larger force F_{2} = p × A_{2}.
+
+  - type: figure
+    src: hydraulic-press.svg
+    width: 72
+    caption: The pressure is the same on both pistons. The force is bigger where the area is bigger.
+
+  - type: formula
+    eq: F_{1} / A_{1} = F_{2} / A_{2}
+    where:
+      - ["F_{1}", effort on the small piston, N]
+      - ["A_{1}", area of the small piston, "m^{2} or cm^{2}"]
+      - ["F_{2}", force on the large piston (the load), N]
+      - ["A_{2}", area of the large piston, "same unit as A_{1}"]
+    note: "The force is multiplied by A_{2} / A_{1}. Any area unit works here, as long as both areas use the same one, because only the ratio matters."
+    cues:
+      - Write the hydraulic press equation.
+
+  - type: concept
+    title: Nothing for free
+    cues:
+      - If the force is multiplied 50 times, what happens to the distance moved?
+    text: The oil pushed out of the small cylinder fills the large cylinder, so the volumes match. **A_{1}d_{1} = A_{2}d_{2}**. The large piston moves a much shorter distance than the small one. You gain force but lose distance, so no energy is created.
+
+  - type: worked-example
+    text: "In a hydraulic press, the small piston has an area of 4.0 cm^{2} and the large piston has an area of 200 cm^{2}. An effort of 50 N is applied to the small piston. Calculate (a) the pressure in the oil, (b) the force on the large piston, and (c) how far the large piston rises when the small piston is pushed down 10 cm."
+    marks: 5
+    space: 55
+    solution:
+      - do: "(a) Pressure made by the effort. Convert the area first."
+        work: "p = F_{1} / A_{1} = 50 ÷ (4.0 × 10^{-4}) = 125 000 Pa"
+      - do: "(b) The same pressure acts on the large piston."
+        work: "F_{2} = p × A_{2} = 125 000 × (200 × 10^{-4}) = 2500 N"
+        note: "Check with the ratio: 200 ÷ 4 = 50, and 50 × 50 N = 2500 N."
+      - do: "(c) Volume of oil moved is the same on both sides."
+        work: "4.0 × 10 = 200 × d_{2}, so d_{2} = 0.20 cm"
+        note: 50 × the force, 1/50 of the distance.
+    final: "(a) 1.25 × 10^{5} Pa (b) 2500 N (c) 0.20 cm"
+
+  - type: error-hunt
+    text: "Effort 20 N on a piston of area 2 cm^{2}. The large piston has area 50 cm^{2}. A student finds the output force F_{2}."
+    working:
+      - F_{1} / A_{1} = F_{2} / A_{2}
+      - 20 / 50 = F_{2} / 2
+      - F_{2} = 0.8 N
+    space: 20
+    answer:
+      - "**L2 is wrong.** The areas are swapped: the effort acts on the **small** 2 cm^{2} piston."
+      - "20 / 2 = F_{2} / 50, so F_{2} = **500 N**."
+      - "Sanity check: a hydraulic press should make the force **bigger**, not smaller."
+
+  - type: question
+    level: exam
+    text: A car’s brake pedal pushes a piston into a cylinder of brake fluid. Pipes carry the fluid to wider pistons at each wheel, which press the brake pads onto the wheels.
+    parts:
+      - text: Explain why the force on each brake pad is larger than the force on the pedal piston.
+        marks: 2
+        lines: 3
+        answer: "The **pressure** is transmitted **equally** through the brake fluid. The wheel pistons have a **larger area**, so F = pA gives a larger force."
+      - text: A mechanic warns that an air bubble in the brake fluid is dangerous. Explain why.
+        marks: 2
+        lines: 3
+        answer: "Air is **compressible**. Pressing the pedal squashes the bubble instead of transmitting the pressure to the wheels, so the brakes feel spongy and **the braking force is much smaller**."
+
+  # ================================================================ 4 · ATMOSPHERE
+  - type: heading
+    title: Atmospheric pressure and the barometer
+    intro: We live at the bottom of an ocean of air.
+
+  - type: concept
+    cues:
+      - What causes atmospheric pressure?
+      - Roughly how big is it at sea level?
+    text: |
+      Air has weight. The column of air above you, about 100 km tall, pushes on every surface. At sea level ==atmospheric pressure is about 1.0 × 10^{5} Pa== (100 kPa). That is like a 1 kg mass resting on every square centimetre of your skin. You don’t feel it because the fluids in your body push outwards just as hard.
+
+      Atmospheric pressure **falls as you go higher**, because there is less air above you. On the summit of Mount Everest it is only about a third of its sea-level value.
+
+  - type: activity
+    title: The card that holds up water
+    need: a plastic cup, a postcard or stiff card, water, a sink
+    steps:
+      - Fill the cup right to the brim with water.
+      - Slide the card over the top so no air is trapped.
+      - Hold the card, turn the cup upside down over the sink, then let go of the card.
+    question: The card stays on and the water stays in. Explain why, using atmospheric pressure.
+    lines: 3
+    answer:
+      - "**Atmospheric pressure (about 100 kPa) pushes up on the card from below.**"
+      - "The water in the cup is only about 10 cm deep, so it pushes down on the card with a pressure of about hρg = 0.10 × 1000 × 10 = 1000 Pa."
+      - "The upward push from the air is about 100 times bigger, so the card is held in place."
+
+  - type: row
+    cols: 1fr 1.2fr
+    items:
+      - type: figure
+        src: barometer.svg
+        caption: A simple mercury barometer.
+      - type: concept
+        title: Measuring it with a liquid column
+        text: |
+          Fill a 1 m glass tube with mercury, cover the end, and turn it upside down into a dish of mercury. The mercury falls until the column is about **760 mm** tall, leaving a **vacuum** above it.
+
+          The air pushing on the dish holds the column up. At the level of the dish surface, **atmospheric pressure = pressure due to the mercury column**:
+
+          **p_{atm} = hρg**
+
+          So "760 mm Hg" (or 76 cm Hg) is a way of stating atmospheric pressure.
+
+  - type: concept
+    title: What changes h, and what doesn’t
+    cues:
+      - Does tilting the tube change h?
+      - Why mercury and not water?
+    bullets:
+      - "Tilting the tube, or using a wider or narrower tube, does **not** change the **vertical** height h. The mercury just fills more of the tilted tube."
+      - "Pushing the tube deeper into the dish does **not** change h either."
+      - "h **does** change when atmospheric pressure changes: lower on a mountain, a little lower before a storm."
+      - "Mercury is used because it is very dense (13 600 kg/m^{3}). A water barometer would need a tube over **10 m** tall."
+      - "Air getting into the vacuum at the top would push down on the column and make h **smaller** than it should be."
+
+  - type: examiner
+    text: |
+      Always measure h **vertically**, from the mercury surface in the dish to the top of the column. Measuring along a tilted tube is a very common slip.
+
+      "Explain why the column stays up" needs the word **atmospheric pressure acting on the surface of the mercury in the dish**. Just saying "the air holds it up" usually earns no mark.
+
+  - type: worked-example
+    text: "On a mountain top the mercury column in a barometer is 60 cm tall. The density of mercury is 13 600 kg/m^{3}. Calculate the atmospheric pressure there in pascals."
+    marks: 2
+    space: 28
+    solution:
+      - do: Convert h to metres.
+        work: "h = 60 cm = 0.60 m"
+      - do: Apply p = hρg.
+        work: "p = 0.60 × 13 600 × 10 = 81 600 Pa"
+        note: Lower than at sea level, as expected up a mountain.
+    final: "8.16 × 10^{4} Pa"
+
+  - type: mcq
+    text: A mercury barometer reads 760 mm. The tube is tilted so that it makes an angle of 60° with the horizontal. What happens to the mercury?
+    options:
+      - The vertical height of the column falls below 760 mm.
+      - The vertical height of the column rises above 760 mm.
+      - The vertical height stays 760 mm, but the mercury fills a longer length of tube.
+      - The mercury runs out of the tube into the dish.
+    answer: C
+    explain: "Only atmospheric pressure decides the vertical height. Tilting the tube means a longer length of tube is needed to reach the same vertical height."
+
+  # ================================================================ 5 · MANOMETER
+  - type: heading
+    title: The manometer
+    intro: Measuring a pressure difference with a U-tube.
+
+  - type: concept
+    cues:
+      - What does a manometer measure?
+      - How do you tell if the gas pressure is above or below atmospheric?
+    text: |
+      A **manometer** is a U-shaped tube containing a liquid (often water or mercury). One arm connects to the gas supply, and the other is open to the air.
+
+      If the two liquid levels are equal, the gas pressure equals atmospheric pressure. If the gas pushes the liquid **down** on its side, the gas pressure is **greater** than atmospheric. The ==difference in levels h measures the pressure difference==:
+
+  - type: row
+    cols: 1fr 1.1fr
+    items:
+      - type: figure
+        src: manometer.svg
+        caption: Gas pressure is higher than atmospheric here, so the liquid is pushed round into the open arm.
+      - type: formula
+        eq: p_{gas} = p_{atm} + hρg
+        where:
+          - [h, "vertical difference between the two levels", m]
+          - [ρ, density of the manometer liquid, "kg/m^{3}"]
+        note: "If the liquid is higher on the gas side, the gas pressure is below atmospheric: p_{gas} = p_{atm} − hρg. The width of the tube does not change h."
+
+  - type: worked-example
+    text: "A water manometer is connected to a gas supply. The water in the open arm stands 25 cm higher than the water in the arm connected to the gas. Atmospheric pressure is 1.0 × 10^{5} Pa and the density of water is 1000 kg/m^{3}. Calculate the pressure of the gas."
+    marks: 3
+    space: 32
+    solution:
+      - do: The open side is higher, so the gas pressure is above atmospheric.
+        work: "p_{gas} = p_{atm} + hρg"
+        note: Decide plus or minus first. It is worth a mark on its own.
+      - do: Pressure difference from the level difference.
+        work: "hρg = 0.25 × 1000 × 10 = 2500 Pa"
+      - do: Add atmospheric pressure.
+        work: "p_{gas} = 100 000 + 2500 = 102 500 Pa"
+    final: "1.025 × 10^{5} Pa"
+
+  - type: mcq
+    text: The U-tube of a manometer is replaced by one with twice the cross-sectional area. It is connected to the same gas supply. What happens to the difference in liquid levels, h?
+    options: [It halves., It stays the same., It doubles., It becomes four times as large.]
+    two: true
+    answer: B
+    explain: "The pressure difference hρg does not depend on area, so for the same gas pressure h is the same."
+
+  - type: question
+    level: exam
+    text: A mercury manometer is connected to a gas cylinder. The mercury in the arm connected to the gas is 4.0 cm **higher** than in the open arm. Atmospheric pressure is 76 cm Hg. The density of mercury is 13 600 kg/m^{3}.
+    parts:
+      - text: State whether the gas pressure is above or below atmospheric pressure. Explain how you know.
+        marks: 1
+        lines: 2
+        answer: "**Below.** The atmosphere pushes the mercury further down on the open side than the gas does on its side."
+      - text: Calculate the gas pressure in cm Hg, and then in Pa.
+        marks: 3
+        space: 26
+        answer:
+          - do: Subtract the level difference.
+            work: "p_{gas} = 76 − 4.0 = 72 cm Hg"
+          - do: Convert with p = hρg.
+            work: "p = 0.72 × 13 600 × 10 ≈ **9.8 × 10^{4} Pa**"
+
+  # ================================================================ WRAP-UP
+  - type: heading
+    title: Pull it together
+    intro: Check yourself before you move on.
+
+  - type: keywords
+    items:
+      - [pressure, force acting normally per unit area]
+      - [pascal (Pa), "1 N acting on 1 m^{2}"]
+      - [depth, vertical distance below the liquid surface]
+      - [incompressible, cannot be squashed into a smaller volume]
+      - [atmospheric pressure, "pressure of the air, about 1.0 × 10^{5} Pa at sea level"]
+      - [manometer, U-tube that measures a pressure difference]
+
+  - type: mcq
+    text: Which unit is the same as the pascal?
+    options: ["N m", "N/m^{2}", "kg/m^{3}", "N/m"]
+    two: true
+    answer: B
+    explain: "Pressure = force ÷ area, so its unit is N ÷ m^{2}."
+
+  - type: mcq
+    text: "Two tanks are filled to the same depth. Tank X holds water (1000 kg/m^{3}). Tank Y holds oil (800 kg/m^{3}) and is three times wider. Which statement about the pressure on the base due to the liquid is correct?"
+    options:
+      - It is the same in both tanks.
+      - It is greater in X.
+      - It is greater in Y, because Y holds more liquid.
+      - It is greater in Y, because Y has a larger base.
+    answer: B
+    explain: "Depth is the same, so p = hρg depends only on density. Water is denser, so the pressure is greater in X. The width does not matter."
+
+  - type: summary
+    prompt: "Summary · explain pressure to a Sec 1 student in three sentences"
+    lines: 4
+
+  - type: confidence
+
+  - type: annex
+    title: Annex · Solutions
+    intro: Try every question on your own first. Mark your work in a different colour, and write down the step where you went wrong.

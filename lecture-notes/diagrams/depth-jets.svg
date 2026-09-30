@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 235" font-family="Nunito, sans-serif" role="img" aria-label="A tall tank with three holes; water leaves the lowest hole fastest">
+  <defs><marker id="dj-k" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#1d2433"/></marker></defs>
+  <rect x="60" y="35" width="70" height="165" fill="#d6ebf7"/>
+  <path d="M60 15 V200 H130 V15" fill="none" stroke="#1d2433" stroke-width="2"/>
+  <line x1="60" y1="35" x2="130" y2="35" stroke="#3563c9" stroke-width="1.5"/>
+  <!-- jets: each falls 40 units; horizontal reach grows with sqrt(depth) -->
+  <g fill="none" stroke="#3563c9" stroke-linecap="round">
+    <path d="M130 80 Q164 80 198 120" stroke-width="3"/>
+    <path d="M130 130 Q179.5 130 229 170" stroke-width="3.5"/>
+    <path d="M130 180 Q191 180 252 220" stroke-width="4"/>
+  </g>
+  <g fill="#1d2433"><circle cx="130" cy="80" r="2.5"/><circle cx="130" cy="130" r="2.5"/><circle cx="130" cy="180" r="2.5"/></g>
+  <text x="204" y="118" font-size="10" fill="#1d2433">slow</text>
+  <text x="258" y="222" font-size="10" font-weight="800" fill="#1d2433">fast</text>
+  <line x1="36" y1="40" x2="36" y2="190" stroke="#1d2433" stroke-width="1.3" marker-end="url(#dj-k)"/>
+  <text x="26" y="118" font-size="10.5" fill="#1d2433" text-anchor="middle" transform="rotate(-90 26 118)">deeper</text>
+</svg>
