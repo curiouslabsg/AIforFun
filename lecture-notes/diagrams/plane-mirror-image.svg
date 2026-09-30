@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 235" font-family="Nunito, sans-serif" role="img" aria-label="Image in a plane mirror: rays from an object reflect off the mirror and appear to come from a virtual image the same distance behind the mirror">
+  <line x1="200.0" y1="25.0" x2="200.0" y2="205.0" stroke="#1d2433" stroke-width="3" stroke-linecap="round"/>
+  <line x1="200.0" y1="25.0" x2="195.0" y2="30.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="34.0" x2="195.0" y2="39.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="43.0" x2="195.0" y2="48.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="52.0" x2="195.0" y2="57.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="61.0" x2="195.0" y2="66.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="70.0" x2="195.0" y2="75.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="79.0" x2="195.0" y2="84.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="88.0" x2="195.0" y2="93.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="97.0" x2="195.0" y2="102.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="106.0" x2="195.0" y2="111.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="115.0" x2="195.0" y2="120.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="124.0" x2="195.0" y2="129.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="133.0" x2="195.0" y2="138.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="142.0" x2="195.0" y2="147.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="151.0" x2="195.0" y2="156.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="160.0" x2="195.0" y2="165.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="169.0" x2="195.0" y2="174.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="178.0" x2="195.0" y2="183.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="187.0" x2="195.0" y2="192.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="196.0" x2="195.0" y2="201.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="205.0" x2="195.0" y2="210.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="115.0" y1="125.0" x2="200.0" y2="70.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="160.5,95.5 156.1,102.0 152.8,96.9" fill="#d4533b"/>
+  <line x1="200.0" y1="70.0" x2="279.8" y2="121.6" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="246.9,100.3 239.2,98.9 242.5,93.9" fill="#d4533b"/>
+  <line x1="200.0" y1="70.0" x2="285.0" y2="125.0" stroke="#d4533b" stroke-width="1.4" stroke-dasharray="4 4" stroke-linecap="round"/>
+  <line x1="115.0" y1="125.0" x2="200.0" y2="170.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="160.7,149.2 152.9,148.5 155.7,143.2" fill="#d4533b"/>
+  <line x1="200.0" y1="170.0" x2="284.0" y2="125.6" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="249.4,143.9 244.4,149.9 241.6,144.6" fill="#d4533b"/>
+  <line x1="200.0" y1="170.0" x2="285.0" y2="125.0" stroke="#d4533b" stroke-width="1.4" stroke-dasharray="4 4" stroke-linecap="round"/>
+  <circle cx="115" cy="125" r="5" fill="#f4b740" stroke="#1d2433" stroke-width="1.5"/>
+  <circle cx="285" cy="125" r="5" fill="#ffffff" stroke="#1d2433" stroke-width="1.5" stroke-dasharray="2 2"/>
+  <text x="115.0" y="147.0" font-size="10.5" font-weight="800" fill="#1d2433" text-anchor="middle">object</text>
+  <text x="285.0" y="147.0" font-size="10.5" font-weight="800" fill="#1d2433" text-anchor="middle">image</text>
+  <text x="285.0" y="160.0" font-size="9.5" font-weight="700" fill="#5d6577" text-anchor="middle">(virtual)</text>
+  <line x1="118.0" y1="222.0" x2="197.0" y2="222.0" stroke="#1d2433" stroke-width="1" stroke-linecap="round"/>
+  <line x1="115.0" y1="216.0" x2="115.0" y2="228.0" stroke="#1d2433" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="216.0" x2="200.0" y2="228.0" stroke="#1d2433" stroke-width="1" stroke-linecap="round"/>
+  <text x="157.5" y="216.0" font-size="11" font-weight="900" fill="#1d2433" text-anchor="middle" font-style="italic">d</text>
+  <line x1="203.0" y1="222.0" x2="282.0" y2="222.0" stroke="#1d2433" stroke-width="1" stroke-linecap="round"/>
+  <line x1="200.0" y1="216.0" x2="200.0" y2="228.0" stroke="#1d2433" stroke-width="1" stroke-linecap="round"/>
+  <line x1="285.0" y1="216.0" x2="285.0" y2="228.0" stroke="#1d2433" stroke-width="1" stroke-linecap="round"/>
+  <text x="242.5" y="216.0" font-size="11" font-weight="900" fill="#1d2433" text-anchor="middle" font-style="italic">d</text>
+  <text x="200.0" y="18.0" font-size="10.5" font-weight="700" fill="#5d6577" text-anchor="middle">mirror</text>
+</svg>

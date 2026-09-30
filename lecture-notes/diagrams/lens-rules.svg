@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 170" font-family="Nunito, sans-serif" role="img" aria-label="The three construction rays for a converging lens">
+  <path d="M95 30 Q114.8 85 95 140 Q75.2 85 95 30 Z" fill="#dff0fb" stroke="#3563c9" stroke-width="1.6"/>
+  <line x1="7.0" y1="85.0" x2="183.0" y2="85.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <circle cx="47" cy="85" r="2.5" fill="#1d2433"/>
+  <text x="47.0" y="100.0" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <circle cx="143" cy="85" r="2.5" fill="#1d2433"/>
+  <text x="143.0" y="100.0" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <line x1="10.0" y1="51.0" x2="95.0" y2="51.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="56.1,51.0 48.9,54.0 48.9,48.0" fill="#d4533b"/>
+  <line x1="95.0" y1="51.0" x2="180.0" y2="111.2" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="127.7,74.2 120.1,72.4 123.5,67.5" fill="#d4533b"/>
+  <text x="95.0" y="150.0" font-size="9.5" font-weight="800" fill="#1d2433" text-anchor="middle">parallel to the axis →</text>
+  <text x="95.0" y="163.0" font-size="9.5" font-weight="800" fill="#d4533b" text-anchor="middle">through F on the far side</text>
+  <circle cx="13" cy="18" r="9" fill="#0f6e74"/>
+  <text x="13.0" y="22.0" font-size="10.5" font-weight="900" fill="#ffffff" text-anchor="middle">1</text>
+  <path d="M280 30 Q299.8 85 280 140 Q260.2 85 280 30 Z" fill="#dff0fb" stroke="#3563c9" stroke-width="1.6"/>
+  <line x1="192.0" y1="85.0" x2="368.0" y2="85.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <circle cx="232" cy="85" r="2.5" fill="#1d2433"/>
+  <text x="232.0" y="100.0" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <circle cx="328" cy="85" r="2.5" fill="#1d2433"/>
+  <text x="328.0" y="100.0" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <line x1="195.0" y1="45.0" x2="365.0" y2="125.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="240.8,66.5 233.0,66.2 235.5,60.8" fill="#d4533b"/>
+  <text x="280.0" y="150.0" font-size="9.5" font-weight="800" fill="#1d2433" text-anchor="middle">through the optical centre →</text>
+  <text x="280.0" y="163.0" font-size="9.5" font-weight="800" fill="#d4533b" text-anchor="middle">carries straight on</text>
+  <circle cx="198" cy="18" r="9" fill="#0f6e74"/>
+  <text x="198.0" y="22.0" font-size="10.5" font-weight="900" fill="#ffffff" text-anchor="middle">2</text>
+  <path d="M465 30 Q484.8 85 465 140 Q445.2 85 465 30 Z" fill="#dff0fb" stroke="#3563c9" stroke-width="1.6"/>
+  <line x1="377.0" y1="85.0" x2="553.0" y2="85.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <circle cx="417" cy="85" r="2.5" fill="#1d2433"/>
+  <text x="417.0" y="100.0" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <circle cx="513" cy="85" r="2.5" fill="#1d2433"/>
+  <text x="513.0" y="100.0" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <line x1="380.0" y1="115.8" x2="465.0" y2="45.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="408.3,92.3 404.7,99.2 400.8,94.6" fill="#d4533b"/>
+  <line x1="465.0" y1="45.0" x2="550.0" y2="45.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="511.1,45.0 503.9,48.0 503.9,42.0" fill="#d4533b"/>
+  <text x="465.0" y="150.0" font-size="9.5" font-weight="800" fill="#1d2433" text-anchor="middle">through F on the near side →</text>
+  <text x="465.0" y="163.0" font-size="9.5" font-weight="800" fill="#d4533b" text-anchor="middle">comes out parallel</text>
+  <circle cx="383" cy="18" r="9" fill="#0f6e74"/>
+  <text x="383.0" y="22.0" font-size="10.5" font-weight="900" fill="#ffffff" text-anchor="middle">3</text>
+</svg>

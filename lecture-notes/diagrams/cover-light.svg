@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 250" font-family="Nunito, sans-serif" role="img" aria-label="Light entering a semicircular glass block at three angles: one refracts out, one skims the surface at the critical angle, one is totally internally reflected">
+  <defs><radialGradient id="cv-g" cx="0.5" cy="0" r="0.9"><stop offset="0" stop-color="#e8f5f7"/><stop offset="1" stop-color="#bfe0e6"/></radialGradient></defs>
+  <rect x="0" y="0" width="480" height="250" rx="10" fill="#10263a"/>
+  <path d="M115 95 A125 125 0 0 0 365 95 Z" fill="url(#cv-g)" opacity="0.95"/>
+  <line x1="170.7" y1="266.5" x2="240.0" y2="95.0" stroke="#f4b740" stroke-width="4" stroke-linecap="round"/>
+  <line x1="240.0" y1="95.0" x2="324.3" y2="-29.1" stroke="#f4b740" stroke-width="4" stroke-linecap="round"/>
+  <line x1="116.7" y1="232.9" x2="240.0" y2="95.0" stroke="#ff8a6b" stroke-width="4" stroke-linecap="round"/>
+  <line x1="240.0" y1="95.0" x2="470.0" y2="95.0" stroke="#ff8a6b" stroke-width="4" stroke-linecap="round"/>
+  <line x1="79.8" y1="187.5" x2="240.0" y2="95.0" stroke="#7ce0d3" stroke-width="4" stroke-linecap="round"/>
+  <line x1="240.0" y1="95.0" x2="400.2" y2="187.5" stroke="#7ce0d3" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="240" cy="95" r="5" fill="#ffffff"/>
+  <text x="18.0" y="30.0" font-size="11" font-weight="900" fill="#f4b740" text-anchor="start">refracts</text>
+  <text x="18.0" y="46.0" font-size="11" font-weight="900" fill="#ff8a6b" text-anchor="start">skims at the critical angle</text>
+  <text x="18.0" y="62.0" font-size="11" font-weight="900" fill="#7ce0d3" text-anchor="start">trapped: total internal reflection</text>
+</svg>

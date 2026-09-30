@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 185" font-family="Nunito, sans-serif" role="img" aria-label="Law of reflection: a ray hits a plane mirror; the angle of incidence equals the angle of reflection, both measured from the normal">
+  <line x1="40.0" y1="150.0" x2="300.0" y2="150.0" stroke="#1d2433" stroke-width="3" stroke-linecap="round"/>
+  <line x1="40.0" y1="150.0" x2="45.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="49.0" y1="150.0" x2="54.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="58.0" y1="150.0" x2="63.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="67.0" y1="150.0" x2="72.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="76.0" y1="150.0" x2="81.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="85.0" y1="150.0" x2="90.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="94.0" y1="150.0" x2="99.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="103.0" y1="150.0" x2="108.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="112.0" y1="150.0" x2="117.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="121.0" y1="150.0" x2="126.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="130.0" y1="150.0" x2="135.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="139.0" y1="150.0" x2="144.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="148.0" y1="150.0" x2="153.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="157.0" y1="150.0" x2="162.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="166.0" y1="150.0" x2="171.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="175.0" y1="150.0" x2="180.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="184.0" y1="150.0" x2="189.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="193.0" y1="150.0" x2="198.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="202.0" y1="150.0" x2="207.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="211.0" y1="150.0" x2="216.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="220.0" y1="150.0" x2="225.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="229.0" y1="150.0" x2="234.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="238.0" y1="150.0" x2="243.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="247.0" y1="150.0" x2="252.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="256.0" y1="150.0" x2="261.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="265.0" y1="150.0" x2="270.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="274.0" y1="150.0" x2="279.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="283.0" y1="150.0" x2="288.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="292.0" y1="150.0" x2="297.0" y2="145.0" stroke="#5d6577" stroke-width="1" stroke-linecap="round"/>
+  <line x1="170.0" y1="150.0" x2="170.0" y2="20.0" stroke="#5d6577" stroke-width="1.3" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="89.7" y1="54.2" x2="170.0" y2="150.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="132.1,104.9 125.2,101.3 129.8,97.4" fill="#d4533b"/>
+  <line x1="170.0" y1="150.0" x2="250.3" y2="54.2" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="212.5,99.4 210.2,106.8 205.6,103.0" fill="#d4533b"/>
+  <path d="M145.6 120.9 A38 38 0 0 1 170.0 112.0" fill="none" stroke="#1d2433" stroke-width="1.2"/>
+  <path d="M170.0 112.0 A38 38 0 0 1 194.4 120.9" fill="none" stroke="#1d2433" stroke-width="1.2"/>
+  <text x="154.0" y="106.0" font-size="13" font-weight="900" fill="#1d2433" text-anchor="middle" font-style="italic">i</text>
+  <text x="186.0" y="106.0" font-size="13" font-weight="900" fill="#1d2433" text-anchor="middle" font-style="italic">r</text>
+  <text x="176.0" y="26.0" font-size="10.5" font-weight="700" fill="#5d6577" text-anchor="start">normal</text>
+  <text x="85.7" y="48.2" font-size="10.5" font-weight="800" fill="#d4533b" text-anchor="middle">incident ray</text>
+  <text x="254.3" y="48.2" font-size="10.5" font-weight="800" fill="#d4533b" text-anchor="middle">reflected ray</text>
+  <text x="300.0" y="176.0" font-size="10.5" font-weight="700" fill="#5d6577" text-anchor="end">plane mirror</text>
+  <text x="170.0" y="176.0" font-size="9.5" font-weight="700" fill="#5d6577" text-anchor="middle">point of incidence</text>
+</svg>

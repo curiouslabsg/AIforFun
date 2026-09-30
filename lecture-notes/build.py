@@ -97,13 +97,27 @@ class Note:
         self.solutions.append((self.section_title, label, body))
 
     def answer_html(self, ans):
+        """An answer is a sentence, or a list mixing sentences, working steps ({do, work, note})
+        and figures ({figure: file.svg, caption, width})."""
         if ans is None:
             return ""
-        if isinstance(ans, list) and ans and isinstance(ans[0], dict) and ("do" in ans[0] or "work" in ans[0]):
-            return steps_html(ans)
-        if isinstance(ans, list):
-            return "".join(f'<p class="ans">{md(a)}</p>' for a in ans)
-        return paras(ans, "ans")
+        if not isinstance(ans, list):
+            return paras(ans, "ans")
+        out, run = [], []
+        for a in ans + [None]:
+            if isinstance(a, dict) and ("do" in a or "work" in a):
+                run.append(a)
+                continue
+            if run:
+                out.append(steps_html(run))
+                run = []
+            if a is None:
+                continue
+            if isinstance(a, dict) and "figure" in a:
+                out.append(figure_html(a["figure"], a.get("caption"), a.get("width", 100)))
+            else:
+                out.append(f'<p class="ans">{md(a)}</p>')
+        return "".join(out)
 
     # --- structure
     def r_cover(self, el):
@@ -151,6 +165,10 @@ class Note:
     # --- teaching pieces
     def r_concept(self, el):
         b = (f'<h3 class="subheading">{md(el["title"])}</h3>' if el.get("title") else "") + paras(el.get("text")) + ul(el.get("bullets"))
+        if el.get("steps"):
+            b += '<ol class="numbered">' + "".join(f"<li>{md(x)}</li>" for x in el["steps"]) + "</ol>"
+        if el.get("after"):
+            b += paras(el["after"])
         return cues_html(el), f'<div class="concept">{b}</div>', ""
 
     def r_formula(self, el):
@@ -160,10 +178,14 @@ class Note:
         return cues_html(el), b, ""
 
     def r_figure(self, el):
-        w = el.get("width", 100)
-        cap = f"<figcaption>{md(el['caption'])}</figcaption>" if el.get("caption") else ""
-        b = f'<figure style="width:{w}%;align-self:center">{inline_svg(el["src"])}{cap}</figure>'
-        return cues_html(el), b, ""
+        return cues_html(el), figure_html(el["src"], el.get("caption"), el.get("width", 100)), ""
+
+    def r_table(self, el):
+        head = "".join(f"<th>{md(h)}</th>" for h in el["headers"])
+        rows = "".join("<tr>" + "".join(f"<td>{md(c)}</td>" for c in r) + "</tr>" for r in el["rows"])
+        title = f'<span class="tag">{md(el["title"])}</span>' if el.get("title") else ""
+        note = f'<p class="given">{md(el["note"])}</p>' if el.get("note") else ""
+        return cues_html(el), f'{title}<div class="tbl"><table><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>{note}', ""
 
     def r_compare(self, el):
         L, R = el["left"], el["right"]
@@ -183,6 +205,8 @@ class Note:
 
     def r_fact(self, el):
         big = f'<span class="big">{md(el["big"])}</span>' if el.get("big") else ""
+        if el.get("src"):
+            big += f'<div class="fact-art">{inline_svg(el["src"])}</div>'
         b = f'<div class="callout fact"><span class="tag">{md(el.get("title", "Did you know?"))}</span>{big}{paras(el["text"])}</div>'
         return cues_html(el), b, ""
 
@@ -211,9 +235,11 @@ class Note:
     def r_worked_example(self, el):
         self.n["we"] += 1
         label = f'Worked example {self.n["we"]}'
-        self.solve(label, steps_html(el["solution"]) + final_html(el.get("final")))
+        self.solve(label, self.answer_html(el["solution"]) + final_html(el.get("final")))
         b = f'<p class="qtext">{md(el["text"])}</p>' + (f'<p class="given">{md(el["given"])}</p>' if el.get("given") else "")
-        b += space_html(el, 40)
+        if el.get("src"):
+            b += figure_html(el["src"], el.get("caption"), el.get("width", 100))
+        b += space_html(el, 0 if el.get("src") else 40)
         g = (f'<span class="glabel">{label}</span>' + (f'<span class="marks">[{el["marks"]}]</span>' if el.get("marks") else "")
              + '<span class="gnote">Try it in the box. Full solution in the Annex.</span>' + cues_html(el))
         return g, b, ""
@@ -252,6 +278,19 @@ class Note:
         self.solve(f"{label} · MCQ", f'<p class="ans"><span class="ans-final">{md(el["answer"])}</span></p>' + paras(el.get("explain"), "ans"))
         b = f'<div class="mcq"><p class="qtext">{md(el["text"])}</p>{opts_html(el["options"], two=el.get("two", False))}</div>'
         g = f'<span class="glabel">{label}</span><span class="gnote">Multiple choice. Tick one box.</span><span class="marks">[1]</span>'
+        return g, b, ""
+
+    def r_draw(self, el):
+        """A drawing task on a printed template (grid, mirror, lens...). The finished drawing goes to the annex."""
+        self.n["q"] += 1
+        label = f'Q{self.n["q"]}'
+        self.solve(f"{label} · drawing", self.answer_html(el.get("answer")))
+        b = f'<p class="qtext">{md(el["text"])}</p>' + figure_html(el["src"], el.get("caption"), el.get("width", 100))
+        if el.get("then"):
+            b += f'<p class="qtext">{md(el["then"])}</p>'
+        b += space_html(el)
+        g = (f'<span class="glabel">{label}</span><span class="gnote">Draw on the diagram. Use a sharp pencil and a ruler.</span>'
+             + (f'<span class="marks">[{el["marks"]}]</span>' if el.get("marks") else "") + cues_html(el))
         return g, b, ""
 
     def r_error_hunt(self, el):
@@ -295,6 +334,11 @@ def steps_html(steps):
         note = f'<span class="note">{md(s.get("note"))}</span>' if s.get("note") else "<span></span>"
         rows.append(f'<div class="step"><span class="n">{i + 1}</span><div>{md(s.get("do"))}<span class="w">{md(s.get("work"))}</span></div>{note}</div>')
     return f'<div class="steps">{"".join(rows)}</div>'
+
+
+def figure_html(src, caption=None, width=100):
+    cap = f"<figcaption>{md(caption)}</figcaption>" if caption else ""
+    return f'<figure style="width:{width}%;align-self:center">{inline_svg(src)}{cap}</figure>'
 
 
 def final_html(final):

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 170" font-family="Nunito, sans-serif" role="img" aria-label="Optical fibre: light bounces along the glass core by total internal reflection at the boundary with the cladding">
+  <rect x="50" y="35" width="355" height="100" rx="6" fill="#f1f4f8" stroke="#5d6577" stroke-width="1.2"/>
+  <rect x="50" y="57" width="355" height="56" fill="#e5f3f2" stroke="#0f6e74" stroke-width="1.2"/>
+  <line x1="18.3" y1="121.4" x2="50.0" y2="97.0" stroke="#d4533b" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="37.0,107.0 33.1,113.8 29.5,109.0" fill="#d4533b"/>
+  <line x1="50.0" y1="97.0" x2="139.8" y2="57.0" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="98.2,75.5 92.9,81.2 90.4,75.7" fill="#d4533b"/>
+  <line x1="139.8" y1="57.0" x2="265.6" y2="113.0" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="206.0,86.5 198.2,86.3 200.7,80.8" fill="#d4533b"/>
+  <line x1="265.6" y1="113.0" x2="391.4" y2="57.0" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="331.8,83.5 326.4,89.2 324.0,83.7" fill="#d4533b"/>
+  <line x1="391.4" y1="57.0" x2="405.0" y2="63.1" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="401.5,61.5 393.7,61.3 396.1,55.8" fill="#d4533b"/>
+  <text x="139.8" y="150.0" font-size="10" font-weight="800" fill="#d4533b" text-anchor="middle">total internal reflection at every bounce</text>
+  <line x1="139.8" y1="140.0" x2="139.8" y2="61.0" stroke="#d4533b" stroke-width="0.9" stroke-linecap="round"/>
+  <text x="399.0" y="51.0" font-size="9.5" font-weight="800" fill="#5d6577" text-anchor="end">cladding: lower refractive index</text>
+  <text x="399.0" y="128.0" font-size="9.5" font-weight="800" fill="#0f6e74" text-anchor="end">core: higher refractive index</text>
+</svg>

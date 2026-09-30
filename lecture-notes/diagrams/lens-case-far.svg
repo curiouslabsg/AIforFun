@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 356 129.20000000000002" font-family="Nunito, sans-serif" role="img" aria-label="Object beyond 2F: the image is real, inverted and diminished, between F and 2F on the other side">
+  <line x1="10.0" y1="60.4" x2="346.0" y2="60.4" stroke="#5d6577" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="178.0" y1="15.6" x2="178.0" y2="99.6" stroke="#3563c9" stroke-width="2.4" stroke-linecap="round"/>
+  <polygon points="178,9.599999999999998 172,18.599999999999998 184,18.599999999999998" fill="#3563c9"/>
+  <polygon points="178,105.60000000000001 172,96.60000000000001 184,96.60000000000001" fill="#3563c9"/>
+  <circle cx="66.0" cy="60.4" r="2.8" fill="#1d2433"/>
+  <text x="66.0" y="75.4" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">2F</text>
+  <circle cx="122.0" cy="60.4" r="2.8" fill="#1d2433"/>
+  <text x="122.0" y="75.4" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <circle cx="234.0" cy="60.4" r="2.8" fill="#1d2433"/>
+  <text x="234.0" y="75.4" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">F</text>
+  <circle cx="290.0" cy="60.4" r="2.8" fill="#1d2433"/>
+  <text x="290.0" y="75.4" font-size="10" font-weight="900" fill="#1d2433" text-anchor="middle">2F</text>
+  <line x1="38.0" y1="60.4" x2="38.0" y2="26.8" stroke="#0f6e74" stroke-width="2.4" stroke-linecap="round"/>
+  <polygon points="38.0,26.8 33.0,33.8 43.0,33.8" fill="#0f6e74" stroke="#0f6e74" stroke-width="1.2"/>
+  <text x="38.0" y="75.4" font-size="9.5" font-weight="800" fill="#0f6e74" text-anchor="middle">object</text>
+  <line x1="38.0" y1="26.8" x2="178.0" y2="26.8" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="111.6,26.8 104.4,29.8 104.4,23.8" fill="#d4533b"/>
+  <line x1="178.0" y1="26.8" x2="304.0" y2="102.4" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="218.9,51.3 211.2,50.2 214.3,45.1" fill="#d4533b"/>
+  <line x1="38.0" y1="26.8" x2="341.8" y2="99.7" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="102.3,42.2 94.6,43.5 96.0,37.6" fill="#d4533b"/>
+  <line x1="38.0" y1="26.8" x2="178.0" y2="82.8" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="111.3,56.1 103.5,56.2 105.8,50.7" fill="#d4533b"/>
+  <line x1="178.0" y1="82.8" x2="341.8" y2="82.8" stroke="#d4533b" stroke-width="1.9" stroke-linecap="round"/>
+  <polygon points="263.5,82.8 256.3,85.8 256.3,79.8" fill="#d4533b"/>
+  <line x1="271.3" y1="60.4" x2="271.3" y2="82.8" stroke="#d4533b" stroke-width="2.4" stroke-linecap="round"/>
+  <polygon points="271.3,82.8 266.3,75.8 276.3,75.8" fill="#d4533b" stroke="#d4533b" stroke-width="1.2"/>
+  <text x="276.3" y="54.4" font-size="9.5" font-weight="800" fill="#d4533b" text-anchor="start">image (real)</text>
+</svg>

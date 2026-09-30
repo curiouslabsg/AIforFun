@@ -1,0 +1,596 @@
+# Light: lecture notes for O-Level Physics (SEAB 6091), Sec 3–4.
+# Pieces are listed in reading order. See PIECES.md for every piece type.
+# Diagrams are generated to scale by diagrams/src/light.py.
+
+meta:
+  title: Light Lecture Notes
+  course: O-Level Physics 6091 · Light
+  series: CuriousLab Lecture Notes
+
+elements:
+
+  # ================================================================ COVER
+  - type: cover
+    chapter: Waves · Light
+    title: Why diamonds sparkle and straws look ==broken==
+    hook: The internet crosses oceans as flashes of light trapped inside glass threads thinner than a hair. A diamond throws light back at you from inside. A magnifying glass makes an ant look like a monster. All of it comes down to how light bounces and bends.
+    chips: [Sec 3–4 · Express, "Exam weight: high", 5 worked examples, 15 practice questions, 3 ray diagrams to draw]
+    art: cover-light.svg
+    outcomes_title: SEAB 6091 learning outcomes · by the end you can
+    outcomes:
+      - use the terms **normal**, **angle of incidence** and **angle of reflection**, and apply **i = r** in constructions, measurements and calculations
+      - use the terms **normal**, **angle of incidence** and **angle of refraction** to describe refraction
+      - recall and apply **sin i / sin r = constant**
+      - define **refractive index** as the ratio of the speed of light in a vacuum to the speed in the medium
+      - explain **critical angle** and **total internal reflection**, and apply them to **optical fibres** in telecommunication and medicine
+      - describe the action of a **thin converging lens** on a beam of light, and define its **focal length**
+      - draw **ray diagrams** for real and virtual images, and describe their characteristics
+
+  # ================================================================ 1 · REFLECTION
+  - type: heading
+    title: Reflection
+    intro: Light bounces off a mirror by one simple rule.
+
+  - type: predict
+    title: How tall does a mirror need to be to see all of yourself?
+    text: You are 160 cm tall and stand 2 m from a flat wall mirror. What is the shortest mirror that lets you see yourself from head to toe?
+    options: ["160 cm, your full height", "80 cm, half your height", "It depends on how far you stand from it"]
+    lines: 2
+    answer:
+      - "**80 cm, half your height, at any distance.**"
+      - "Light from your feet reaches your eye by bouncing off the mirror at a point halfway between your eye level and your feet (i = r). Light from the top of your head bounces halfway between your eye and the top of your head."
+      - "So the mirror only has to cover half of you. Step back and both halfway points stay where they are, so distance makes no difference."
+
+  - type: concept
+    cues:
+      - What is the normal?
+      - From where are angles of incidence and reflection measured?
+      - State the two laws of reflection.
+    text: |
+      The **normal** is an imaginary line drawn ==at 90° to the surface== at the point where the ray hits it. The **angle of incidence, i** is the angle between the incident ray and the normal. The **angle of reflection, r** is the angle between the reflected ray and the normal.
+
+      **Laws of reflection**
+    steps:
+      - "The angle of incidence equals the angle of reflection: ==i = r==."
+      - "The incident ray, the reflected ray and the normal all lie in the **same plane**."
+
+  - type: row
+    cols: 1.1fr 1fr
+    items:
+      - type: figure
+        src: reflection-law.svg
+        caption: Both angles are measured from the **normal**, never from the mirror.
+      - type: examiner
+        text: |
+          If a question gives the angle between the ray and the **mirror**, subtract it from 90° first.
+
+          A ray at 25° to the mirror has i = 90° − 25° = **65°**.
+
+  - type: worked-example
+    text: "A ray of light strikes a plane mirror at an angle of 25° to the mirror surface. Find (a) the angle of incidence, (b) the angle of reflection, and (c) the angle between the incident ray and the reflected ray."
+    marks: 3
+    space: 34
+    solution:
+      - do: "(a) Angles are measured from the normal, which is at 90° to the mirror."
+        work: "i = 90° − 25° = 65°"
+      - do: "(b) Law of reflection."
+        work: "r = i = 65°"
+      - do: "(c) The two rays sit either side of the normal."
+        work: "angle between rays = i + r = 65° + 65° = 130°"
+        note: "Sketch it. 50° is the common wrong answer, from using 25° + 25°."
+    final: "(a) 65° (b) 65° (c) 130°"
+
+  - type: concept
+    title: The image in a plane mirror
+    cues:
+      - List five features of an image in a plane mirror.
+      - What does virtual mean?
+    text: Rays from the object reflect off the mirror and spread out. Your eye traces them back in straight lines, so they ==seem to come from a point behind the mirror==. No light actually goes there, so the image is **virtual**. It cannot be caught on a screen.
+    bullets:
+      - "**virtual** (cannot be formed on a screen)"
+      - "**upright** (the same way up as the object)"
+      - "**the same size** as the object"
+      - "**the same distance behind** the mirror as the object is in front"
+      - "**laterally inverted** (left and right are swapped)"
+
+  - type: row
+    cols: 1.1fr 1fr
+    items:
+      - type: figure
+        src: plane-mirror-image.svg
+        caption: The dashed lines are not real rays. They show where the reflected rays **appear** to come from.
+      - type: fact
+        src: ambulance.svg
+        text: "Ambulances have their name printed backwards on the front. In a driver’s rear-view mirror, lateral inversion flips it back so it reads AMBULANCE."
+
+  - type: draw
+    text: "Construct the image of the object in the plane mirror. Then draw **two** rays that leave the top and the bottom of the object, reflect off the mirror and enter the eye."
+    src: mirror-construct-task.svg
+    width: 88
+    marks: 4
+    answer:
+      - do: Mark the image the same distance behind the mirror as the object, the same size and upright.
+        work: "object is 4 squares in front, so image is 4 squares behind"
+      - do: "Join the image to the eye with a straight line. Where it crosses the mirror is where the real ray reflects."
+        work: "draw it dashed behind the mirror"
+      - do: "Draw the real ray: object → that point on the mirror → eye. Add arrows."
+        work: "repeat for the bottom of the object"
+      - figure: mirror-construct-answer.svg
+        width: 80
+
+  - type: mcq
+    text: Which list describes the image formed by a plane mirror?
+    options:
+      - real, inverted, same size
+      - virtual, upright, same size, laterally inverted
+      - virtual, inverted, diminished
+      - real, upright, magnified
+    answer: B
+    explain: "A plane mirror image cannot be caught on a screen (virtual), is the right way up, the same size, and left–right reversed."
+
+  - type: question
+    level: stretch
+    text: "A ray of light hits a plane mirror. The ray stays fixed while the mirror is turned through 10°. Explain why the reflected ray turns through **20°**."
+    marks: 3
+    lines: 4
+    answer:
+      - "The normal is fixed to the mirror, so it also turns through **10°**. The angle of incidence therefore changes by 10°."
+      - "Since r = i, the angle of reflection also changes by 10°, on the other side of the normal, which has itself moved 10°."
+      - "The two changes add, so the reflected ray turns through **10° + 10° = 20°**."
+
+  # ================================================================ 2 · REFRACTION
+  - type: heading
+    title: Refraction
+    intro: Light changes speed when it enters a new material, and bends.
+
+  - type: activity
+    title: The coin that appears from nowhere
+    need: an opaque mug, a coin, a jug of water, a friend
+    steps:
+      - Put the coin at the bottom of the empty mug, near the side.
+      - Move your head back until the rim of the mug just hides the coin. Keep your head still.
+      - Ask your friend to pour water into the mug slowly, without moving the coin.
+    question: The coin comes back into view. Use the word refraction to explain why.
+    lines: 3
+    answer:
+      - "Light from the coin **refracts away from the normal** as it leaves the water and enters the air, because it speeds up."
+      - "The bent ray now clears the rim and reaches your eye. Your brain assumes light travels in straight lines, so it traces the ray back and sees the coin **higher up** than it really is."
+
+  - type: concept
+    cues:
+      - Define refraction.
+      - What causes refraction?
+      - When does a ray not bend at all?
+    text: |
+      **Refraction** is the ==bending of light as it passes from one medium into another==. It happens because light travels at **different speeds** in different materials.
+
+      A material in which light travels more slowly is called **optically denser**.
+    bullets:
+      - "Air → glass (light slows down): the ray bends ==towards the normal==. The angle of refraction r is smaller than i."
+      - "Glass → air (light speeds up): the ray bends ==away from the normal==."
+      - "A ray travelling **along the normal** (i = 0°) does not bend. It still changes speed."
+
+  - type: figure
+    src: glass-block.svg
+    width: 80
+    caption: "Drawn to scale for glass (n = 1.50) with i = 50°, giving r = 30.7°. The ray leaves **parallel** to the way it came in, shifted sideways."
+
+  - type: formula
+    eq: n = sin i / sin r
+    where:
+      - [n, refractive index of the medium, no unit]
+      - [i, "angle in air (or a vacuum)", °]
+      - [r, angle in the medium, °]
+    note: "This is Snell’s law: for a given pair of materials, sin i / sin r is a constant. n is always greater than 1."
+    cues:
+      - "Why can n never be less than 1?"
+
+  - type: formula
+    eq: n = c / v
+    where:
+      - [c, "speed of light in a vacuum", "3.0 × 10^{8} m/s"]
+      - [v, speed of light in the medium, m/s]
+    note: "Refractive index is the ratio of the speed of light in a vacuum to the speed of light in the medium. A bigger n means light is slowed down more."
+    cues:
+      - Define refractive index using speeds.
+
+  - type: table
+    title: Refractive index and the speed of light
+    headers: [Material, Refractive index n, "Speed of light v = c / n"]
+    rows:
+      - [air, "1.00 (almost exactly)", "3.0 × 10^{8} m/s"]
+      - [water, "1.33", "2.3 × 10^{8} m/s"]
+      - [glass, "1.50 (varies by type)", "2.0 × 10^{8} m/s"]
+      - [diamond, "2.42", "1.2 × 10^{8} m/s"]
+
+  - type: examiner
+    title: Examiner’s tip · a check that catches most slips
+    text: |
+      Whichever way the light is going, the **bigger angle is always in the air** and the smaller angle is in the glass or water. So n = sin(angle in air) ÷ sin(angle in the medium).
+
+      If you get n < 1, you have divided the wrong way round or used an angle measured from the surface.
+
+  - type: worked-example
+    text: "A ray of light in air strikes a glass block at an angle of incidence of 50°. The refractive index of the glass is 1.50. Calculate (a) the angle of refraction, and (b) the speed of light in the glass."
+    marks: 4
+    space: 40
+    solution:
+      - do: "(a) Rearrange n = sin i / sin r."
+        work: "sin r = sin i / n = sin 50° / 1.50 = 0.766 / 1.50 = 0.511"
+      - do: Take the inverse sine. Check your calculator is in degrees.
+        work: "r = sin^{-1}(0.511) = 30.7°"
+        note: r is smaller than i. The ray bent towards the normal, as it should.
+      - do: "(b) Use n = c / v."
+        work: "v = c / n = 3.0 × 10^{8} / 1.50 = 2.0 × 10^{8} m/s"
+    final: "(a) 30.7° (b) 2.0 × 10^{8} m/s"
+
+  - type: worked-example
+    text: "A ray of light travelling **inside** a glass block (n = 1.50) meets the glass–air surface at an angle of incidence of 25°. Calculate the angle the ray makes with the normal after it leaves the glass."
+    marks: 3
+    space: 34
+    solution:
+      - do: The larger angle is in the air, so the 25° goes on the bottom.
+        work: "n = sin θ_{air} / sin θ_{glass}, so 1.50 = sin θ_{air} / sin 25°"
+        note: Label the angles by material, not by i and r.
+      - do: Rearrange.
+        work: "sin θ_{air} = 1.50 × sin 25° = 1.50 × 0.423 = 0.634"
+      - do: Inverse sine.
+        work: "θ_{air} = 39.3°"
+    final: "39.3° (bent away from the normal)"
+
+  - type: error-hunt
+    text: "A ray hits a glass block making an angle of 30° with the **surface** of the block. The angle of refraction is 35°. A student calculates the refractive index."
+    working:
+      - n = sin i / sin r
+      - n = sin 30° / sin 35°
+      - n = 0.500 / 0.574 = 0.87
+    space: 22
+    answer:
+      - "**L2 is wrong.** 30° is measured from the surface, not the normal. The angle of incidence is i = 90° − 30° = 60°."
+      - "n = sin 60° / sin 35° = 0.866 / 0.574 = **1.51**."
+      - "Sanity check: n = 0.87 is impossible. Nothing slows light down to *faster* than in a vacuum."
+
+  - type: question
+    level: warm-up
+    text: The refractive index of water is 1.33.
+    parts:
+      - text: Calculate the speed of light in water.
+        marks: 2
+        space: 16
+        answer: "v = c / n = 3.0 × 10^{8} / 1.33 = **2.26 × 10^{8} m/s**"
+      - text: A ray in air strikes the water surface at an angle of incidence of 40°. Calculate the angle of refraction.
+        marks: 2
+        space: 18
+        answer:
+          - do: Rearrange Snell’s law.
+            work: "sin r = sin 40° / 1.33 = 0.643 / 1.33 = 0.483"
+          - do: Inverse sine.
+            work: "r = **28.9°**"
+
+  - type: mcq
+    text: A ray of light enters a glass block along the normal. What happens to it?
+    options:
+      - It bends towards the normal and slows down.
+      - It bends away from the normal and speeds up.
+      - It does not bend, but it slows down.
+      - It is totally internally reflected.
+    answer: C
+    explain: "Along the normal, i = 0°, so r = 0°: no bending. The speed still drops, because the light is now in glass."
+
+  - type: question
+    level: stretch
+    text: "Light passes from glass (n = 1.50) into water (n = 1.33). Does it bend towards or away from the normal? Explain your answer using the speed of light."
+    marks: 2
+    lines: 3
+    answer:
+      - "**Away from the normal.**"
+      - "Water has a lower refractive index than glass, so light travels **faster** in water (2.26 × 10^{8} m/s) than in glass (2.0 × 10^{8} m/s). Light that speeds up bends away from the normal."
+
+  # ================================================================ 3 · TIR
+  - type: heading
+    title: Total internal reflection
+    intro: At a steep enough angle, light cannot escape. This is how optical fibres work.
+
+  - type: concept
+    cues:
+      - Define critical angle.
+      - State the two conditions for total internal reflection.
+    text: |
+      Send light from glass into air and make the angle of incidence bigger. The refracted ray bends further and further from the normal. At one angle, the **critical angle c**, the refracted ray ==travels along the surface at 90°== to the normal.
+
+      Make the angle any bigger and no light escapes at all. It is **all** reflected back inside the glass. This is **total internal reflection** (TIR).
+
+  - type: figure
+    src: tir-panels.svg
+    caption: "Glass with n = 1.50 has a critical angle of 41.8°. The three panels are drawn at 25°, 41.8° and 58°. A faint ray shows the weak partial reflection that happens alongside refraction."
+
+  - type: compare
+    cues:
+      - Can total internal reflection happen when light goes from air into water?
+    left:
+      title: Total internal reflection needs BOTH
+      items:
+        - "light travelling from an **optically denser** medium towards a **less dense** one (glass → air, water → air)"
+        - "an angle of incidence **greater than the critical angle** (i > c)"
+    right:
+      title: It cannot happen when
+      items:
+        - "light goes from air into glass or water. It always refracts in"
+        - "i is less than c. Most light refracts out and a little is reflected"
+
+  - type: formula
+    eq: sin c = 1 / n
+    where:
+      - [c, critical angle, °]
+      - [n, refractive index of the denser medium, no unit]
+    note: "Where it comes from: at the critical angle the angle in air is 90°, so n = sin 90° / sin c = 1 / sin c."
+
+  - type: worked-example
+    text: "(a) Calculate the critical angle for glass of refractive index 1.50. (b) Calculate the critical angle for diamond, n = 2.42. (c) Use your answers to suggest why a cut diamond sparkles much more than a glass copy."
+    marks: 5
+    space: 45
+    solution:
+      - do: "(a) Use sin c = 1 / n."
+        work: "sin c = 1 / 1.50 = 0.667, so c = 41.8°"
+      - do: "(b) Same for diamond."
+        work: "sin c = 1 / 2.42 = 0.413, so c = 24.4°"
+      - do: "(c) Compare."
+        work: "diamond’s critical angle is much smaller"
+        note: "Name the idea: total internal reflection."
+      - "Light inside the diamond only needs to hit a face at more than 24.4° to be totally internally reflected, so it bounces around inside many times before coming out through the top. The cut is designed to send it back out towards your eye."
+    final: "(a) 41.8° (b) 24.4°"
+
+  - type: error-hunt
+    text: "A student finds the critical angle for water, n = 1.33."
+    working:
+      - sin c = 1 / n
+      - sin c = 1.33 / 1 = 1.33
+      - "sin^{-1}(1.33) gives Math ERROR, so water has no critical angle"
+    space: 18
+    answer:
+      - "**L2 is wrong.** The fraction was turned upside down: sin c = 1 / 1.33, not 1.33 / 1."
+      - "sin c = 1 / 1.33 = 0.752, so c = **48.8°**."
+      - "Sanity check: a sine can never be bigger than 1. A Math ERROR is a clue that you have divided the wrong way."
+
+  - type: concept
+    title: Optical fibres
+    cues:
+      - Why is the cladding given a lower refractive index than the core?
+      - Give three advantages of optical fibres over copper cables.
+    text: |
+      An optical fibre is a very thin, flexible strand of glass. Its **core** is surrounded by **cladding** with a ==lower refractive index==. Light entering one end hits the core–cladding boundary at an angle bigger than the critical angle, so it is totally internally reflected again and again. It follows the fibre even round gentle bends.
+
+  - type: figure
+    src: optical-fibre.svg
+    width: 90
+    caption: The light cannot leak out of the sides, so very little is lost even over many kilometres.
+
+  - type: compare
+    left:
+      title: Telecommunication
+      items:
+        - "Internet, phone and TV signals travel as pulses of light."
+        - "Carries **far more data** than a copper cable of the same size."
+        - "**Less signal loss**, so fewer boosters are needed over long distances."
+        - "**No electrical interference** and harder to tap into, so more secure."
+        - "Thinner and lighter than copper for the same amount of data."
+    right:
+      title: Medicine (the endoscope)
+      items:
+        - "A bundle of fibres carries light **into** the body to light it up."
+        - "A second bundle carries the image **back out** to a camera."
+        - "Doctors can see inside the stomach or lungs **without major surgery**."
+        - "Small cuts mean less pain, less risk of infection and faster recovery."
+
+  - type: fact
+    big: "Under the sea"
+    text: Almost all internet traffic between countries travels as light through optical fibre cables lying on the sea floor. Singapore is one of the busiest landing points for these cables in the world.
+
+  - type: draw
+    text: "A ray of light enters a right-angled glass prism at 90° to face AB, as shown. The refractive index of the glass is 1.50."
+    src: prism-task.svg
+    width: 62
+    then: "(a) Explain why the ray does not bend as it enters the prism. (b) Show that the ray is totally internally reflected at the long face. (c) Complete the path of the ray until it leaves the prism."
+    marks: 5
+    lines: 5
+    answer:
+      - "(a) The ray travels **along the normal** to the face (i = 0°), so it does not change direction."
+      - do: "(b) Find the critical angle."
+        work: "sin c = 1 / 1.50, so c = 41.8°"
+      - do: "The ray meets the long face at an angle of incidence of 45°."
+        work: "45° > 41.8°, so total internal reflection happens"
+        note: "State both numbers and compare them."
+      - "(c) The ray is turned through 90° and leaves through the bottom face along the normal, without bending."
+      - figure: prism-answer.svg
+        width: 55
+      - "Prisms used like this replace mirrors in periscopes and binoculars. They reflect all the light and never tarnish."
+
+  - type: mcq
+    text: Which is **not** an advantage of optical fibres over copper cables for carrying phone signals?
+    options:
+      - They carry much more data.
+      - They lose less signal over long distances.
+      - They are not affected by electrical interference.
+      - They can carry electrical power to the phone at the same time.
+    answer: D
+    explain: "Glass fibres carry light, not electric current. A, B and C are the real advantages."
+
+  # ================================================================ 4 · LENSES
+  - type: heading
+    title: Thin converging lenses
+    intro: How a curved piece of glass forms images.
+
+  - type: concept
+    cues:
+      - Define the principal focus.
+      - Define focal length.
+    text: A **converging lens** (convex lens) is thicker in the middle than at the edges. It refracts rays so that they come together.
+    bullets:
+      - "**Principal axis**: the line through the centre of the lens, at 90° to it."
+      - "**Optical centre, C**: the centre of the lens. Rays through it pass straight through."
+      - "**Principal focus, F**: the point where rays ==parallel to the principal axis converge== after passing through the lens. There is one on each side."
+      - "**Focal length, f**: the ==distance between the optical centre and the principal focus==."
+
+  - type: figure
+    src: lens-beam.svg
+    width: 78
+    caption: A thicker, more curved lens bends light more, so it has a shorter focal length.
+
+  - type: subheading
+    title: The three construction rays
+    cues:
+      - Name the three rays you can draw without measuring any angles.
+
+  - type: figure
+    src: lens-rules.svg
+    caption: "Any two of these rays are enough to find the image. Ray 2 is the easiest to draw accurately."
+
+  - type: concept
+    title: How to draw a ray diagram
+    cues:
+      - How do you find a virtual image on a ray diagram?
+    steps:
+      - "Choose a scale. Draw the principal axis and the lens as a vertical line with arrowheads."
+      - "Mark F and 2F on **both** sides of the lens, using the scale."
+      - "Draw the object as an upright arrow standing on the axis."
+      - "From the tip of the object draw ray 1 (parallel, then through F) and ray 2 (straight through C)."
+      - "Where the rays **cross** is the tip of the image. Draw the image arrow from the axis to that point."
+      - "If the rays **spread apart** after the lens, extend them backwards with dashed lines. Where the dashed lines meet is a **virtual** image."
+
+  - type: examiner
+    text: |
+      Marks go for: a **ruler**, **arrows** on every ray, real rays **solid**, virtual extensions **dashed**, and the image clearly **labelled**.
+
+      Describe images with three words from three pairs: **real / virtual**, **upright / inverted**, **magnified / diminished / same size**.
+
+  - type: figure
+    src: lens-case-far.svg
+    width: 78
+    caption: "Object beyond 2F: the rays really meet, so the image is **real**. It is inverted and diminished. This is how a camera and your eye work."
+
+  - type: figure
+    src: lens-case-magnifier.svg
+    width: 66
+    caption: "Object between F and the lens: the rays spread out and only **seem** to meet, so the image is **virtual**, upright and magnified."
+
+  - type: table
+    title: Where the image forms · learn this table
+    cues:
+      - Which object position gives a same-size image?
+      - Which position does a magnifying glass use?
+    headers: [Object position, Image position, Nature of image, Used in]
+    rows:
+      - [very far away, at F on the other side, "real, inverted, diminished", "focusing on distant objects"]
+      - [beyond 2F, between F and 2F on the other side, "real, inverted, diminished", "camera, the eye"]
+      - [at 2F, at 2F on the other side, "real, inverted, same size", "photocopier (same-size copy)"]
+      - [between F and 2F, beyond 2F on the other side, "real, inverted, magnified", "projector"]
+      - [at F, "no image: rays come out parallel", "—", "spotlight, torch beam"]
+      - [between F and the lens, "same side as the object, further away", "virtual, upright, magnified", "magnifying glass"]
+    note: "Real images form on the opposite side of the lens and can be caught on a screen. The virtual image is on the same side as the object."
+
+  - type: worked-example
+    text: "An object 3.0 cm tall stands 12 cm from a thin converging lens of focal length 8.0 cm. By drawing a ray diagram to scale on the grid, find the position and height of the image, and describe it."
+    src: lens-we-task.svg
+    marks: 5
+    solution:
+      - do: "Mark F at 8 squares and 2F at 16 squares on both sides. The object is drawn 12 squares left of the lens."
+        work: "object is between F and 2F"
+      - do: "Draw ray 1 from the object tip parallel to the axis, then through F on the far side. Draw ray 2 straight through C."
+        work: "the rays cross 24 cm right of the lens, 6.0 cm below the axis"
+      - do: "A third ray through the near F comes out parallel and meets the other two at the same point. It is a good check."
+        work: "image tip at (24 cm, −6.0 cm)"
+      - figure: lens-we-answer.svg
+        width: 95
+      - "The image is **24 cm** from the lens on the opposite side and **6.0 cm** tall. It is **real, inverted and magnified** (twice the object’s height). A careful drawing within ±1 cm earns full marks."
+    final: "24 cm from the lens, 6.0 cm tall; real, inverted, magnified"
+
+  - type: draw
+    text: "A magnifying glass has a focal length of 6.0 cm. It is held 4.0 cm from a beetle 2.0 cm tall. Complete the ray diagram to scale to find the image."
+    src: lens-mag-task.svg
+    width: 100
+    then: "State the distance of the image from the lens, its height, and three features of the image."
+    marks: 5
+    lines: 3
+    answer:
+      - do: "Ray 1 from the tip goes parallel to the axis, then through F on the far side. Ray 2 goes straight through C."
+        work: "the two rays spread apart after the lens"
+      - do: Extend both rays backwards with dashed lines until they meet.
+        work: "they meet 12 cm left of the lens, 6.0 cm above the axis"
+      - figure: lens-mag-answer.svg
+        width: 85
+      - "The image is **12 cm** from the lens, on the **same side** as the beetle, and **6.0 cm** tall. It is **virtual, upright and magnified** (3 times)."
+
+  - type: mcq
+    text: A student uses a converging lens as a magnifying glass. Where must the object be placed?
+    options: [beyond 2F, at 2F, between F and 2F, between F and the lens]
+    two: true
+    answer: D
+    explain: "Only an object closer to the lens than F gives an upright, magnified, virtual image."
+
+  - type: mcq
+    text: An object is placed at 2F in front of a converging lens. Which describes the image?
+    options:
+      - virtual, upright, same size
+      - real, inverted, same size
+      - real, inverted, magnified
+      - real, upright, diminished
+    answer: B
+    explain: "At 2F the image forms at 2F on the other side: real, inverted and the same size."
+
+  - type: question
+    level: exam
+    text: "A camera uses a converging lens to form an image of a distant tree on the light sensor."
+    parts:
+      - text: State three features of the image formed on the sensor.
+        marks: 2
+        lines: 2
+        answer: "**Real, inverted, diminished.** (All three for 2 marks, two for 1 mark.)"
+      - text: Explain why the image must be real, not virtual.
+        marks: 1
+        lines: 2
+        answer: "Only a **real** image, where rays actually meet, can be **formed on a screen or sensor**. A virtual image has no light arriving at it."
+      - text: The camera is moved closer to the tree. Does the sensor need to move further from, or closer to, the lens? Explain using the table of image positions.
+        marks: 2
+        lines: 3
+        answer: "**Further from the lens.** As the object moves closer (towards 2F), the image moves further from the lens (from F towards 2F), so the sensor must move back to keep the image sharp."
+
+  - type: fact
+    big: Upside down
+    text: The lens in your eye forms a real, inverted, diminished image on your retina, just like a camera. Your brain turns it the right way up. Newborn babies are still learning to make sense of it.
+
+  # ================================================================ WRAP-UP
+  - type: heading
+    title: Pull it together
+    intro: Check yourself before you move on.
+
+  - type: keywords
+    items:
+      - [normal, "line at 90° to a surface where a ray hits it"]
+      - [refraction, "bending of light as it passes from one medium into another"]
+      - [refractive index, "n = c / v = sin i / sin r"]
+      - [critical angle, "angle of incidence in the denser medium that gives a refracted angle of 90°"]
+      - [total internal reflection, "all light reflected back when i > c, going from denser to less dense"]
+      - [principal focus, "point where rays parallel to the principal axis converge"]
+      - [focal length, "distance from the optical centre to the principal focus"]
+      - [real image, "formed where rays actually meet; can be caught on a screen"]
+      - [virtual image, "where rays only appear to come from; cannot be caught on a screen"]
+
+  - type: mcq
+    text: "Light travels from glass into air. The angle of incidence is increased steadily from 0°. Which describes what happens at the moment the angle of incidence becomes greater than the critical angle?"
+    options:
+      - The refracted ray bends towards the normal.
+      - The refracted ray disappears and all the light is reflected inside the glass.
+      - The light passes straight through without bending.
+      - The reflected ray disappears.
+    answer: B
+    explain: "Beyond the critical angle no light can refract out. All of it is reflected: total internal reflection."
+
+  - type: summary
+    prompt: "Summary · explain to a friend why the straw in your drink looks bent at the water surface"
+    lines: 4
+
+  - type: confidence
+
+  - type: annex
+    title: Annex · Solutions
+    intro: Try every question on your own first. For drawings, lay your answer next to the one here and check the image position within ±1 small square.
