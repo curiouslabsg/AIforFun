@@ -1,0 +1,593 @@
+<title>Light Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a darkened optics bench. Sticky chapter nav, then one lab per section:
+   explanation on the left, live apparatus on the right (stacked on phones).
+   Deliberately single-theme: light rays read best on a dark bench. */
+:root{
+  --bg:#0b1220; --panel:#121b2e; --panel2:#18233a; --line:#26344f; --text:#e8edf7; --muted:#9aa6bf;
+  --ray:#ffcf4a; --ray-soft:rgba(255,207,74,.35); --hot:#ff7a59; --glass:#7fd6e6; --glass-fill:rgba(127,214,230,.14);
+  --teal:#7ce0d3; --violet:#b69bff; --good:#6fe3a5; --bad:#ff7a59;
+  --f-display:"Fredoka","Nunito",system-ui,sans-serif;
+  --f-body:"Nunito",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:16px/1.6 var(--f-body);margin:0;padding-inline:16px;padding-block:0 64px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;line-height:1.1;text-wrap:balance}
+p{margin:0}
+b{font-weight:800}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ray);outline-offset:2px}
+.wrap{max-width:1100px;margin-inline:auto}
+
+/* nav */
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(11,18,32,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+nav .wrap{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav a{flex:none;text-decoration:none;color:var(--muted);font:700 14px var(--f-body);padding:6px 12px;border-radius:99px;border:1px solid transparent}
+nav a:hover{color:var(--text);border-color:var(--line)}
+nav a.on{color:var(--bg);background:var(--ray)}
+
+/* hero */
+header.hero{padding-block:40px 28px;display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+.kicker{font:700 12px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.hero h1{font-size:clamp(40px,7vw,76px);margin-top:10px}
+.hero h1 span{color:var(--ray);text-shadow:0 0 28px rgba(255,207,74,.45)}
+.hero p.lede{color:var(--muted);font-size:18px;margin-top:14px;max-width:52ch}
+.hero .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font:700 12px var(--f-mono);border:1px solid var(--line);border-radius:99px;padding:5px 10px;color:var(--muted)}
+.hero svg{width:100%;height:auto;display:block}
+
+/* sections */
+section.lab{padding-block:36px;border-top:1px solid var(--line);scroll-margin-top:60px}
+.lab-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px}
+.lab-head .num{font:700 14px var(--f-mono);color:var(--ray)}
+.lab-head h2{font-size:clamp(28px,4vw,40px)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:24px;align-items:start}
+.explain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.explain p{color:#cfd7e8;max-width:60ch}
+.eq{font:700 20px var(--f-mono);color:var(--ray);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:inline-block}
+.tip{border-left:3px solid var(--hot);padding:6px 12px;background:rgba(255,122,89,.08);border-radius:0 10px 10px 0;font-size:15px}
+.tip b{color:var(--hot)}
+.try{border:1px dashed var(--teal);border-radius:12px;padding:10px 14px;font-size:15px}
+.try b{color:var(--teal)}
+
+.bench{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.bench svg{width:100%;height:auto;display:block;background:radial-gradient(ellipse at 50% 40%,#16223a,#0e1628);border-radius:12px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl label{font:700 13px var(--f-body);color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.ctl label output{font:700 13px var(--f-mono);color:var(--ray)}
+input[type=range]{width:100%;accent-color:var(--ray)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font:700 13px var(--f-body);cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ray);color:var(--bg);border-color:var(--ray)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.readout div{background:var(--panel2);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
+.readout span{font:700 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.readout b{font:700 18px var(--f-mono);color:var(--text);font-variant-numeric:tabular-nums}
+.status{font:800 15px var(--f-body);padding:8px 12px;border-radius:10px;background:var(--panel2)}
+.status.tir{background:rgba(124,224,211,.14);color:var(--teal)}
+.status.warn{background:rgba(255,122,89,.12);color:var(--hot)}
+
+/* svg text */
+svg text{font-family:var(--f-body);font-weight:700}
+
+/* puzzle */
+.puzzle{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.puzzle .opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left;font-weight:700}
+.opt.right{background:rgba(111,227,165,.16);border-color:var(--good);color:var(--good)}
+.opt.wrong{background:rgba(255,122,89,.12);border-color:var(--bad);color:var(--bad)}
+.fb{font-size:15px;color:#cfd7e8;min-height:1.6em}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.qcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.qcard h3{font:800 16px/1.4 var(--f-body)}
+.qcard .opts{display:grid;gap:6px}
+.score{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.score b{font:700 28px var(--f-mono);color:var(--ray)}
+.score button{background:none;border:1px solid var(--line);border-radius:99px;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:700}
+
+footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+
+@media (max-width:820px){
+  header.hero,.grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<nav aria-label="Chapter sections"><div class="wrap">
+  <a href="#reflection">1 · Reflection</a><a href="#refraction">2 · Refraction</a><a href="#tir">3 · Total internal reflection</a><a href="#lenses">4 · Lenses</a><a href="#quiz">Check yourself</a>
+</div></nav>
+
+<div class="wrap">
+<header class="hero">
+  <div>
+    <span class="kicker">O-Level Physics 6091 · Light</span>
+    <h1>Bounce it. <span>Bend it.</span> Trap it.</h1>
+    <p class="lede">Four live experiments on how light reflects, refracts and gets totally trapped inside glass, then how a lens turns all that into an image. Drag the sliders. Every angle here is worked out with the same equations you use in the exam.</p>
+    <div class="meta"><span class="chip">4 labs</span><span class="chip">8 check questions</span><span class="chip">n = sin i / sin r</span><span class="chip">sin c = 1 / n</span></div>
+  </div>
+  <svg id="heroSvg" viewBox="0 0 420 260" role="img" aria-label="Three rays hit the flat face of a semicircular glass block from inside: one refracts out, one skims the surface at the critical angle, one is totally internally reflected"></svg>
+</header>
+
+<!-- ================= 1 REFLECTION ================= -->
+<section class="lab" id="reflection">
+  <div class="lab-head"><span class="num">01</span><h2>Reflection</h2></div>
+  <div class="grid">
+    <div class="explain">
+      <p>Measure every angle from the <b>normal</b>, the dashed line at 90° to the mirror. The law of reflection says the angle of incidence equals the angle of reflection.</p>
+      <span class="eq">i = r</span>
+      <p>Now tilt the mirror. The normal tilts with it, so the angle of incidence changes, and so does the angle of reflection on the other side. The reflected ray swings through <b>twice</b> the tilt.</p>
+      <div class="tip"><b>Exam trap:</b> “30° to the mirror” means i = 90° − 30° = 60°.</div>
+      <div class="puzzle" id="mirrorPuzzle">
+        <b>Puzzle.</b> You are 160 cm tall. What is the shortest wall mirror that lets you see yourself from head to toe?
+        <div class="opts">
+          <button class="opt" data-ok="0">160 cm</button><button class="opt" data-ok="1">80 cm</button><button class="opt" data-ok="0">It depends how far away you stand</button>
+        </div>
+        <p class="fb" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="bench">
+      <svg id="reflSvg" viewBox="0 0 400 270" role="img" aria-label="Ray reflecting off a plane mirror, with live angles"></svg>
+      <div class="controls">
+        <div class="ctl"><label for="reflI">Angle of incidence <output id="reflIOut">40°</output></label><input id="reflI" type="range" min="0" max="80" value="40"></div>
+        <div class="ctl"><label for="reflT">Tilt the mirror <output id="reflTOut">0°</output></label><input id="reflT" type="range" min="-15" max="15" value="0"></div>
+      </div>
+      <div class="readout">
+        <div><span>angle i</span><b id="rI">40.0°</b></div>
+        <div><span>angle r</span><b id="rR">40.0°</b></div>
+        <div><span>ray turned by</span><b id="rTurn">0°</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2 REFRACTION ================= -->
+<section class="lab" id="refraction">
+  <div class="lab-head"><span class="num">02</span><h2>Refraction</h2></div>
+  <div class="grid">
+    <div class="explain">
+      <p>Light slows down in glass and water. When it crosses the boundary at an angle, the change of speed <b>bends</b> it. Slower means it bends <b>towards</b> the normal; faster means <b>away</b>.</p>
+      <span class="eq">n = sin i / sin r = c / v</span>
+      <p>The bigger the refractive index, the more the light slows and the more it bends. Diamond slows light to about half its speed in air.</p>
+      <div class="tip"><b>Quick check:</b> the bigger angle is always the one in <b>air</b>. If you get n &lt; 1, you divided the wrong way round.</div>
+      <div class="try"><b>Try this:</b> set the angle to 0°. The ray goes straight through without bending, but the speed readout still drops.</div>
+    </div>
+    <div class="bench">
+      <svg id="refrSvg" viewBox="0 0 400 300" role="img" aria-label="Ray crossing a boundary between air and a material, bending by Snell's law"></svg>
+      <div class="controls">
+        <div class="ctl"><label>Material</label><div class="seg" id="refrMat">
+          <button aria-pressed="false" data-n="1.33">water 1.33</button><button aria-pressed="true" data-n="1.50">glass 1.50</button><button aria-pressed="false" data-n="2.42">diamond 2.42</button></div></div>
+        <div class="ctl"><label for="refrI">Angle of incidence <output id="refrIOut">40°</output></label><input id="refrI" type="range" min="0" max="89" value="40"></div>
+      </div>
+      <div class="readout">
+        <div><span>angle in air</span><b id="fAir">40.0°</b></div>
+        <div><span>angle in material</span><b id="fMat">25.4°</b></div>
+        <div><span>speed in material</span><b id="fV">2.00×10⁸</b></div>
+      </div>
+      <p class="status" id="refrStatus" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3 TIR ================= -->
+<section class="lab" id="tir">
+  <div class="lab-head"><span class="num">03</span><h2>Total internal reflection</h2></div>
+  <div class="grid">
+    <div class="explain">
+      <p>Now send the light the other way: from inside the glass out into air. It bends away from the normal. Increase the angle and the escaping ray gets flatter, until at the <b>critical angle</b> it skims along the surface.</p>
+      <span class="eq">sin c = 1 / n</span>
+      <p>Go past the critical angle and nothing escapes. All the light reflects back inside. That needs two things together: light heading from a <b>denser</b> medium into a <b>less dense</b> one, and <b>i &gt; c</b>.</p>
+      <div class="try"><b>Try this:</b> switch to diamond. Its critical angle is only 24.4°, so light inside a cut diamond gets trapped and bounces around, which is why it sparkles.</div>
+    </div>
+    <div class="bench">
+      <svg id="tirSvg" viewBox="0 0 400 290" role="img" aria-label="Semicircular block: a ray inside hits the flat face; below the critical angle it escapes, above it is totally internally reflected"></svg>
+      <div class="controls">
+        <div class="ctl"><label>Material</label><div class="seg" id="tirMat">
+          <button aria-pressed="false" data-n="1.33">water</button><button aria-pressed="true" data-n="1.50">glass</button><button aria-pressed="false" data-n="2.42">diamond</button></div></div>
+        <div class="ctl"><label for="tirI">Angle inside the block <output id="tirIOut">30°</output></label><input id="tirI" type="range" min="0" max="85" value="30"></div>
+      </div>
+      <div class="readout">
+        <div><span>critical angle</span><b id="tC">41.8°</b></div>
+        <div><span>angle in air</span><b id="tAir">48.6°</b></div>
+      </div>
+      <p class="status" id="tirStatus" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:28px">
+    <div class="explain">
+      <h3>Optical fibres</h3>
+      <p>A glass <b>core</b> sits inside <b>cladding</b> with a lower refractive index. Light that hits the core wall at more than the critical angle is totally internally reflected, again and again, all the way along. Launch it too steeply and it leaks out.</p>
+      <p>That is how almost all internet traffic between countries travels, and how an endoscope lets a doctor see inside your stomach without surgery.</p>
+    </div>
+    <div class="bench">
+      <svg id="fibreSvg" viewBox="0 0 400 170" role="img" aria-label="Light zig-zagging along an optical fibre core"></svg>
+      <div class="controls">
+        <div class="ctl"><label for="fibA">Launch angle to the fibre axis <output id="fibAOut">12°</output></label><input id="fibA" type="range" min="3" max="40" value="12"></div>
+      </div>
+      <p class="status" id="fibStatus" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4 LENSES ================= -->
+<section class="lab" id="lenses">
+  <div class="lab-head"><span class="num">04</span><h2>Thin converging lens</h2></div>
+  <div class="grid">
+    <div class="explain">
+      <p>A converging lens bends rays parallel to the axis so they meet at the <b>principal focus F</b>. The <b>focal length f</b> is the distance from the lens centre to F.</p>
+      <p>To find an image, draw two rays from the tip of the object:</p>
+      <p><b style="color:var(--ray)">1.</b> parallel to the axis, then through F<br><b style="color:var(--violet)">2.</b> straight through the centre of the lens</p>
+      <p>Where they cross is the image. If they spread apart instead, trace them back with dashed lines: the image is <b>virtual</b>.</p>
+      <div class="try"><b>Try this:</b> slide the object in from far away. Watch the image grow, flip from real to virtual as you pass F, and see which gadget uses each position.</div>
+    </div>
+    <div class="bench">
+      <svg id="lensSvg" viewBox="0 0 600 300" role="img" aria-label="Live ray diagram for a converging lens"></svg>
+      <div class="controls">
+        <div class="ctl"><label for="lensU">Object distance <output id="lensUOut">15 cm</output></label><input id="lensU" type="range" min="2" max="28" step="0.5" value="15"></div>
+        <div class="ctl"><label for="lensF">Focal length <output id="lensFOut">6 cm</output></label><input id="lensF" type="range" min="4" max="10" step="0.5" value="6"></div>
+      </div>
+      <div class="readout">
+        <div><span>object is</span><b id="lZone">beyond 2F</b></div>
+        <div><span>image distance</span><b id="lV">10.0 cm</b></div>
+        <div><span>image height</span><b id="lH">×0.67</b></div>
+      </div>
+      <p class="status" id="lensStatus" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUIZ ================= -->
+<section class="lab" id="quiz">
+  <div class="lab-head"><span class="num">✓</span><h2>Check yourself</h2></div>
+  <div class="score"><span>Score</span><b id="score">0 / 8</b><button id="reset">Start again</button></div>
+  <div class="quiz" id="quizBox"></div>
+</section>
+
+<footer>CuriousLab · Light Lab. Values: glass n = 1.50, water 1.33, diamond 2.42, c = 3.0 × 10⁸ m/s. Your quiz score is kept on this device only.</footer>
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const R = d => d * Math.PI / 180, D = r => r * 180 / Math.PI;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = { ray: css('--ray'), hot: css('--hot'), glass: css('--glass'), glassFill: css('--glass-fill'), muted: css('--muted'), text: css('--text'), teal: css('--teal'), violet: css('--violet'), line: css('--line') };
+
+  function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  function line(svg, x1, y1, x2, y2, stroke, w = 2, extra = {}) { return el('line', Object.assign({ x1, y1, x2, y2, stroke, 'stroke-width': w, 'stroke-linecap': 'round' }, extra), svg); }
+  function text(svg, x, y, s, fill, size = 13, anchor = 'start', extra = {}) { const t = el('text', Object.assign({ x, y, fill, 'font-size': size, 'text-anchor': anchor }, extra), svg); t.textContent = s; return t; }
+  function arrow(svg, x1, y1, x2, y2, fill, at = .55, s = 8) {
+    const a = Math.atan2(y2 - y1, x2 - x1), mx = x1 + (x2 - x1) * at, my = y1 + (y2 - y1) * at, c = Math.cos(a), si = Math.sin(a);
+    el('polygon', { points: `${mx + c * s * .6},${my + si * s * .6} ${mx - c * s * .6 - si * s * .5},${my - si * s * .6 + c * s * .5} ${mx - c * s * .6 + si * s * .5},${my - si * s * .6 - c * s * .5}`, fill }, svg);
+  }
+  function ray(svg, p, q, stroke = C.ray, w = 3, opts = {}) {
+    if (opts.glow !== false) line(svg, p[0], p[1], q[0], q[1], stroke, w + 6, { opacity: .18 });
+    line(svg, p[0], p[1], q[0], q[1], stroke, w, opts.dash ? { 'stroke-dasharray': opts.dash, opacity: opts.opacity ?? 1 } : { opacity: opts.opacity ?? 1 });
+    if (opts.arrow !== false) arrow(svg, p[0], p[1], q[0], q[1], stroke, opts.at ?? .55);
+  }
+  function arcPath(svg, cx, cy, r, a1, a2, stroke) {
+    const x1 = cx + r * Math.cos(R(a1)), y1 = cy + r * Math.sin(R(a1)), x2 = cx + r * Math.cos(R(a2)), y2 = cy + r * Math.sin(R(a2));
+    const sweep = ((a2 - a1) % 360 + 360) % 360 < 180 ? 1 : 0;
+    el('path', { d: `M${x1} ${y1} A${r} ${r} 0 0 ${sweep} ${x2} ${y2}`, fill: 'none', stroke, 'stroke-width': 1.5 }, svg);
+  }
+  const fmt = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toFixed(d);
+  function segment(group, onChange) {
+    const btns = [...group.querySelectorAll('button')];
+    btns.forEach(b => b.addEventListener('click', () => { btns.forEach(x => x.setAttribute('aria-pressed', x === b)); onChange(+b.dataset.n); }));
+    return () => +btns.find(b => b.getAttribute('aria-pressed') === 'true').dataset.n;
+  }
+
+  /* ---------------- hero: semicircle with three rays ---------------- */
+  (function hero() {
+    const s = document.getElementById('heroSvg'), cx = 210, top = 95, Rr = 130, n = 1.5, c = D(Math.asin(1 / n));
+    el('path', { d: `M${cx - Rr} ${top} A${Rr} ${Rr} 0 0 0 ${cx + Rr} ${top} Z`, fill: C.glassFill, stroke: C.glass, 'stroke-width': 2 }, s);
+    line(s, cx, 20, cx, top + Rr, C.muted, 1.2, { 'stroke-dasharray': '5 5', opacity: .6 });
+    [[22, C.ray], [c, C.hot], [58, C.teal]].forEach(([i, col]) => {
+      const a = R(i), A = [cx - Rr * Math.sin(a), top + Rr * Math.cos(a)], st = [A[0] - 40 * Math.sin(a), A[1] + 40 * Math.cos(a)];
+      ray(s, st, [cx, top], col, 3, { arrow: false });
+      const sc = n * Math.sin(a);
+      if (sc < 0.999) { const th = Math.asin(sc); ray(s, [cx, top], [cx + 110 * Math.sin(th), top - 110 * Math.cos(th)], col, 3, { arrow: false }); }
+      else if (sc < 1.001) ray(s, [cx, top], [cx + 200, top], col, 3, { arrow: false });
+      else ray(s, [cx, top], [cx + (Rr + 30) * Math.sin(a), top + (Rr + 30) * Math.cos(a)], col, 3, { arrow: false });
+    });
+    el('circle', { cx, cy: top, r: 5, fill: '#fff' }, s);
+    text(s, 12, 24, 'escapes', C.ray, 13); text(s, 12, 42, 'skims the surface', C.hot, 13); text(s, 12, 60, 'trapped inside', C.teal, 13);
+  })();
+
+  /* ---------------- 1 reflection ---------------- */
+  const reflI = document.getElementById('reflI'), reflT = document.getElementById('reflT');
+  function drawRefl() {
+    const s = document.getElementById('reflSvg'); clear(s);
+    const i0 = +reflI.value, t = +reflT.value, P = [200, 215], L = 170;
+    document.getElementById('reflIOut').textContent = i0 + '°';
+    document.getElementById('reflTOut').textContent = (t > 0 ? '+' : '') + t + '°';
+    // mirror direction and its upward normal, rotated by the tilt
+    const m = [Math.cos(R(t)), Math.sin(R(t))], nrm = [Math.sin(R(t)), -Math.cos(R(t))];
+    el('line', { x1: P[0] - 170 * m[0], y1: P[1] - 170 * m[1], x2: P[0] + 170 * m[0], y2: P[1] + 170 * m[1], stroke: '#cfd7e8', 'stroke-width': 5, 'stroke-linecap': 'round' }, s);
+    for (let k = -160; k <= 160; k += 12) { const bx = P[0] + k * m[0], by = P[1] + k * m[1]; line(s, bx, by, bx - 8 * nrm[0] + 6 * m[0], by - 8 * nrm[1] + 6 * m[1], C.muted, 1, { opacity: .6 }); }
+    line(s, P[0], P[1], P[0] + 150 * nrm[0], P[1] + 150 * nrm[1], C.muted, 1.4, { 'stroke-dasharray': '6 5' });
+    text(s, P[0] + 150 * nrm[0] + 6, P[1] + 150 * nrm[1] + 4, 'normal', C.muted, 12);
+    // incident direction is fixed by the slider (measured from the vertical); the mirror tilt changes the real angle
+    const d = [Math.sin(R(i0)), Math.cos(R(i0))];
+    const S = [P[0] - L * d[0], P[1] - L * d[1]];
+    const dn = d[0] * nrm[0] + d[1] * nrm[1];
+    const r = [d[0] - 2 * dn * nrm[0], d[1] - 2 * dn * nrm[1]];
+    const E = [P[0] + L * r[0], P[1] + L * r[1]];
+    ray(s, S, P); ray(s, P, E);
+    const ai = D(Math.acos(Math.min(1, -dn)));
+    const aN = D(Math.atan2(nrm[1], nrm[0])), aS = D(Math.atan2(S[1] - P[1], S[0] - P[0])), aE = D(Math.atan2(E[1] - P[1], E[0] - P[0]));
+    if (ai > 1) { arcPath(s, P[0], P[1], 42, aS, aN, C.text); arcPath(s, P[0], P[1], 48, aN, aE, C.text); }
+    text(s, P[0] - 22, P[1] - 56, 'i', C.text, 15, 'middle', { 'font-style': 'italic' });
+    text(s, P[0] + 22, P[1] - 56, 'r', C.text, 15, 'middle', { 'font-style': 'italic' });
+    // reflected ray direction with the mirror flat, to show the turn
+    const flat = [d[0], -d[1]];
+    const turn = D(Math.acos(Math.max(-1, Math.min(1, flat[0] * r[0] + flat[1] * r[1]))));
+    if (t !== 0) ray(s, P, [P[0] + L * flat[0], P[1] + L * flat[1]], C.muted, 1.5, { dash: '4 5', arrow: false, glow: false, opacity: .7 });
+    document.getElementById('rI').textContent = fmt(ai) + '°';
+    document.getElementById('rR').textContent = fmt(ai) + '°';
+    document.getElementById('rTurn').textContent = fmt(turn, 0) + '°';
+  }
+  reflI.addEventListener('input', drawRefl); reflT.addEventListener('input', drawRefl);
+
+  document.querySelectorAll('#mirrorPuzzle .opt').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#mirrorPuzzle .opt').forEach(x => x.className = 'opt');
+    const ok = b.dataset.ok === '1'; b.classList.add(ok ? 'right' : 'wrong');
+    document.querySelector('#mirrorPuzzle .fb').textContent = ok
+      ? 'Right: 80 cm, at any distance. Light from your feet reflects halfway between your eyes and your feet (i = r), and light from your head halfway between your eyes and your head.'
+      : 'Not quite. Use i = r: the reflection points sit halfway between your eyes and your feet, and halfway between your eyes and the top of your head. Step back and they don’t move.';
+  }));
+
+  /* ---------------- 2 refraction (air into material) ---------------- */
+  const refrI = document.getElementById('refrI');
+  const refrN = segment(document.getElementById('refrMat'), drawRefr);
+  function medium(s, y, fillTop, fillBot, labTop, labBot, W = 400, H = 300) {
+    el('rect', { x: 0, y: 0, width: W, height: y, fill: fillTop }, s);
+    el('rect', { x: 0, y, width: W, height: H - y, fill: fillBot }, s);
+    line(s, 0, y, W, y, C.glass, 2);
+    text(s, 12, 22, labTop, C.muted, 13); text(s, 12, H - 12, labBot, C.glass, 13);
+  }
+  function drawRefr() {
+    const s = document.getElementById('refrSvg'); clear(s);
+    const n = refrN(), i = +refrI.value, P = [200, 150], L = 150;
+    document.getElementById('refrIOut').textContent = i + '°';
+    const name = { 1.33: 'water', 1.5: 'glass', 2.42: 'diamond' }[n];
+    medium(s, 150, 'transparent', C.glassFill, 'air  n = 1.00', `${name}  n = ${n.toFixed(2)}`);
+    line(s, P[0], 10, P[0], 290, C.muted, 1.3, { 'stroke-dasharray': '6 5' });
+    const r = D(Math.asin(Math.sin(R(i)) / n));
+    const S = [P[0] - L * Math.sin(R(i)), P[1] - L * Math.cos(R(i))];
+    const E = [P[0] + L * Math.sin(R(r)), P[1] + L * Math.cos(R(r))];
+    ray(s, P, [P[0] + L * Math.sin(R(i)), P[1] - L * Math.cos(R(i))], C.ray, 1.5, { opacity: .3, glow: false });
+    ray(s, S, P); ray(s, P, E);
+    // where the ray would go with no bending
+    line(s, P[0], P[1], P[0] + 140 * Math.sin(R(i)), P[1] + 140 * Math.cos(R(i)), C.muted, 1.2, { 'stroke-dasharray': '3 5', opacity: .7 });
+    if (i > 0) { arcPath(s, P[0], P[1], 40, D(Math.atan2(S[1] - P[1], S[0] - P[0])), -90, C.text); arcPath(s, P[0], P[1], 40, 90 - r, 90, C.text); }
+    text(s, P[0] - 14, P[1] - 50, 'i', C.text, 15, 'middle', { 'font-style': 'italic' });
+    text(s, P[0] + 12, P[1] + 60, 'r', C.text, 15, 'middle', { 'font-style': 'italic' });
+    document.getElementById('fAir').textContent = i + '.0°';
+    document.getElementById('fMat').textContent = fmt(r) + '°';
+    document.getElementById('fV').textContent = fmt(3 / n, 2) + '×10⁸';
+    const st = document.getElementById('refrStatus');
+    st.className = 'status';
+    st.textContent = i === 0 ? 'Along the normal: no bending, but light slows to ' + fmt(3 / n, 2) + ' × 10⁸ m/s.'
+      : `Light slows down, so it bends towards the normal: ${i}° in air becomes ${fmt(r)}° in ${name}. Check: sin ${i}° ÷ sin ${fmt(r)}° = ${fmt(Math.sin(R(i)) / Math.sin(R(r)), 2)}.`;
+  }
+  refrI.addEventListener('input', drawRefr);
+
+  /* ---------------- 3 TIR (inside the block, out to air) ---------------- */
+  const tirI = document.getElementById('tirI');
+  const tirN = segment(document.getElementById('tirMat'), drawTir);
+  function drawTir() {
+    const s = document.getElementById('tirSvg'); clear(s);
+    const n = tirN(), i = +tirI.value, cx = 200, top = 110, Rr = 150, c = D(Math.asin(1 / n));
+    document.getElementById('tirIOut').textContent = i + '°';
+    el('path', { d: `M${cx - Rr} ${top} A${Rr} ${Rr} 0 0 0 ${cx + Rr} ${top} Z`, fill: C.glassFill, stroke: C.glass, 'stroke-width': 2 }, s);
+    line(s, cx, 10, cx, top + Rr + 10, C.muted, 1.3, { 'stroke-dasharray': '6 5' });
+    // critical-angle guide
+    const cr = R(c);
+    line(s, cx, top, cx - Rr * Math.sin(cr), top + Rr * Math.cos(cr), C.hot, 1.2, { 'stroke-dasharray': '2 5', opacity: .8 });
+    text(s, cx - Rr * Math.sin(cr) - 6, top + Rr * Math.cos(cr) + 14, `c = ${fmt(c)}°`, C.hot, 12, 'end');
+    const a = R(i), A = [cx - Rr * Math.sin(a), top + Rr * Math.cos(a)];
+    const St = [A[0] - 30 * Math.sin(a), A[1] + 30 * Math.cos(a)];
+    ray(s, St, A, C.ray, 3, { arrow: false }); ray(s, A, [cx, top]);
+    const sc = n * Math.sin(a), Rf = [cx + Rr * Math.sin(a), top + Rr * Math.cos(a)];
+    const st = document.getElementById('tirStatus'), out = document.getElementById('tAir');
+    if (sc < 0.9995) {
+      const th = Math.asin(sc);
+      ray(s, [cx, top], [cx + 100 * Math.sin(th), top - 100 * Math.cos(th)]);
+      ray(s, [cx, top], Rf, C.ray, 1.5, { opacity: .3, glow: false });
+      out.textContent = fmt(D(th)) + '°';
+      st.className = 'status'; st.textContent = `i = ${i}° is less than the critical angle, so most light escapes, bending away from the normal. A little reflects back.`;
+    } else if (sc < 1.0125) {
+      ray(s, [cx, top], [cx + Rr + 40, top]);
+      out.textContent = '90°';
+      st.className = 'status warn'; st.textContent = `At the critical angle: the refracted ray skims along the surface at 90° to the normal.`;
+    } else {
+      ray(s, [cx, top], Rf, C.teal, 3.5);
+      out.textContent = '—';
+      st.className = 'status tir'; st.textContent = `Total internal reflection: ${i}° is greater than c = ${fmt(c)}°, so no light escapes.`;
+    }
+    arcPath(s, cx, top, 34, 90, 90 + i, C.text);
+    text(s, cx - 12, top + 50, 'i', C.text, 15, 'middle', { 'font-style': 'italic' });
+    text(s, 12, 22, 'air', C.muted, 13); text(s, 12, top + 30, { 1.33: 'water', 1.5: 'glass', 2.42: 'diamond' }[n], C.glass, 13);
+    document.getElementById('tC').textContent = fmt(c) + '°';
+  }
+  tirI.addEventListener('input', drawTir);
+
+  /* ---------------- optical fibre ---------------- */
+  const fibA = document.getElementById('fibA');
+  const N_CORE = 1.5, N_CLAD = 1.4, C_FIB = D(Math.asin(N_CLAD / N_CORE));
+  let fibPath = [], fibLen = 0, t0 = performance.now();
+  function drawFibre() {
+    const s = document.getElementById('fibreSvg'); clear(s);
+    const a = +fibA.value; document.getElementById('fibAOut').textContent = a + '°';
+    const x0 = 20, x1 = 390, yT = 55, yB = 115;
+    el('rect', { x: x0, y: 30, width: x1 - x0, height: 110, rx: 10, fill: 'rgba(255,255,255,.04)', stroke: C.line }, s);
+    el('rect', { x: x0, y: yT, width: x1 - x0, height: yB - yT, fill: C.glassFill, stroke: C.glass, 'stroke-width': 1.2 }, s);
+    text(s, x1 - 6, 47, `cladding n = ${N_CLAD}`, C.muted, 11, 'end'); text(s, x1 - 6, 132, `core n = ${N_CORE}`, C.glass, 11, 'end');
+    const inc = 90 - a, trapped = inc > C_FIB;
+    let x = x0, y = 100, up = true; const pts = [[x, y]];
+    while (x < x1) {
+      const ty = up ? yT : yB, nx = x + Math.abs(y - ty) / Math.tan(R(a));
+      if (nx >= x1) { pts.push([x1, y + (up ? -1 : 1) * (x1 - x) * Math.tan(R(a))]); break; }
+      pts.push([nx, ty]); x = nx; y = ty; up = !up;
+      if (!trapped) break;
+    }
+    if (!trapped) {   // leaks out through the cladding at the first bounce
+      const last = pts[pts.length - 1], th = Math.asin(Math.min(1, N_CORE / N_CLAD * Math.sin(R(inc))));
+      const esc = [last[0] + 60 * Math.sin(th), last[1] - 60 * Math.cos(th)];
+      pts.push(esc);
+    }
+    for (let k = 0; k < pts.length - 1; k++) ray(s, pts[k], pts[k + 1], C.ray, 2.2, { at: .5 });
+    fibPath = pts; fibLen = pts.slice(1).reduce((acc, p, k) => acc + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
+    el('circle', { id: 'pulse', r: 5, fill: '#fff', cx: pts[0][0], cy: pts[0][1] }, s);
+    const st = document.getElementById('fibStatus');
+    st.className = 'status ' + (trapped ? 'tir' : 'warn');
+    st.textContent = trapped ? `The ray hits the wall at ${inc}°, more than the critical angle (${fmt(C_FIB)}°), so it is totally internally reflected every time.`
+      : `Too steep: the ray hits the wall at only ${inc}°, less than the critical angle (${fmt(C_FIB)}°), so it leaks out.`;
+  }
+  fibA.addEventListener('input', drawFibre);
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function animate(now) {
+    const p = document.getElementById('pulse');
+    if (p && fibLen > 0 && !still) {
+      let dist = ((now - t0) / 1000 * 140) % fibLen;
+      for (let k = 0; k < fibPath.length - 1; k++) {
+        const a = fibPath[k], b = fibPath[k + 1], seg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (dist <= seg) { p.setAttribute('cx', a[0] + (b[0] - a[0]) * dist / seg); p.setAttribute('cy', a[1] + (b[1] - a[1]) * dist / seg); break; }
+        dist -= seg;
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+
+  /* ---------------- 4 lens ---------------- */
+  const lensU = document.getElementById('lensU'), lensF = document.getElementById('lensF');
+  function drawLens() {
+    const s = document.getElementById('lensSvg'); clear(s);
+    const u = +lensU.value, f = +lensF.value, h = 4, px = 10, W = 600, H = 300, ax = 150, lx = 300;
+    document.getElementById('lensUOut').textContent = u + ' cm'; document.getElementById('lensFOut').textContent = f + ' cm';
+    const X = x => lx + x * px, Y = y => ax - y * px;
+    for (let x = 0; x <= W; x += px) line(s, x, 0, x, H, 'rgba(255,255,255,.04)', 1, { 'stroke-linecap': 'butt' });
+    for (let y = 0; y <= H; y += px) line(s, 0, y, W, y, 'rgba(255,255,255,.04)', 1, { 'stroke-linecap': 'butt' });
+    line(s, 0, ax, W, ax, C.muted, 1.2);
+    // lens
+    el('path', { d: `M${lx} 30 Q${lx + 26} ${ax} ${lx} 270 Q${lx - 26} ${ax} ${lx} 30 Z`, fill: C.glassFill, stroke: C.glass, 'stroke-width': 2 }, s);
+    [[-2, '2F'], [-1, 'F'], [1, 'F'], [2, '2F']].forEach(([k, lab]) => {
+      const x = X(k * f); if (x > 4 && x < W - 4) { el('circle', { cx: x, cy: ax, r: 3.5, fill: C.text }, s); text(s, x, ax + 20, lab, C.text, 13, 'middle'); }
+    });
+    // object
+    const ox = X(-u);
+    line(s, ox, ax, ox, Y(h), C.teal, 3.5);
+    el('polygon', { points: `${ox},${Y(h) - 4} ${ox - 7},${Y(h) + 8} ${ox + 7},${Y(h) + 8}`, fill: C.teal }, s);
+    text(s, ox, ax + 38, 'object', C.teal, 12, 'middle');
+    // clip helper: extend a line from (x0,y0) with slope m to the edge of the drawing
+    const toEdge = (x0, y0, m, dir = 1) => {
+      let x = dir > 0 ? (W - lx) / px : -lx / px, y = y0 + m * (x - x0);
+      const yMax = ax / px, yMin = -(H - ax) / px;
+      if (y > yMax) { x = x0 + (yMax - y0) / m; y = yMax; } else if (y < yMin) { x = x0 + (yMin - y0) / m; y = yMin; }
+      return [X(x), Y(y)];
+    };
+    const tip = [ox, Y(h)];
+    const m1 = -h / f;                    // ray 1 after the lens passes through far F
+    const m2 = -h / u;                    // ray 2 through the centre
+    ray(s, tip, [X(0), Y(h)], C.ray, 2.6); ray(s, [X(0), Y(h)], toEdge(0, h, m1), C.ray, 2.6, { at: .35 });
+    ray(s, tip, toEdge(-u, h, m2), C.violet, 2.6, { at: .25 });
+    const zone = document.getElementById('lZone'), vOut = document.getElementById('lV'), hOut = document.getElementById('lH'), st = document.getElementById('lensStatus');
+    const near = Math.abs(u - f) < 0.26;
+    const zoneTxt = near ? 'at F' : u > 2 * f + 0.25 ? 'beyond 2F' : Math.abs(u - 2 * f) <= 0.25 ? 'at 2F' : u > f ? 'between F and 2F' : 'inside F';
+    zone.textContent = zoneTxt;
+    if (near) {
+      vOut.textContent = '∞'; hOut.textContent = '—';
+      st.className = 'status warn'; st.textContent = 'Object at F: the rays come out parallel and never meet, so no image forms. This is how a torch or spotlight makes a beam.';
+      return;
+    }
+    const v = 1 / (1 / f - 1 / u), mag = -v / u, hi = mag * h;
+    if (v > 0) {
+      const ix = X(v);
+      if (ix < W - 4 && Y(hi) < H - 4) {
+        line(s, ix, ax, ix, Y(hi), C.hot, 3.5);
+        el('polygon', { points: `${ix},${Y(hi) + 4} ${ix - 7},${Y(hi) - 8} ${ix + 7},${Y(hi) - 8}`, fill: C.hot }, s);
+        text(s, ix + 8, ax - 8, 'image', C.hot, 12);
+      }
+      const size = Math.abs(mag) > 1.02 ? 'magnified' : Math.abs(mag) < 0.98 ? 'diminished' : 'same size';
+      const use = { 'beyond 2F': 'a camera or your eye', 'at 2F': 'a same-size photocopy', 'between F and 2F': 'a projector' }[zoneTxt];
+      vOut.textContent = fmt(v) + ' cm'; hOut.textContent = '×' + fmt(Math.abs(mag), 2);
+      st.className = 'status'; st.textContent = `Real, inverted, ${size}, on the far side of the lens. Used in ${use}.` + (ix >= W - 4 ? ' (The image is off the edge of this bench.)' : '');
+    } else {
+      // virtual: trace both rays back with dashes to where they appear to come from
+      line(s, X(0), Y(h), X(v), Y(h + m1 * v), C.ray, 1.6, { 'stroke-dasharray': '5 5', opacity: .8 });
+      line(s, tip[0], tip[1], X(v), Y(h + m2 * (v + u)), C.violet, 1.6, { 'stroke-dasharray': '5 5', opacity: .8 });
+      const ix = X(v);
+      if (ix > 4 && Y(hi) > 4) {
+        line(s, ix, ax, ix, Y(hi), C.hot, 2.5, { 'stroke-dasharray': '6 4' });
+        el('polygon', { points: `${ix},${Y(hi) - 4} ${ix - 7},${Y(hi) + 8} ${ix + 7},${Y(hi) + 8}`, fill: 'none', stroke: C.hot, 'stroke-width': 2 }, s);
+        text(s, ix, Y(hi) - 10, 'virtual image', C.hot, 12, 'middle');
+      }
+      vOut.textContent = fmt(-v) + ' cm, same side'; hOut.textContent = '×' + fmt(Math.abs(mag), 2);
+      st.className = 'status tir'; st.textContent = 'Virtual, upright and magnified, on the same side as the object. This is a magnifying glass.' + ((ix <= 4 || Y(hi) <= 4) ? ' (The image is off the edge of this bench.)' : '');
+    }
+  }
+  lensU.addEventListener('input', drawLens); lensF.addEventListener('input', drawLens);
+
+  /* ---------------- quiz ---------------- */
+  const Q = [
+    ['A ray hits a mirror at 25° to the mirror surface. What is the angle of reflection?', ['25°', '50°', '65°', '130°'], 2, 'Measure from the normal: 90° − 25° = 65°, and r = i.'],
+    ['Light goes from air into glass. Which way does it bend?', ['Towards the normal', 'Away from the normal', 'It does not bend', 'It depends on the colour only'], 0, 'It slows down in glass, so it bends towards the normal.'],
+    ['Light travels at 2.0 × 10⁸ m/s in a plastic. What is its refractive index?', ['0.67', '1.33', '1.50', '6.0'], 2, 'n = c / v = 3.0 ÷ 2.0 = 1.50.'],
+    ['i = 50° in air, r = 30° in a material. What is n?', ['1.53', '1.67', '0.65', '1.20'], 0, 'n = sin 50° ÷ sin 30° = 0.766 ÷ 0.500 = 1.53.'],
+    ['The critical angle of a glass is 42°. Light inside hits the surface at 50°. What happens?', ['It escapes, bending away', 'It skims along the surface', 'It is totally internally reflected', 'It passes straight through'], 2, '50° is greater than 42°, so total internal reflection.'],
+    ['Why does an optical fibre’s cladding have a lower refractive index than the core?', ['To absorb stray light', 'So total internal reflection can happen at the boundary', 'To make it bend more easily', 'To speed up the light'], 1, 'TIR only happens going from higher n to lower n.'],
+    ['Where must the object be for a converging lens to act as a magnifying glass?', ['Beyond 2F', 'At 2F', 'Between F and 2F', 'Between F and the lens'], 3, 'Inside F gives a virtual, upright, magnified image.'],
+    ['An object is 20 cm from a lens of focal length 10 cm. Where is the image?', ['10 cm', '20 cm', '40 cm', 'At infinity'], 1, 'The object is at 2F, so the image is at 2F, same size.'],
+  ];
+  const box = document.getElementById('quizBox'), scoreEl = document.getElementById('score');
+  let answers = {};
+  try { answers = JSON.parse(localStorage.getItem('lightLabQuiz') || '{}'); } catch (e) { answers = {}; }
+  function save() { try { localStorage.setItem('lightLabQuiz', JSON.stringify(answers)); } catch (e) {} }
+  function renderQuiz() {
+    box.innerHTML = '';
+    let score = 0;
+    Q.forEach(([q, opts, ok, why], qi) => {
+      const card = document.createElement('div'); card.className = 'qcard';
+      const h = document.createElement('h3'); h.textContent = (qi + 1) + '. ' + q; card.appendChild(h);
+      const wrap = document.createElement('div'); wrap.className = 'opts';
+      const fb = document.createElement('p'); fb.className = 'fb';
+      opts.forEach((o, oi) => {
+        const b = document.createElement('button'); b.className = 'opt'; b.textContent = 'ABCD'[oi] + '   ' + o;
+        if (qi in answers) {
+          if (oi === ok) b.classList.add('right');
+          else if (oi === answers[qi]) b.classList.add('wrong');
+          b.disabled = true;
+        }
+        b.addEventListener('click', () => { answers[qi] = oi; save(); renderQuiz(); });
+        wrap.appendChild(b);
+      });
+      if (qi in answers) { fb.textContent = (answers[qi] === ok ? 'Correct. ' : 'Not quite. ') + why; if (answers[qi] === ok) score++; }
+      card.appendChild(wrap); card.appendChild(fb); box.appendChild(card);
+    });
+    scoreEl.textContent = score + ' / ' + Q.length;
+  }
+  document.getElementById('reset').addEventListener('click', () => { answers = {}; save(); renderQuiz(); });
+
+  /* ---------------- nav highlight ---------------- */
+  const links = [...document.querySelectorAll('nav a')];
+  const secs = links.map(a => document.querySelector(a.getAttribute('href')));
+  addEventListener('scroll', () => {
+    let cur = 0; secs.forEach((s, k) => { if (s.getBoundingClientRect().top < 140) cur = k; });
+    links.forEach((a, k) => a.classList.toggle('on', k === cur));
+  }, { passive: true });
+
+  drawRefl(); drawRefr(); drawTir(); drawFibre(); drawLens(); renderQuiz();
+  links[0].classList.add('on');
+})();
+</script>
