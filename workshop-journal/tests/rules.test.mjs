@@ -261,3 +261,87 @@ test('custom workshop codes must be 4-12 capital letters or digits', async () =>
   await assertFails(setDoc(doc(teacher(), 'workshops/es-26'), w));
   await assertFails(setDoc(doc(teacher(), 'workshops/ABC'), w));
 });
+
+// ---------- team sync, locks, teacher deletes ----------
+import { Timestamp } from 'firebase/firestore';
+
+async function joinStudent(uid, sid, name, klass, team, pin = '1111') {
+  const db = device(uid);
+  const batch = writeBatch(db);
+  batch.set(doc(db, `workshops/${CODE}/students/${sid}`), {
+    name, team, level: 1, class: klass, teacher: 'Mr Lloyd Goh', pin, pinHash: hash(sid, pin), createdAt: 1, progress: {}, lastActive: 1,
+  });
+  batch.set(doc(db, `workshops/${CODE}/students/${sid}/claims/${uid}`), { pinHash: hash(sid, pin), at: 1 });
+  await batch.commit();
+  return db;
+}
+const tpath = (key, sub = '') => `workshops/${CODE}/teams/${key}${sub}`;
+const member = (db, key, uid, sid, name) => setDoc(doc(db, tpath(key, `/members/${uid}`)), { sid, name, at: 1 });
+
+test('teammates share a team journal; other teams cannot see it', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  const b = await joinStudent('b', 't1-ben', 'Ben', '1A', 1);
+  const c = await joinStudent('c', 't1-cara', 'Cara', '1B', 1);
+  await assertSucceeds(member(a, '1A-t1', 'a', 't1-aisha', 'Aisha'));
+  await assertSucceeds(member(b, '1A-t1', 'b', 't1-ben', 'Ben'));
+  await assertSucceeds(setDoc(doc(a, tpath('1A-t1', '/entries/define')), { kind: 'stage', stage: 'define', answers: { hmw: 'from Aisha' }, updatedAt: 1 }, { merge: true }));
+  await assertSucceeds(setDoc(doc(b, tpath('1A-t1', '/entries/define')), { kind: 'stage', stage: 'define', answers: { why: 'from Ben' }, updatedAt: 1 }, { merge: true }));
+  const snap = await getDoc(doc(a, tpath('1A-t1', '/entries/define')));
+  if (snap.data().answers.hmw !== 'from Aisha' || snap.data().answers.why !== 'from Ben') throw new Error('merge lost a field');
+  await assertSucceeds(getDocs(collection(b, tpath('1A-t1', '/members'))));
+  // Cara is in 1B: she can't join 1A-t1 or read it.
+  await assertFails(member(c, '1A-t1', 'c', 't1-cara', 'Cara'));
+  await assertFails(getDoc(doc(c, tpath('1A-t1', '/entries/define'))));
+  await assertSucceeds(member(c, '1B-t1', 'c', 't1-cara', 'Cara'));
+  await assertSucceeds(getDocs(collection(teacher(), tpath('1A-t1', '/entries'))));
+});
+
+test('cannot join a team with a journal you do not own or a fake name', async () => {
+  await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  const x = device('x');
+  await assertFails(member(x, '1A-t1', 'x', 't1-aisha', 'Aisha'));
+  const b = await joinStudent('b', 't1-ben', 'Ben', '1A', 1);
+  await assertFails(member(b, '1A-t1', 'b', 't1-ben', 'Aisha'));
+  await assertFails(member(b, '1A-t1', 'a', 't1-ben', 'Ben'));
+});
+
+test('answer locks: one teammate at a time, stale locks can be taken over', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  const b = await joinStudent('b', 't1-ben', 'Ben', '1A', 1);
+  await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');
+  await member(b, '1A-t1', 'b', 't1-ben', 'Ben');
+  const lock = (db, uid, name) => setDoc(doc(db, tpath('1A-t1', '/locks/define__hmw')), { uid, name, at: serverTimestamp() });
+  await assertSucceeds(lock(a, 'a', 'Aisha'));
+  await assertSucceeds(lock(a, 'a', 'Aisha')); // heartbeat
+  await assertFails(lock(b, 'b', 'Ben'));
+  await assertFails(deleteDoc(doc(b, tpath('1A-t1', '/locks/define__hmw'))));
+  await assertFails(setDoc(doc(b, tpath('1A-t1', '/locks/define__why')), { uid: 'a', name: 'Aisha', at: serverTimestamp() }));
+  await assertSucceeds(deleteDoc(doc(a, tpath('1A-t1', '/locks/define__hmw'))));
+  await assertSucceeds(lock(b, 'b', 'Ben'));
+  // A lock left behind 2 minutes ago can be taken over.
+  await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), tpath('1A-t1', '/locks/define__why')), { uid: 'a', name: 'Aisha', at: Timestamp.fromMillis(Date.now() - 120000) }));
+  await assertSucceeds(setDoc(doc(b, tpath('1A-t1', '/locks/define__why')), { uid: 'b', name: 'Ben', at: serverTimestamp() }));
+});
+
+test('teachers delete student records; only admins delete workshops', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');
+  await setDoc(doc(a, `workshops/${CODE}/students/t1-aisha/entries/define`), entry());
+  await assertFails(deleteDoc(doc(a, `workshops/${CODE}/students/t1-aisha`)));
+  const t = teacher();
+  await assertSucceeds(deleteDoc(doc(t, `workshops/${CODE}/students/t1-aisha/entries/define`)));
+  await assertSucceeds(deleteDoc(doc(t, `workshops/${CODE}/students/t1-aisha/claims/a`)));
+  await assertSucceeds(deleteDoc(doc(t, tpath('1A-t1', '/members/a'))));
+  await assertSucceeds(deleteDoc(doc(t, `workshops/${CODE}/students/t1-aisha`)));
+  await assertFails(deleteDoc(doc(t, `workshops/${CODE}`)));
+  await assertSucceeds(deleteDoc(doc(admin(), `workshops/${CODE}`)));
+});
+
+test('teachers can list and clear answer locks when deleting', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');
+  await setDoc(doc(a, tpath('1A-t1', '/locks/define__hmw')), { uid: 'a', name: 'Aisha', at: serverTimestamp() });
+  await assertSucceeds(getDocs(collection(teacher(), tpath('1A-t1', '/locks'))));
+  await assertSucceeds(deleteDoc(doc(teacher(), tpath('1A-t1', '/locks/define__hmw'))));
+  await assertFails(getDocs(collection(device('z'), tpath('1A-t1', '/locks'))));
+});

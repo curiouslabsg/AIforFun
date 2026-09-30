@@ -2,11 +2,11 @@ import {
   GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, onSnapshot, serverTimestamp,
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, onSnapshot, serverTimestamp, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, pinHash } from './firebase.js';
 import { LEVELS, DEFAULT_TEACHERS, trackForLevel } from './school.js';
-import { STAGES, TRACK_LABEL, promptFor } from './prompts.js';
+import { STAGES, TRACK_LABEL, promptFor, isPersonal } from './prompts.js';
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -22,6 +22,7 @@ function writePref(key, value) {
   try { localStorage.setItem(`dash.${key}`, value); } catch { /* private mode */ }
 }
 
+const teamKeyOf = (st) => `${st.class ?? 'X'}-t${st.team}`;
 const studentTrack = (st) => (st.level ? trackForLevel(st.level) : state.ws?.track ?? 'code');
 
 function h(tag, props = {}, ...children) {
@@ -179,11 +180,19 @@ function openWorkshop(code) {
   view('t-ws');
 
   state.unsub?.();
-  state.unsub = onSnapshot(collection(db, `workshops/${code}/students`), (snap) => {
+  state.teams = new Map();
+  const lost = (err) => { console.error(err); $('ws-status').textContent = 'Lost the live connection. Reload the page.'; };
+  const u1 = onSnapshot(collection(db, `workshops/${code}/students`), (snap) => {
     state.students = snap.docs.map((d) => ({ sid: d.id, ...d.data() }))
       .sort((a, b) => (a.class ?? '').localeCompare(b.class ?? '') || a.team - b.team || a.name.localeCompare(b.name));
     renderRows();
-  }, (err) => { console.error(err); $('ws-status').textContent = 'Lost the live connection. Reload the page.'; });
+  }, lost);
+  const u2 = onSnapshot(collection(db, `workshops/${code}/teams`), (snap) => {
+    state.teams = new Map(snap.docs.map((d) => [d.id, d.data()]));
+    renderRows();
+  }, lost);
+  state.unsub = () => { u1(); u2(); };
+  $('ws-delete').hidden = state.role !== 'admin';
 }
 
 function renderToggle() {
@@ -245,6 +254,12 @@ function pinCell(st) {
   return h('td', {}, b);
 }
 
+// Answers counted for one student in one stage: their team's shared answers plus their own.
+function stageDone(st, s) {
+  const team = state.teams?.get(teamKeyOf(st))?.progress?.[s.id] ?? 0;
+  return Math.min(s.prompts.length, team + (st.progress?.[s.id] ?? 0));
+}
+
 function renderRows() {
   const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
   const list = visibleStudents();
@@ -258,7 +273,7 @@ function renderRows() {
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
-    const answered = STAGES.reduce((n, s) => n + Math.min(st.progress?.[s.id] ?? 0, s.prompts.length), 0);
+    const answered = STAGES.reduce((n, s) => n + stageDone(st, s), 0);
     return h('tr', { onclick: () => openStudent(st), tabindex: '0', onkeydown: (e) => { if (e.key === 'Enter') openStudent(st); } },
       h('td', {}, st.class ?? '–'),
       h('td', { class: 'num' }, String(st.team)),
@@ -267,7 +282,7 @@ function renderRows() {
       pinCell(st),
       h('td', { class: 'num' }, `${Math.round((answered / total) * 100)}%`),
       ...STAGES.map((s) => {
-        const n = st.progress?.[s.id] ?? 0;
+        const n = stageDone(st, s);
         const cls = n >= s.prompts.length ? 'done' : n ? 'part' : '';
         return h('td', {}, h('div', { class: 'bar', title: `${s.title}: ${n}/${s.prompts.length}` }, h('i', { class: cls })));
       }),
@@ -342,21 +357,54 @@ function accountSection(st) {
     note);
 }
 
+async function loadTeamSub(key, sub) {
+  const snap = await getDocs(collection(db, `workshops/${state.ws.code}/teams/${key}/${sub}`));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((x, y) => (x.createdAt?.toMillis?.() ?? 0) - (y.createdAt?.toMillis?.() ?? 0));
+}
+
+// A student's journal = shared team answers for team questions + their own answers for personal ones.
+// Journals from before team sync kept everything personally, so fall back to those.
+async function loadJournal(st, teamCache = new Map()) {
+  const key = teamKeyOf(st);
+  if (!teamCache.has(key)) {
+    teamCache.set(key, Promise.all([loadTeamSub(key, 'entries'), loadTeamSub(key, 'images'), loadTeamSub(key, 'feedback')]));
+  }
+  const [[teamEntries, teamImages, teamNotes], entries, oldImages, oldNotes] = await Promise.all([
+    teamCache.get(key), loadSub(st.sid, 'entries'), loadSub(st.sid, 'images'), loadSub(st.sid, 'feedback'),
+  ]);
+  const mine = Object.fromEntries(entries.filter((e) => e.kind === 'stage').map((e) => [e.stage, e.answers ?? {}]));
+  const team = Object.fromEntries(teamEntries.map((e) => [e.id, e.answers ?? {}]));
+  const answer = (stageId, p) => (isPersonal(p)
+    ? mine[stageId]?.[p.id]
+    : (team[stageId]?.[p.id] || mine[stageId]?.[p.id])) ?? '';
+  return {
+    answer,
+    log: entries.filter((e) => e.kind === 'learning'),
+    images: [...teamImages, ...oldImages],
+    notes: [
+      ...teamNotes.map((n) => ({ ...n, path: `workshops/${state.ws.code}/teams/${key}/feedback/${n.id}` })),
+      ...oldNotes.map((n) => ({ ...n, path: `workshops/${state.ws.code}/students/${st.sid}/feedback/${n.id}` })),
+    ],
+    key,
+  };
+}
+
 async function openStudent(st) {
   const drawer = $('drawer');
   drawer.hidden = false;
   drawer.replaceChildren(h('p', { class: 'muted' }, 'Loading journal…'));
-  let entries, images, notes;
+  let journal;
   try {
-    [entries, images, notes] = await Promise.all([loadSub(st.sid, 'entries'), loadSub(st.sid, 'images'), loadSub(st.sid, 'feedback')]);
+    journal = await loadJournal(st);
   } catch (err) {
     console.error(err);
     drawer.replaceChildren(h('p', { class: 'msg err' }, 'Could not load this journal.'));
     return;
   }
   const trk = studentTrack(st);
-  const byStage = Object.fromEntries(entries.filter((e) => e.kind === 'stage').map((e) => [e.stage, e.answers ?? {}]));
-  const log = entries.filter((e) => e.kind === 'learning');
+  const { answer, log, images, notes } = journal;
+  const mates = state.students.filter((x) => x.sid !== st.sid && teamKeyOf(x) === teamKeyOf(st)).map((x) => x.name);
   const USE = { yes: 'Would use it', maybe: 'Maybe', no: 'Wouldn’t use it' };
 
   const noteEl = (n) => {
@@ -365,7 +413,7 @@ async function openStudent(st) {
       onclick: async (ev) => {
         const b = ev.currentTarget;
         if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Click again to delete'; return; }
-        try { await deleteDoc(doc(db, `workshops/${state.ws.code}/students/${st.sid}/feedback/${n.id}`)); card.remove(); } catch (err) { console.error(err); }
+        try { await deleteDoc(doc(db, n.path)); card.remove(); } catch (err) { console.error(err); }
       },
     }, 'Delete');
     const card = h('div', { class: 'qa note-mini' },
@@ -381,7 +429,8 @@ async function openStudent(st) {
     h('div', { style: 'display:flex;justify-content:space-between;gap:1rem;align-items:start' },
       h('div', {},
         h('span', { class: 'label' }, [st.class, `Team ${st.team}`, st.teacher, TRACK_LABEL[trk]].filter(Boolean).join(' · ')),
-        h('h2', {}, st.name)),
+        h('h2', {}, st.name),
+        h('p', { class: 'small muted' }, mates.length ? `Shares a team journal with ${mates.join(', ')}.` : 'No teammates have joined yet.')),
       h('button', { class: 'btn ghost', type: 'button', onclick: closeDrawer }, 'Close')),
     accountSection(st),
     h('section', {}, h('h3', {}, `Learning log (${log.length})`),
@@ -390,8 +439,8 @@ async function openStudent(st) {
     ...STAGES.map((s) => h('section', {}, h('h3', {}, `${s.day} · ${s.title}`),
       ...s.prompts.map((raw) => {
         const p = promptFor(raw, trk);
-        const a = (byStage[s.id]?.[p.id] ?? '').trim();
-        return h('div', { class: 'qa' }, h('b', {}, p.q), h('p', { class: a ? '' : 'empty' }, a || 'Not answered'));
+        const a = String(answer(s.id, p)).trim();
+        return h('div', { class: 'qa' }, h('b', {}, p.q, isPersonal(p) ? ' (own answer)' : ''), h('p', { class: a ? '' : 'empty' }, a || 'Not answered'));
       }),
       s.id === 'prototype' ? h('div', { class: 'thumbs' },
         ...(images.length ? images.map((im) => h('button', { type: 'button', class: 'thumb', onclick: () => lightbox(im.data, im.caption) },
@@ -400,8 +449,105 @@ async function openStudent(st) {
         h('b', {}, `Peer feedback notes (${notes.length})`),
         ...(notes.length ? notes.map(noteEl) : [h('p', { class: 'muted small' }, 'No peer feedback yet.')])) : null)),
   );
+  drawer.append(deleteStudentSection(st));
   drawer.scrollTop = 0;
 }
+
+// ---------- deleting records ----------
+
+// Deletes every document under the given collection paths, 400 per batch.
+async function deleteCollections(paths) {
+  for (const path of paths) {
+    const snap = await getDocs(collection(db, path));
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+}
+
+async function deleteStudent(st, { keepTeam = false } = {}) {
+  const base = `workshops/${state.ws.code}/students/${st.sid}`;
+  await deleteCollections(['entries', 'images', 'feedback', 'claims'].map((c) => `${base}/${c}`));
+  const key = teamKeyOf(st);
+  const teamBase = `workshops/${state.ws.code}/teams/${key}`;
+  const members = await getDocs(collection(db, `${teamBase}/members`));
+  for (const m of members.docs) if (m.data().sid === st.sid) await deleteDoc(m.ref);
+  const othersInTeam = state.students.some((x) => x.sid !== st.sid && teamKeyOf(x) === key);
+  if (!othersInTeam && !keepTeam) {
+    await deleteCollections(['entries', 'images', 'feedback', 'locks', 'members'].map((c) => `${teamBase}/${c}`));
+    await deleteDoc(doc(db, teamBase));
+  }
+  await deleteDoc(doc(db, base));
+}
+
+function deleteStudentSection(st) {
+  const note = h('p', { class: 'small muted' });
+  const btn = h('button', {
+    class: 'btn ghost danger-ghost', type: 'button',
+    onclick: async () => {
+      if (!btn.dataset.armed) {
+        btn.dataset.armed = '1';
+        btn.textContent = `Click again to delete ${st.name}'s journal for good`;
+        btn.classList.add('danger');
+        return;
+      }
+      btn.disabled = true;
+      note.textContent = 'Deleting…';
+      try {
+        await deleteStudent(st);
+        closeDrawer();
+        $('ws-status').textContent = `Deleted ${st.name}'s journal.`;
+      } catch (err) {
+        console.error(err);
+        note.textContent = 'Could not delete everything. Try again.';
+        btn.disabled = false;
+      }
+    },
+  }, 'Delete this journal');
+  const others = state.students.some((x) => x.sid !== st.sid && teamKeyOf(x) === teamKeyOf(st));
+  return h('section', {},
+    h('h3', {}, 'Delete'),
+    h('p', { class: 'small muted' }, others
+      ? 'Removes this student, their personal answers and learning log. The shared team journal stays for their teammates.'
+      : 'Removes this student and everything in their journal, including the team pages (no teammates are left). This can’t be undone.'),
+    h('div', {}, btn), note);
+}
+
+$('ws-delete').addEventListener('click', async () => {
+  const b = $('ws-delete');
+  const code = state.ws.code;
+  if (!b.dataset.armed) {
+    b.dataset.armed = '1';
+    b.textContent = `Click again to delete ${code} and all ${state.students.length} journals`;
+    b.classList.add('danger');
+    setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete workshop'; b.classList.remove('danger'); }, 5000);
+    return;
+  }
+  b.disabled = true;
+  $('ws-status').textContent = 'Deleting workshop…';
+  try {
+    for (const st of [...state.students]) await deleteStudent(st, { keepTeam: true });
+    const teams = await getDocs(collection(db, `workshops/${code}/teams`));
+    for (const t of teams.docs) {
+      await deleteCollections(['entries', 'images', 'feedback', 'locks', 'members'].map((c) => `${t.ref.path}/${c}`));
+      await deleteDoc(t.ref);
+    }
+    state.unsub?.();
+    await deleteDoc(doc(db, `workshops/${code}`));
+    closeDrawer();
+    await loadWorkshops();
+  } catch (err) {
+    console.error(err);
+    $('ws-status').textContent = 'Could not delete everything. Try again.';
+  } finally {
+    b.disabled = false;
+    delete b.dataset.armed;
+    b.textContent = 'Delete workshop';
+    b.classList.remove('danger');
+  }
+});
 
 // ---------- CSV export ----------
 
@@ -418,14 +564,13 @@ $('ws-export').addEventListener('click', async () => {
     const cols = STAGES.flatMap((st) => st.prompts.map((p) => ({ stage: st, p })));
     const header = ['Level', 'Class', 'Teacher', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', 'Sketches / photos', 'Peer feedback'];
     const rows = [header];
+    const teamCache = new Map();
     for (const st of visibleStudents()) {
-      const [entries, images, notes] = await Promise.all([loadSub(st.sid, 'entries'), loadSub(st.sid, 'images'), loadSub(st.sid, 'feedback')]);
-      const byStage = Object.fromEntries(entries.filter((e) => e.kind === 'stage').map((e) => [e.stage, e.answers ?? {}]));
-      const log = entries.filter((e) => e.kind === 'learning');
+      const { answer, log, images, notes } = await loadJournal(st, teamCache);
       const join = (type) => log.filter((e) => (e.type ?? 'learnt') === type).map((e) => `[${e.tag}] ${e.text}`).join('\n');
       const fb = notes.map((n) => [`${n.from}${n.use ? ` (${n.use})` : ''}:`, n.like && `I like ${n.like}`, n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' ')).join('\n');
       rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', st.teacher ?? '', st.team, st.name, TRACK_LABEL[studentTrack(st)],
-        ...cols.map((c) => byStage[c.stage.id]?.[c.p.id] ?? ''), join('learnt'), join('gathered'), images.length, fb]);
+        ...cols.map((c) => answer(c.stage.id, c.p)), join('learnt'), join('gathered'), images.length, fb]);
     }
     // BOM so Excel opens the file as UTF-8 (°C, names with accents).
     const csv = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');

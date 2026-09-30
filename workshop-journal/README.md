@@ -39,9 +39,12 @@ To deploy changes: `npm install`, `npx firebase login`, then `npx firebase deplo
 - **Prototype**: upload a photo of a paper sketch, or draw on the built-in sketch pad. Images are shrunk to under 900 KB and stored in Firestore.
 - **Test & feedback**: *Visitor mode* turns the laptop into a feedback form (I like / I wish / What if / would the user use it). Each visitor's note sticks to the team's wall. Students can't delete notes; teachers can.
 
+**Team journals.** Students with the same workshop code, class and team number share one journal and see each other's answers live. Questions tagged *Team* are shared; *Just me* questions (what I built, the coding idea I used, the team that impressed me, and the Reflect 3-2-1) and the learning log stay personal. Sketches and the feedback wall are shared too. When someone clicks into a shared answer, it locks for teammates, who see "Name is typing…"; it unlocks when they click away, or after 45 seconds if their laptop closes.
+
 **Teachers** sign in with Google at `/teacher.html`.
 - *My students* shows students who chose your name when joining; *Whole school* shows everyone. Filter by class.
 - PINs are hidden until clicked. Open a student to set a new PIN or fix their class and teacher.
+- Delete a student's journal from their panel (their teammates keep the shared team pages). Admins can delete a whole workshop.
 - Create workshops with your own code (e.g. `ESSS26`) or a random one. Download a CSV of everything.
 - The dashboard keeps its own sign-in, separate from the student journal, so opening the journal in the same browser never logs a teacher out. Teachers stay signed in until they press Sign out.
 

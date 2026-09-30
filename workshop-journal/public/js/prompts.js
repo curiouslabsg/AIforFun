@@ -2,6 +2,8 @@
 // `type: 'problem'`, which is the problem statement picker.
 // `ai` replaces `q`/`hint` for AI for Fun (Sec 2) workshops.
 // `color` and `icon` style each stage (icons live in icons.js).
+// Prompts are shared by the whole team (same workshop, class and team number)
+// unless marked `personal: true`, which each student answers for themselves.
 
 export const STAGES = [
   {
@@ -83,11 +85,11 @@ export const STAGES = [
     blurb: 'Log what you built and what went wrong along the way.',
     sheet: 'W6',
     prompts: [
-      { id: 'mypart', q: 'What did you personally build or code today?' },
+      { id: 'mypart', personal: true, q: 'What did you personally build or code today?' },
       { id: 'bug', q: 'Biggest bug or problem you hit' },
       { id: 'fix', q: 'How did you fix it (or what would you try next)?' },
       {
-        id: 'concept', q: 'Which coding idea did you use? Explain it in your own words.', hint: 'variables, IF / ELSE, loops, events, thresholds…',
+        id: 'concept', personal: true, q: 'Which coding idea did you use? Explain it in your own words.', hint: 'variables, IF / ELSE, loops, events, thresholds…',
         ai: { q: 'What did you learn about training data? What made the model better or worse?', hint: 'more samples, different lighting, different people…' },
       },
     ],
@@ -107,7 +109,7 @@ export const STAGES = [
       },
       { id: 'like', q: 'Best "I like…" feedback you received' },
       { id: 'wish', q: 'Most useful "I wish…" or "What if…" feedback' },
-      { id: 'others', q: 'Which other team\'s project impressed you, and why?' },
+      { id: 'others', personal: true, q: 'Which other team\'s project impressed you, and why?' },
     ],
   },
   {
@@ -121,11 +123,11 @@ export const STAGES = [
     prompts: [
       { id: 'change', q: 'If you had one more day, what would you change, and which feedback made you decide that?' },
       {
-        id: 'learnt3', q: '3 things I learnt about coding or electronics',
+        id: 'learnt3', personal: true, q: '3 things I learnt about coding or electronics',
         ai: { q: '3 things I learnt about how AI works' },
       },
-      { id: 'design2', q: '2 things I learnt about designing for real people' },
-      { id: 'question1', q: '1 question I still have' },
+      { id: 'design2', personal: true, q: '2 things I learnt about designing for real people' },
+      { id: 'question1', personal: true, q: '1 question I still have' },
     ],
   },
 ];
@@ -138,6 +140,8 @@ export const LEARNING_TAGS = {
 };
 
 export const LOG_STYLE = { color: '#4f46e5', icon: 'log' };
+
+export const isPersonal = (p) => p.personal === true;
 
 export function promptFor(p, track) {
   return track === 'ai' && p.ai ? { ...p, ...p.ai } : p;

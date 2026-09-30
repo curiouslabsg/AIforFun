@@ -8,6 +8,8 @@ rules_version = '2';
 //   workshops/{code}/students/{sid}/entries/{entryId}  journal entries
 //   workshops/{code}/students/{sid}/images/{imageId}   prototype photos and sketches (JPEG data URLs)
 //   workshops/{code}/students/{sid}/feedback/{noteId}  peer feedback sticky notes from the gallery walk
+//   workshops/{code}/teams/{key}                       shared team journal; key is "<class>-t<team>", e.g. "1A-t1"
+//     members/{uid}  entries/{stageId}  images/{id}  feedback/{id}  locks/{stage__prompt}
 //   settings/school                                    teacher names for the student sign-up list
 //
 // Students sign in anonymously. A device owns a journal once it has written a
@@ -22,9 +24,10 @@ service cloud.firestore {
     }
 
     function isTeacher() {
+      // Anonymous student accounts have no email, so read it with a default.
       return signedIn()
-        && request.auth.token.email != null
-        && request.auth.token.email_verified == true
+        && request.auth.token.get('email', '') != ''
+        && request.auth.token.get('email_verified', false) == true
         && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email));
     }
 
@@ -99,7 +102,7 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.token.email;
       allow update: if isTeacher()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'open']);
-      allow delete: if false;
+      allow delete: if isAdmin();
 
       match /students/{sid} {
         // resource == null lets a student check whether a name is free before joining.
@@ -129,7 +132,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'level', 'class', 'teacher'])
             && request.resource.data.pin.matches('^[0-9]{4}$')
             && request.resource.data.pinHash.size() == 64);
-        allow delete: if false;
+        allow delete: if isTeacher();
 
         match /claims/{uid} {
           // getAfter() also covers the first claim, written in the same batch as the student doc.
@@ -139,7 +142,8 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['pinHash', 'at'])
             && request.resource.data.pinHash == getAfter(studentPath(code, sid)).data.pinHash;
           allow read: if isTeacher();
-          allow update, delete: if false;
+          allow update: if false;
+          allow delete: if isTeacher();
         }
 
         match /entries/{entryId} {
@@ -152,9 +156,10 @@ service cloud.firestore {
             && (!('text' in request.resource.data) || request.resource.data.text.size() <= 2000)
             && (!('answers' in request.resource.data)
                 || (request.resource.data.answers is map && request.resource.data.answers.size() <= 20));
-          allow delete: if ownsJournal(code, sid)
+          allow delete: if (ownsJournal(code, sid)
             && workshopOpen(code)
-            && resource.data.kind == 'learning';
+            && resource.data.kind == 'learning')
+            || isTeacher();
         }
 
         match /images/{imageId} {
@@ -186,6 +191,99 @@ service cloud.firestore {
             && request.resource.data.use in ['yes', 'maybe', 'no', ''];
           allow delete: if isTeacher();
           allow update: if false;
+        }
+      }
+
+      // Shared team journal. A device joins a team by writing a members/{uid} doc that
+      // points at a journal it owns (proved by the PIN claim) whose class and team match.
+      match /teams/{key} {
+        function isMember() {
+          return signedIn() && exists(/databases/$(database)/documents/workshops/$(code)/teams/$(key)/members/$(request.auth.uid));
+        }
+        function staleLock() {
+          return resource.data.at < request.time - duration.value(45, 's');
+        }
+
+        allow get: if isMember() || isTeacher();
+        allow list: if isTeacher();
+        allow create, update: if isMember()
+          && workshopOpen(code)
+          && request.resource.data.keys().hasOnly(['progress', 'updatedAt'])
+          && request.resource.data.progress is map
+          && request.resource.data.progress.size() <= 20;
+        allow delete: if isTeacher();
+
+        match /members/{uid} {
+          allow get: if (signedIn() && uid == request.auth.uid) || isTeacher();
+          allow list: if isMember() || isTeacher();
+          allow create: if signedIn()
+            && uid == request.auth.uid
+            && request.resource.data.keys().hasOnly(['sid', 'name', 'at'])
+            && request.resource.data.sid is string
+            && ownsJournal(code, request.resource.data.sid)
+            && get(studentPath(code, request.resource.data.sid)).data['class'] + '-t'
+                 + string(get(studentPath(code, request.resource.data.sid)).data.team) == key
+            && request.resource.data.name == get(studentPath(code, request.resource.data.sid)).data.name;
+          allow update: if false;
+          allow delete: if isTeacher();
+        }
+
+        match /entries/{stageId} {
+          allow read: if isMember() || isTeacher();
+          allow create, update: if isMember()
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['kind', 'stage', 'answers', 'createdAt', 'updatedAt'])
+            && request.resource.data.kind == 'stage'
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 20;
+          allow delete: if isTeacher();
+        }
+
+        match /images/{imageId} {
+          allow read: if isMember() || isTeacher();
+          allow create: if isMember()
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['stage', 'source', 'caption', 'data', 'by', 'createdAt'])
+            && request.resource.data.source in ['photo', 'sketch']
+            && request.resource.data.data is string
+            && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')
+            && request.resource.data.data.size() <= 900000
+            && (!('caption' in request.resource.data) || request.resource.data.caption.size() <= 200)
+            && (!('by' in request.resource.data) || request.resource.data.by.size() <= 40);
+          allow delete: if (isMember() && workshopOpen(code)) || isTeacher();
+          allow update: if false;
+        }
+
+        match /feedback/{noteId} {
+          allow read: if isMember() || isTeacher();
+          allow create: if isMember()
+            && workshopOpen(code)
+            && request.resource.data.keys().hasOnly(['from', 'like', 'wish', 'whatif', 'use', 'createdAt'])
+            && shortString(request.resource.data.from, 60)
+            && request.resource.data.like.size() <= 300
+            && request.resource.data.wish.size() <= 300
+            && request.resource.data.whatif.size() <= 300
+            && (request.resource.data.like.size() + request.resource.data.wish.size() + request.resource.data.whatif.size()) > 0
+            && request.resource.data.use in ['yes', 'maybe', 'no', ''];
+          allow delete: if isTeacher();
+          allow update: if false;
+        }
+
+        // One teammate at a time per answer box. A lock is taken by writing the server time;
+        // it can be taken over once it hasn't been refreshed for 45 seconds.
+        match /locks/{field} {
+          allow read: if isMember() || isTeacher();
+          allow create: if isMember()
+            && request.resource.data.keys().hasOnly(['uid', 'name', 'at'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.name is string && request.resource.data.name.size() <= 40
+            && request.resource.data.at == request.time;
+          allow update: if isMember()
+            && request.resource.data.keys().hasOnly(['uid', 'name', 'at'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.at == request.time
+            && (resource.data.uid == request.auth.uid || staleLock());
+          allow delete: if (isMember() && (resource.data.uid == request.auth.uid || staleLock())) || isTeacher();
         }
       }
     }

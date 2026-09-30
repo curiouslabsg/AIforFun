@@ -3,7 +3,7 @@ import {
   doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, writeBatch, collection, onSnapshot, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, studentId, pinHash, normaliseCode } from './firebase.js';
-import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor } from './prompts.js';
+import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor, isPersonal } from './prompts.js';
 import { PROBLEMS, OWN_IDEA, CATEGORY, problemLabel, findProblem } from './problems.js';
 import { icon } from './icons.js';
 import { celebrate } from './confetti.js';
@@ -15,8 +15,14 @@ const LOG_ID = 'log';
 
 const state = {
   code: null, sid: null, workshop: null, student: null,
-  entries: new Map(), images: new Map(), feedback: new Map(), current: LOG_ID, unsubs: [], logType: 'learnt',
+  // entries: this student's own docs (learning log + personal answers).
+  // teamEntries / images / feedback / locks / members: shared by everyone in the same class + team.
+  entries: new Map(), teamEntries: new Map(), images: new Map(), feedback: new Map(), locks: new Map(), members: new Map(),
+  teamKey: null, current: LOG_ID, unsubs: [], logType: 'learnt',
 };
+
+const teamPath = (sub = '') => `workshops/${state.code}/teams/${state.teamKey}${sub}`;
+const fieldKey = (stageId, pid) => `${stageId}__${pid}`;
 
 // ---------- small helpers ----------
 
@@ -84,46 +90,176 @@ async function saving(promise) {
     setSave(err?.code === 'permission-denied' ? 'Not saved: the workshop is closed' : 'Not saved yet. Check the Wi-Fi', true);
   }
 }
-const timers = new Map(); // stageId -> { timer, answers } waiting to be saved
+// Each answer box saves on its own (1.5 s after typing stops), so teammates editing
+// different boxes never overwrite each other.
+const timers = new Map(); // fieldKey -> { timer, stageId, prompt, value }
+const drafts = new Map(); // fieldKey -> value typed here but not yet confirmed by the server
 
-function queueStageSave(stageId, answers) {
-  clearTimeout(timers.get(stageId)?.timer);
-  const timer = setTimeout(() => { timers.delete(stageId); saveStage(stageId, answers); }, 1500);
-  timers.set(stageId, { timer, answers });
+function answerOf(stageId, p) {
+  const k = fieldKey(stageId, p.id);
+  if (drafts.has(k)) return drafts.get(k);
+  const src = isPersonal(p) ? state.entries : state.teamEntries;
+  return src.get(stageId)?.answers?.[p.id] ?? '';
+}
+
+function queueFieldSave(stageId, p, value) {
+  const k = fieldKey(stageId, p.id);
+  drafts.set(k, value);
+  clearTimeout(timers.get(k)?.timer);
+  const timer = setTimeout(() => { timers.delete(k); saveField(stageId, p, value); }, 1500);
+  timers.set(k, { timer, stageId, prompt: p, value });
+}
+
+function flushField(k) {
+  const t = timers.get(k);
+  if (!t) return Promise.resolve();
+  clearTimeout(t.timer);
+  timers.delete(k);
+  return saveField(t.stageId, t.prompt, t.value);
 }
 
 // Save anything still waiting on the debounce, e.g. when the student changes section or leaves the page.
 function flushSaves() {
-  for (const [stageId, { timer, answers }] of timers) {
-    clearTimeout(timer);
-    timers.delete(stageId);
-    saveStage(stageId, answers);
-  }
+  for (const k of [...timers.keys()]) flushField(k);
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSaves(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { flushSaves(); releaseAllLocks(); }
+});
 window.addEventListener('beforeunload', (e) => {
   flushSaves();
+  releaseAllLocks();
   if (pending) e.preventDefault();
 });
 
-async function saveStage(stageId, answers) {
-  const ref = doc(db, `workshops/${state.code}/students/${state.sid}/entries/${stageId}`);
-  const data = { kind: 'stage', stage: stageId, answers, updatedAt: serverTimestamp() };
-  if (!state.entries.has(stageId)) data.createdAt = serverTimestamp();
-  saving(setDoc(ref, data, { merge: true }));
+function stageCounts(stage) {
+  let team = 0;
+  let personal = 0;
+  for (const p of stage.prompts) {
+    if (!String(answerOf(stage.id, p)).trim()) continue;
+    if (isPersonal(p)) personal++; else team++;
+  }
+  return { team, personal, total: team + personal };
+}
 
+async function saveField(stageId, p, value) {
   const stage = STAGES.find((s) => s.id === stageId);
-  const answered = stage.prompts.filter((p) => (answers[p.id] ?? '').trim()).length;
-  const progress = { ...(state.student.progress ?? {}) };
-  if (progress[stageId] !== answered) {
-    const justFinished = answered >= stage.prompts.length && (progress[stageId] ?? 0) < stage.prompts.length;
-    progress[stageId] = answered;
-    state.student.progress = progress;
-    renderNav();
-    if (justFinished) celebrate(stage.color, `${stage.title} complete!`);
-    saving(updateDoc(doc(db, `workshops/${state.code}/students/${state.sid}`), { progress, lastActive: serverTimestamp() }));
+  const before = stageCounts(stage).total;
+  const k = fieldKey(stageId, p.id);
+  drafts.set(k, value);
+  const personal = isPersonal(p);
+  const ref = personal
+    ? doc(db, `workshops/${state.code}/students/${state.sid}/entries/${stageId}`)
+    : doc(db, teamPath(`/entries/${stageId}`));
+  const exists = (personal ? state.entries : state.teamEntries).has(stageId);
+  const data = { kind: 'stage', stage: stageId, answers: { [p.id]: value }, updatedAt: serverTimestamp() };
+  if (!exists) data.createdAt = serverTimestamp();
+  const write = setDoc(ref, data, { merge: true });
+  saving(write);
+  write.then(() => { if (drafts.get(k) === value) drafts.delete(k); }, () => {});
+
+  const after = stageCounts(stage).total;
+  renderNav();
+  if (after >= stage.prompts.length && before < stage.prompts.length) celebrate(stage.color, `${stage.title} complete!`);
+  saveProgress();
+}
+
+// Progress is stored for the teacher dashboard: team answers on the team doc, personal ones on the student doc.
+let lastProgress = '';
+function saveProgress() {
+  const teamP = {};
+  const mine = {};
+  for (const st of STAGES) {
+    const c = stageCounts(st);
+    teamP[st.id] = c.team;
+    mine[st.id] = c.personal;
+  }
+  const sig = JSON.stringify([teamP, mine]);
+  if (sig === lastProgress) return;
+  lastProgress = sig;
+  saving(setDoc(doc(db, teamPath()), { progress: teamP, updatedAt: serverTimestamp() }, { merge: true }));
+  saving(updateDoc(doc(db, `workshops/${state.code}/students/${state.sid}`), { progress: mine, lastActive: serverTimestamp() }));
+}
+
+// ---------- answer locks (one teammate per box) ----------
+
+const LOCK_FRESH_MS = 45000;
+const myLocks = new Set();
+let heartbeat = null;
+
+function lockOf(k) {
+  const l = state.locks.get(k);
+  if (!l || l.uid === auth.currentUser?.uid) return null;
+  const at = l.at?.toMillis?.() ?? Date.now();
+  return Date.now() - at < LOCK_FRESH_MS ? l : null;
+}
+
+async function acquireLock(k) {
+  myLocks.add(k);
+  try {
+    await setDoc(doc(db, teamPath(`/locks/${k}`)), { uid: auth.currentUser.uid, name: state.student.name, at: serverTimestamp() });
+    if (!heartbeat) heartbeat = setInterval(refreshLocks, 20000);
+    return true;
+  } catch (err) {
+    myLocks.delete(k);
+    if (err.code !== 'permission-denied') console.warn('lock failed', err);
+    return false;
   }
 }
+
+function refreshLocks() {
+  if (!myLocks.size) { clearInterval(heartbeat); heartbeat = null; return; }
+  for (const k of myLocks) {
+    setDoc(doc(db, teamPath(`/locks/${k}`)), { uid: auth.currentUser.uid, name: state.student.name, at: serverTimestamp() }).catch(() => myLocks.delete(k));
+  }
+}
+
+async function releaseLock(k) {
+  if (!myLocks.has(k)) return;
+  myLocks.delete(k);
+  await flushField(k).catch(() => {});
+  deleteDoc(doc(db, teamPath(`/locks/${k}`))).catch(() => {});
+}
+
+function releaseAllLocks() {
+  if (!state.teamKey) return;
+  for (const k of [...myLocks]) releaseLock(k);
+}
+
+// Wire focus / blur on a shared answer box so only one teammate can edit it at a time.
+function lockable(el, stageId, p) {
+  if (isPersonal(p)) return el;
+  const k = fieldKey(stageId, p.id);
+  el.dataset.field = k;
+  el.addEventListener('focus', async () => {
+    const other = lockOf(k);
+    if (other) { el.blur(); applyLockState(); return; }
+    if (!(await acquireLock(k))) {
+      // A teammate got there first: drop anything typed meanwhile and show their text.
+      clearTimeout(timers.get(k)?.timer);
+      timers.delete(k);
+      drafts.delete(k);
+      el.blur();
+      el.value = answerOf(stageId, p);
+      applyLockState();
+    }
+  });
+  el.addEventListener('blur', () => { releaseLock(k); });
+  return el;
+}
+
+// Disable boxes a teammate is editing and show who.
+function applyLockState() {
+  for (const el of $('panel').querySelectorAll('[data-field]')) {
+    const other = lockOf(el.dataset.field);
+    const badge = el.closest('.field')?.querySelector('.lock-badge');
+    if (el !== document.activeElement) el.disabled = !isOpen() || !!other;
+    if (badge) {
+      badge.hidden = !other;
+      badge.textContent = other ? `${other.name} is typing…` : '';
+    }
+  }
+}
+setInterval(() => { if (state.teamKey && $('panel')) applyLockState(); }, 10000);
 
 // ---------- join ----------
 
@@ -203,30 +339,77 @@ async function openJournal(code, sid) {
   ]);
   if (!ws.exists() || !st.exists()) throw new Error('journal missing');
 
-  Object.assign(state, { code, sid, workshop: ws.data(), student: st.data(), entries: new Map(), images: new Map(), feedback: new Map(), current: LOG_ID });
+  const student = st.data();
+  Object.assign(state, {
+    code, sid, workshop: ws.data(), student, current: LOG_ID,
+    teamKey: `${student.class ?? 'X'}-t${student.team}`,
+    entries: new Map(), teamEntries: new Map(), images: new Map(), feedback: new Map(), locks: new Map(), members: new Map(),
+  });
+  lastProgress = '';
+  drafts.clear();
   document.body.dataset.track = track();
   $('me-name').textContent = `Hi, ${state.student.name.split(' ')[0]}!`;
-  $('me-meta').textContent = [state.student.class, `Team ${state.student.team}`, state.workshop.name, TRACK_LABEL[track()]].filter(Boolean).join(' · ');
+  renderTeamMeta();
   $('closed').hidden = isOpen();
   setSave('');
 
   unsubscribeAll();
-  const watch = (sub, map, after) => onSnapshot(collection(db, `workshops/${code}/students/${sid}/${sub}`), (snap) => {
+  // Join the team (a members doc tied to this journal) before listening to team data.
+  const memberRef = doc(db, teamPath(`/members/${auth.currentUser.uid}`));
+  if (!(await getDoc(memberRef)).exists()) {
+    await setDoc(memberRef, { sid, name: student.name, at: serverTimestamp() });
+  }
+  let migrated = false;
+  const watch = (path, map, after) => onSnapshot(collection(db, path), (snap) => {
     for (const change of snap.docChanges()) {
       if (change.type === 'removed') map.delete(change.doc.id);
       else map.set(change.doc.id, { id: change.doc.id, ...change.doc.data({ serverTimestamps: 'estimate' }) });
     }
     after();
-  }, (err) => { console.error(err); setSave('Lost connection to your journal. Reload the page', true); });
+  }, (err) => {
+    console.warn(err);
+    setSave(err.code === 'permission-denied'
+      ? 'This journal was removed by your teacher. Tap Switch student.'
+      : 'Lost connection to your journal. Reload the page', true);
+  });
+  const mine = `workshops/${code}/students/${sid}`;
   state.unsubs = [
-    watch('entries', state.entries, refreshFromRemote),
-    watch('images', state.images, renderImages),
-    watch('feedback', state.feedback, renderNotes),
+    watch(`${mine}/entries`, state.entries, refreshFromRemote),
+    watch(teamPath('/entries'), state.teamEntries, () => {
+      if (!migrated) { migrated = true; migrateOldAnswers(); }
+      refreshFromRemote();
+    }),
+    watch(teamPath('/images'), state.images, renderImages),
+    watch(teamPath('/feedback'), state.feedback, renderNotes),
+    watch(teamPath('/locks'), state.locks, applyLockState),
+    watch(teamPath('/members'), state.members, renderTeamMeta),
   ];
 
   show('journal');
   renderNav();
   renderPanel();
+}
+
+function renderTeamMeta() {
+  const mates = [...state.members.values()].map((m) => m.name).filter((n) => n && n !== state.student.name);
+  $('me-meta').textContent = [
+    state.student.class, `Team ${state.student.team}${mates.length ? ` with ${mates.join(', ')}` : ''}`,
+    state.workshop.name, TRACK_LABEL[track()],
+  ].filter(Boolean).join(' · ');
+}
+
+// Journals started before team sync kept every answer privately. Copy shared answers into the
+// team journal once, without overwriting anything a teammate already wrote.
+function migrateOldAnswers() {
+  for (const st of STAGES) {
+    const old = state.entries.get(st.id)?.answers;
+    if (!old) continue;
+    for (const raw of st.prompts) {
+      if (isPersonal(raw) || !String(old[raw.id] ?? '').trim()) continue;
+      if (String(state.teamEntries.get(st.id)?.answers?.[raw.id] ?? '').trim()) continue;
+      saveField(st.id, raw, old[raw.id]);
+    }
+  }
 }
 
 function unsubscribeAll() {
@@ -236,6 +419,7 @@ function unsubscribeAll() {
 
 async function switchStudent() {
   flushSaves();
+  releaseAllLocks();
   await Promise.allSettled([...inflight]);
   unsubscribeAll();
   writeSession(null);
@@ -248,7 +432,7 @@ async function switchStudent() {
 }
 
 function stageCount(stage) {
-  return state.student.progress?.[stage.id] ?? 0;
+  return stageCounts(stage).total;
 }
 
 function renderNav() {
@@ -292,18 +476,18 @@ function renderPanel() {
 
 function renderStage(stage) {
   const i = STAGES.indexOf(stage);
-  const answers = { ...(state.entries.get(stage.id)?.answers ?? {}) };
   const fields = stage.prompts.map((raw) => {
     const p = promptFor(raw, track());
     const id = `q-${stage.id}-${p.id}`;
-    if (p.type === 'problem') return problemPicker(stage, p, id, answers);
+    if (p.type === 'problem') return problemPicker(stage, p, id);
     return h('label', { class: 'field', for: id },
-      h('span', {}, p.q),
+      h('span', { class: 'q-line' }, p.q, h('em', { class: `scope ${isPersonal(p) ? 'me' : 'team'}` }, isPersonal(p) ? 'Just me' : 'Team')),
       p.hint ? h('small', {}, p.hint) : null,
-      h('textarea', {
-        id, 'data-prompt': p.id, maxLength: 1500, disabled: !isOpen(), value: answers[p.id] ?? '',
-        oninput: (e) => { answers[p.id] = e.target.value; queueStageSave(stage.id, answers); },
-      }));
+      h('span', { class: 'lock-badge', hidden: true }),
+      lockable(h('textarea', {
+        id, 'data-prompt': p.id, 'data-stage': stage.id, maxLength: 1500, disabled: !isOpen(), value: answerOf(stage.id, p),
+        oninput: (e) => queueFieldSave(stage.id, p, e.target.value),
+      }), stage.id, p));
   });
   const go = (j) => { state.current = STAGES[j].id; renderNav(); renderPanel(); };
   $('panel').style.setProperty('--stage', stage.color);
@@ -317,6 +501,7 @@ function renderStage(stage) {
       i < STAGES.length - 1 ? h('button', { class: 'btn', type: 'button', onclick: () => go(i + 1) }, `${STAGES[i + 1].title} →`) : null),
   );  if (stage.id === 'prototype') renderImages();
   if (stage.id === 'test') renderNotes();
+  applyLockState();
 }
 
 function stageHeader(iconName, label, title, blurb) {
@@ -341,25 +526,30 @@ function problemCard(p) {
       p.tech ? h('p', { class: 'tech' }, h('b', {}, track() === 'ai' ? 'Model: ' : 'Sensors: '), p.tech) : null));
 }
 
-function problemPicker(stage, p, id, answers) {
+function problemPicker(stage, p, id) {
   const list = PROBLEMS[track()] ?? [];
-  const current = findProblem(track(), answers[p.id]);
+  const current = findProblem(track(), answerOf(stage.id, p));
   const card = h('div', { class: 'pcard-slot' }, problemCard(current));
   const group = (cat) => h('optgroup', { label: CATEGORY[cat].label },
     ...list.filter((x) => x.cat === cat).map((x) => h('option', { value: problemLabel(x) }, `#${x.id}  ${x.title}`)));
   const select = h('select', {
     id, class: 'problem-select', 'data-prompt': p.id, disabled: !isOpen(),
     onchange: (e) => {
-      answers[p.id] = e.target.value;
       card.replaceChildren(problemCard(findProblem(track(), e.target.value)));
-      queueStageSave(stage.id, answers);
+      queueFieldSave(stage.id, p, e.target.value);
+      flushField(fieldKey(stage.id, p.id));
     },
   },
   h('option', { value: '' }, 'Choose a problem statement…'),
   group('food'), group('health'),
   h('optgroup', { label: 'Something else' }, h('option', { value: OWN_IDEA.title }, OWN_IDEA.title)));
-  select.value = answers[p.id] ?? '';
-  return h('div', { class: 'field' }, h('label', { for: id }, h('span', {}, p.q)), select, card);
+  select.value = answerOf(stage.id, p);
+  select.dataset.prompt = p.id;
+  select.dataset.stage = stage.id;
+  lockable(select, stage.id, p);
+  return h('div', { class: 'field' },
+    h('label', { for: id, class: 'q-line' }, p.q, h('em', { class: 'scope team' }, 'Team')),
+    h('span', { class: 'lock-badge', hidden: true }), select, card);
 }
 
 function renderLog() {
@@ -434,18 +624,15 @@ function renderLogList() {
 function refreshFromRemote() {
   renderNav();
   if (state.current === LOG_ID) { renderLogList(); return; }
-  const answers = state.entries.get(state.current)?.answers ?? {};
-  for (const sel of $('panel').querySelectorAll('select[data-prompt]')) {
-    const v = answers[sel.dataset.prompt] ?? '';
-    if (sel !== document.activeElement && !timers.has(state.current) && sel.value !== v) {
-      sel.value = v;
-      sel.closest('.field').querySelector('.pcard-slot')?.replaceChildren(problemCard(findProblem(track(), v)));
-    }
-  }
-  for (const ta of $('panel').querySelectorAll('textarea[data-prompt]')) {
-    if (ta !== document.activeElement && !timers.has(state.current) && (answers[ta.dataset.prompt] ?? '') !== ta.value) {
-      ta.value = answers[ta.dataset.prompt] ?? '';
-    }
+  const stage = STAGES.find((s) => s.id === state.current);
+  if (!stage) return;
+  for (const el of $('panel').querySelectorAll('[data-prompt][data-stage]')) {
+    const p = promptFor(stage.prompts.find((x) => x.id === el.dataset.prompt), track());
+    const k = fieldKey(stage.id, p.id);
+    const v = answerOf(stage.id, p);
+    if (el === document.activeElement || timers.has(k) || el.value === v) continue;
+    el.value = v;
+    if (el.tagName === 'SELECT') el.closest('.field').querySelector('.pcard-slot')?.replaceChildren(problemCard(findProblem(track(), v)));
   }
 }
 
@@ -548,12 +735,12 @@ function renderImages() {
     h('button', { class: 'img-open', type: 'button', 'aria-label': 'Open full size', onclick: () => lightbox(im.data, im.caption) },
       h('img', { src: im.data, alt: im.caption || 'Prototype sketch', loading: 'lazy' })),
     h('figcaption', {},
-      h('span', {}, im.caption || (im.source === 'sketch' ? 'Sketch' : 'Photo')),
+      h('span', {}, `${im.caption || (im.source === 'sketch' ? 'Sketch' : 'Photo')}${im.by ? ` · ${im.by}` : ''}`),
       isOpen() ? h('button', {
         class: 'btn quiet', type: 'button',
         onclick: (ev) => {
           const b = ev.currentTarget;
-          if (b.dataset.armed) saving(deleteDoc(doc(db, `workshops/${state.code}/students/${state.sid}/images/${im.id}`)));
+          if (b.dataset.armed) saving(deleteDoc(doc(db, teamPath(`/images/${im.id}`))));
           else { b.dataset.armed = '1'; b.textContent = 'Tap again'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete'; }, 3000); }
         },
       }, 'Delete') : null))));
@@ -561,8 +748,8 @@ function renderImages() {
 
 async function saveImage(dataUrl, source) {
   imageMessage('');
-  await saving(addDoc(collection(db, `workshops/${state.code}/students/${state.sid}/images`), {
-    stage: 'prototype', source, caption: `${source === 'sketch' ? 'Sketch' : 'Photo'} ${state.images.size + 1}`,
+  await saving(addDoc(collection(db, teamPath('/images')), {
+    stage: 'prototype', source, by: state.student.name, caption: `${source === 'sketch' ? 'Sketch' : 'Photo'} ${state.images.size + 1}`,
     data: dataUrl, createdAt: serverTimestamp(),
   }));
 }
@@ -738,7 +925,7 @@ function renderNotes() {
 }
 
 function openVisitorMode() {
-  const problem = findProblem(track(), state.entries.get('empathise')?.answers?.problem);
+  const problem = findProblem(track(), state.teamEntries.get('empathise')?.answers?.problem);
   const field = (id, label, placeholder) => h('label', { class: 'field' },
     h('span', {}, label), h('textarea', { id, maxLength: 300, rows: 2, placeholder }));
   let use = '';
@@ -771,7 +958,7 @@ function openVisitorMode() {
     const btn = form.querySelector('button[type=submit]');
     btn.disabled = true;
     try {
-      await saving(addDoc(collection(db, `workshops/${state.code}/students/${state.sid}/feedback`), note));
+      await saving(addDoc(collection(db, teamPath('/feedback')), note));
       form.hidden = true;
       thanks.hidden = false;
     } catch {

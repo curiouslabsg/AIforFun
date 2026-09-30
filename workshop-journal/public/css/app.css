@@ -272,3 +272,16 @@ body:has(#journal:not([hidden])), body:has(#join:not([hidden])) {
 .note-mini { background: #fff8c4; border-radius: 6px; padding: 0.6rem 0.7rem; }
 .note-mini .btn.quiet { align-self: flex-start; padding: 0.2rem 0; font-size: 0.8rem; }
 #t-team-rows input { min-width: 11rem; }
+
+/* ---------- Team sync ---------- */
+.q-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-weight: 700; }
+.scope { font: 600 0.66rem/1 var(--f-mono); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.25rem 0.45rem; border-radius: 99px; }
+.scope.team { background: color-mix(in srgb, var(--stage) 14%, #fff); color: var(--stage); }
+.scope.me { background: #f1f0f7; color: var(--muted); }
+.lock-badge { align-self: flex-start; font-size: 0.82rem; font-weight: 700; color: #92400e; background: #fef3c7; border-radius: 99px; padding: 0.25rem 0.7rem; animation: pulse 1.6s ease-in-out infinite; }
+.lock-badge::before { content: "✎ "; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .lock-badge { animation: none; } }
+.panel textarea:disabled { cursor: not-allowed; }
+.danger { background: #b3261e !important; color: #fff !important; border-color: #b3261e !important; }
+.btn.ghost.danger-ghost { color: #b3261e; border-color: #b3261e; }
