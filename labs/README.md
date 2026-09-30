@@ -5,6 +5,7 @@ Interactive chapter labs for O-Level Physics (SEAB 6091). Each lab is one self-c
 | File | Chapter | Activities tracked |
 |---|---|---|
 | `measurement.html` | 1 · Physical quantities, units and measurement | units, prefixes, magnitude, vernier, micrometer, time, vectors, quiz |
+| `kinematics.html` | 2 · Kinematics | speed, journey, graphs, area, fall, quiz |
 | `light.html` | Light: reflection, refraction, TIR, lenses | reflection, refraction, tir, fibre, lens, quiz |
 
 ## Progress messages
