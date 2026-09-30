@@ -26,7 +26,11 @@ button,select,input{font:inherit;color:inherit}
 
 /* nav */
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(11,18,32,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
-nav .wrap{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav .wrap{display:flex;gap:12px;align-items:center}
+.links{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.prog{flex:none;display:flex;align-items:center;gap:8px;font:700 12px var(--f-mono);color:var(--muted)}
+.prog .bar{width:90px;height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.prog .bar i{display:block;height:100%;width:0;background:var(--good);transition:width .4s}
 nav a{flex:none;text-decoration:none;color:var(--muted);font:700 14px var(--f-body);padding:6px 12px;border-radius:99px;border:1px solid transparent}
 nav a:hover{color:var(--text);border-color:var(--line)}
 nav a.on{color:var(--bg);background:var(--ray)}
@@ -102,7 +106,8 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
 </style>
 
 <nav aria-label="Chapter sections"><div class="wrap">
-  <a href="#reflection">1 · Reflection</a><a href="#refraction">2 · Refraction</a><a href="#tir">3 · Total internal reflection</a><a href="#lenses">4 · Lenses</a><a href="#quiz">Check yourself</a>
+  <div class="links"><a href="#reflection">1 · Reflection</a><a href="#refraction">2 · Refraction</a><a href="#tir">3 · Total internal reflection</a><a href="#lenses">4 · Lenses</a><a href="#quiz">Check yourself</a></div>
+  <div class="prog" title="Activities completed on this device"><span id="progTxt">0/6</span><span class="bar"><i id="progBar"></i></span></div>
 </div></nav>
 
 <div class="wrap">
@@ -255,6 +260,39 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
 </div>
 
 <script>
+/* ------------------------------------------------------------------
+   Progress bridge. Every CuriousLab lab reports the same events, so the
+   journal can collect them. Outside the journal it only uses this device.
+     window.parent.postMessage({ source: 'curiouslab-lab', lab, event, data, at }, '*')
+   events: 'activity-complete' {id, score?, of?} · 'attempt' {id, correct} · 'quiz-complete' {score, of}
+------------------------------------------------------------------- */
+const LAB = { id: 'p6091-light', activities: ['reflection', 'refraction', 'tir', 'fibre', 'lens', 'quiz'] };
+const Progress = (() => {
+  let state = { done: {} };
+  try { state = JSON.parse(localStorage.getItem(LAB.id) || '{"done":{}}'); } catch (e) {}
+  const save = () => { try { localStorage.setItem(LAB.id, JSON.stringify(state)); } catch (e) {} };
+  function emit(event, data) {
+    if (window.parent !== window) {
+      try { window.parent.postMessage({ source: 'curiouslab-lab', lab: LAB.id, event, data, at: new Date().toISOString() }, '*'); } catch (e) {}
+    }
+  }
+  function paint() {
+    const n = LAB.activities.filter(a => state.done[a]).length;
+    document.getElementById('progTxt').textContent = `${n}/${LAB.activities.length}`;
+    document.getElementById('progBar').style.width = (n / LAB.activities.length * 100) + '%';
+    const sec = {};
+    Object.entries(sec).forEach(([a, s]) => {
+      const both = s === 'instruments' ? state.done.vernier && state.done.micrometer : state.done[a];
+      const badge = document.getElementById('done-' + s); if (badge) badge.hidden = !both;
+    });
+  }
+  return {
+    complete(id, data = {}) { if (!state.done[id]) { state.done[id] = { at: new Date().toISOString(), ...data }; save(); emit('activity-complete', { id, ...data }); } paint(); },
+    attempt(id, correct) { emit('attempt', { id, correct }); },
+    emit, paint, isDone: id => !!state.done[id],
+  };
+})();
+
 (() => {
   const NS = "http://www.w3.org/2000/svg";
   const R = d => d * Math.PI / 180, D = r => r * 180 / Math.PI;
@@ -341,6 +379,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
   document.querySelectorAll('#mirrorPuzzle .opt').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('#mirrorPuzzle .opt').forEach(x => x.className = 'opt');
     const ok = b.dataset.ok === '1'; b.classList.add(ok ? 'right' : 'wrong');
+    Progress.attempt('reflection', ok); Progress.complete('reflection', { correct: ok });
     document.querySelector('#mirrorPuzzle .fb').textContent = ok
       ? 'Right: 80 cm, at any distance. Light from your feet reflects halfway between your eyes and your feet (i = r), and light from your head halfway between your eyes and your head.'
       : 'Not quite. Use i = r: the reflection points sit halfway between your eyes and your feet, and halfway between your eyes and the top of your head. Step back and they don’t move.';
@@ -348,7 +387,8 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
 
   /* ---------------- 2 refraction (air into material) ---------------- */
   const refrI = document.getElementById('refrI');
-  const refrN = segment(document.getElementById('refrMat'), drawRefr);
+  const triedN = new Set();
+  const refrN = segment(document.getElementById('refrMat'), n => { triedN.add(n); if (triedN.size >= 2) Progress.complete('refraction'); drawRefr(); });
   function medium(s, y, fillTop, fillBot, labTop, labBot, W = 400, H = 300) {
     el('rect', { x: 0, y: 0, width: W, height: y, fill: fillTop }, s);
     el('rect', { x: 0, y, width: W, height: H - y, fill: fillBot }, s);
@@ -413,6 +453,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
     } else {
       ray(s, [cx, top], Rf, C.teal, 3.5);
       out.textContent = '—';
+      Progress.complete('tir', { material: n });
       st.className = 'status tir'; st.textContent = `Total internal reflection: ${i}° is greater than c = ${fmt(c)}°, so no light escapes.`;
     }
     arcPath(s, cx, top, 34, 90, 90 + i, C.text);
@@ -449,6 +490,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
     for (let k = 0; k < pts.length - 1; k++) ray(s, pts[k], pts[k + 1], C.ray, 2.2, { at: .5 });
     fibPath = pts; fibLen = pts.slice(1).reduce((acc, p, k) => acc + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
     el('circle', { id: 'pulse', r: 5, fill: '#fff', cx: pts[0][0], cy: pts[0][1] }, s);
+    if (!trapped) Progress.complete('fibre');
     const st = document.getElementById('fibStatus');
     st.className = 'status ' + (trapped ? 'tir' : 'warn');
     st.textContent = trapped ? `The ray hits the wall at ${inc}°, more than the critical angle (${fmt(C_FIB)}°), so it is totally internally reflected every time.`
@@ -471,7 +513,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
   requestAnimationFrame(animate);
 
   /* ---------------- 4 lens ---------------- */
-  const lensU = document.getElementById('lensU'), lensF = document.getElementById('lensF');
+  const lensU = document.getElementById('lensU'), lensF = document.getElementById('lensF'), seen = new Set();
   function drawLens() {
     const s = document.getElementById('lensSvg'); clear(s);
     const u = +lensU.value, f = +lensF.value, h = 4, px = 10, W = 600, H = 300, ax = 150, lx = 300;
@@ -512,6 +554,7 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
       return;
     }
     const v = 1 / (1 / f - 1 / u), mag = -v / u, hi = mag * h;
+    seen.add(v > 0 ? 'real' : 'virtual'); if (seen.size === 2) Progress.complete('lens');
     if (v > 0) {
       const ix = X(v);
       if (ix < W - 4 && Y(hi) < H - 4) {
@@ -569,13 +612,14 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
           else if (oi === answers[qi]) b.classList.add('wrong');
           b.disabled = true;
         }
-        b.addEventListener('click', () => { answers[qi] = oi; save(); renderQuiz(); });
+        b.addEventListener('click', () => { answers[qi] = oi; save(); Progress.attempt('quiz-q' + (qi + 1), oi === ok); renderQuiz(); });
         wrap.appendChild(b);
       });
       if (qi in answers) { fb.textContent = (answers[qi] === ok ? 'Correct. ' : 'Not quite. ') + why; if (answers[qi] === ok) score++; }
       card.appendChild(wrap); card.appendChild(fb); box.appendChild(card);
     });
     scoreEl.textContent = score + ' / ' + Q.length;
+    if (Object.keys(answers).length === Q.length && !Progress.isDone('quiz')) { Progress.emit('quiz-complete', { score, of: Q.length }); Progress.complete('quiz', { score, of: Q.length }); }
   }
   document.getElementById('reset').addEventListener('click', () => { answers = {}; save(); renderQuiz(); });
 
@@ -587,7 +631,8 @@ footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font
     links.forEach((a, k) => a.classList.toggle('on', k === cur));
   }, { passive: true });
 
-  drawRefl(); drawRefr(); drawTir(); drawFibre(); drawLens(); renderQuiz();
+  drawRefl(); drawRefr(); drawTir(); drawFibre(); seen.clear(); drawLens(); renderQuiz();
+  Progress.paint(); Progress.emit('lab-open', { activities: LAB.activities });
   links[0].classList.add('on');
 })();
 </script>

@@ -1,0 +1,772 @@
+<title>Measurement Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* CuriousLab Labs · Chapter 1 · Physical quantities, units and measurement.
+   Layout: the same darkened optics bench as the Light Lab, so the chapters read as one series.
+   Sticky chapter nav with a progress meter; each lab is explanation left, apparatus right. */
+:root{
+  --bg:#0b1220; --panel:#121b2e; --panel2:#18233a; --line:#26344f; --text:#e8edf7; --muted:#9aa6bf;
+  --ray:#ffcf4a; --hot:#ff7a59; --glass:#7fd6e6; --glass-fill:rgba(127,214,230,.14);
+  --teal:#7ce0d3; --violet:#b69bff; --good:#6fe3a5; --bad:#ff7a59; --metal:#c9d2e3; --metal2:#8e9ab3;
+  --f-display:"Fredoka","Nunito",system-ui,sans-serif;
+  --f-body:"Nunito",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:16px/1.6 var(--f-body);margin:0;padding-inline:16px;padding-block:0 64px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;line-height:1.1;text-wrap:balance}
+h3{font-size:20px}
+p{margin:0}
+b{font-weight:800}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ray);outline-offset:2px}
+.wrap{max-width:1100px;margin-inline:auto}
+
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(11,18,32,.93);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+nav .wrap{display:flex;gap:12px;align-items:center}
+.links{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+nav a{flex:none;text-decoration:none;color:var(--muted);font:700 14px var(--f-body);padding:6px 12px;border-radius:99px;border:1px solid transparent}
+nav a:hover{color:var(--text);border-color:var(--line)}
+nav a.on{color:var(--bg);background:var(--ray)}
+.prog{flex:none;display:flex;align-items:center;gap:8px;font:700 12px var(--f-mono);color:var(--muted)}
+.prog .bar{width:90px;height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.prog .bar i{display:block;height:100%;width:0;background:var(--good);transition:width .4s}
+
+header.hero{padding-block:40px 28px;display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+.kicker{font:700 12px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.hero h1{font-size:clamp(38px,6.4vw,70px);margin-top:10px}
+.hero h1 span{color:var(--ray);text-shadow:0 0 28px rgba(255,207,74,.4)}
+.hero p.lede{color:var(--muted);font-size:18px;margin-top:14px;max-width:52ch}
+.hero .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font:700 12px var(--f-mono);border:1px solid var(--line);border-radius:99px;padding:5px 10px;color:var(--muted)}
+.hero svg{width:100%;height:auto;display:block}
+
+section.lab{padding-block:36px;border-top:1px solid var(--line);scroll-margin-top:60px}
+.lab-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.lab-head .num{font:700 14px var(--f-mono);color:var(--ray)}
+.lab-head h2{font-size:clamp(28px,4vw,40px)}
+.lab-head .done{font:800 12px var(--f-mono);color:var(--good);border:1px solid var(--good);border-radius:99px;padding:3px 10px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:24px;align-items:start}
+.grid + .grid{margin-top:28px}
+.explain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.explain p{color:#cfd7e8;max-width:60ch}
+.eq{font:700 18px var(--f-mono);color:var(--ray);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:inline-block;align-self:flex-start}
+.tip{border-left:3px solid var(--hot);padding:6px 12px;background:rgba(255,122,89,.08);border-radius:0 10px 10px 0;font-size:15px}
+.tip b{color:var(--hot)}
+.try{border:1px dashed var(--teal);border-radius:12px;padding:10px 14px;font-size:15px}
+.try b{color:var(--teal)}
+
+.bench{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.bench svg{width:100%;height:auto;display:block;background:radial-gradient(ellipse at 50% 40%,#16223a,#0e1628);border-radius:12px}
+.task{font:800 15px var(--f-body)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctl{display:flex;flex-direction:column;gap:4px;flex:1;min-width:170px}
+.ctl label{font:700 13px var(--f-body);color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.ctl label output{font:700 13px var(--f-mono);color:var(--ray)}
+input[type=range]{width:100%;accent-color:var(--ray)}
+input[type=text]{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:700 16px var(--f-mono);width:150px}
+.btn{background:var(--ray);color:var(--bg);border:0;border-radius:99px;padding:8px 16px;font:800 14px var(--f-body);cursor:pointer}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font:700 13px var(--f-body);cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ray);color:var(--bg);border-color:var(--ray)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.readout div{background:var(--panel2);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
+.readout span{font:700 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.readout b{font:700 18px var(--f-mono);color:var(--text);font-variant-numeric:tabular-nums}
+.status{font:700 15px var(--f-body);padding:8px 12px;border-radius:10px;background:var(--panel2);min-height:40px}
+.status.good{background:rgba(111,227,165,.14);color:var(--good)}
+.status.bad{background:rgba(255,122,89,.12);color:var(--hot)}
+.streak{font:700 12px var(--f-mono);color:var(--muted)}
+svg text{font-family:var(--f-body);font-weight:700}
+
+/* matching + cards */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.match .col{display:flex;flex-direction:column;gap:8px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;text-align:left;font-weight:800}
+.tile.sel{border-color:var(--ray);color:var(--ray)}
+.tile.ok{border-color:var(--good);color:var(--good);cursor:default;background:rgba(111,227,165,.1)}
+.tile.no{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.sorter{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.card b{font-size:15px}
+.card .seg button{padding:4px 10px;font-size:12px}
+.card.ok{border-color:var(--good)}
+.card.no{border-color:var(--bad)}
+
+.ladder{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
+.rung{background:var(--panel2);border-radius:8px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.rung b{font:700 18px var(--f-mono);color:var(--ray)}
+.rung span{font:700 10px var(--f-mono);color:var(--muted)}
+.rung.base{background:transparent;border:1px dashed var(--line)}
+
+.quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.qcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.qcard h3{font:800 16px/1.4 var(--f-body)}
+.qcard .opts{display:grid;gap:6px}
+.opt{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left;font-weight:700}
+.opt.right{background:rgba(111,227,165,.16);border-color:var(--good);color:var(--good)}
+.opt.wrong{background:rgba(255,122,89,.12);border-color:var(--bad);color:var(--bad)}
+.fb{font-size:15px;color:#cfd7e8;min-height:1.6em}
+.score{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.score b{font:700 28px var(--f-mono);color:var(--ray)}
+footer{padding-top:28px;border-top:1px solid var(--line);color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px}
+
+@media (max-width:820px){ header.hero,.grid{grid-template-columns:1fr} .ladder{grid-template-columns:repeat(5,1fr)} .prog .bar{width:50px} }
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<nav aria-label="Chapter sections"><div class="wrap">
+  <div class="links">
+    <a href="#units">1 · Units</a><a href="#prefixes">2 · Prefixes</a><a href="#magnitude">3 · Orders of magnitude</a><a href="#instruments">4 · Instruments</a><a href="#time">5 · Timing</a><a href="#vectors">6 · Scalars &amp; vectors</a><a href="#quiz">Check yourself</a>
+  </div>
+  <div class="prog" title="Activities completed on this device"><span id="progTxt">0/8</span><span class="bar"><i id="progBar"></i></span></div>
+</div></nav>
+
+<div class="wrap">
+<header class="hero">
+  <div>
+    <span class="kicker">O-Level Physics 6091 · Chapter 1</span>
+    <h1>Every number needs <span>a unit.</span></h1>
+    <p class="lede">From an atom to the Earth: units, prefixes, the size of things, and how to read the instruments that measure them. Every scale here is generated fresh, so you can practise as many readings as you like.</p>
+    <div class="meta"><span class="chip">6 labs</span><span class="chip">8 activities</span><span class="chip">vernier · micrometer</span><span class="chip">10⁻¹⁰ m → 10⁷ m</span></div>
+  </div>
+  <svg id="heroSvg" viewBox="0 0 440 240" role="img" aria-label="A vernier caliper gripping a small cylinder"></svg>
+</header>
+
+<!-- ============ 1 UNITS ============ -->
+<section class="lab" id="units">
+  <div class="lab-head"><span class="num">01</span><h2>Physical quantities and SI units</h2><span class="done" id="done-units" hidden>Done</span></div>
+  <div class="grid">
+    <div class="explain">
+      <p>A physical quantity has a <b>numerical magnitude</b> and a <b>unit</b>. “The corridor is 12 long” tells you nothing. 12 m, 12 cm and 12 km are three very different corridors.</p>
+      <p>Everything in physics is built from six <b>base quantities</b>. Units like the newton or the joule are combinations of these.</p>
+      <div class="tip"><b>Watch out:</b> temperature’s SI unit is the <b>kelvin (K)</b>, not °C. And mass is the <b>kilogram</b>, the only base unit with a prefix built in.</div>
+    </div>
+    <div class="bench">
+      <p class="task">Match each base quantity to its SI unit. Click one on each side.</p>
+      <div class="match" id="matchBox"><div class="col" id="mq"></div><div class="col" id="mu"></div></div>
+      <p class="status" id="matchStatus" aria-live="polite">6 pairs to find.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 PREFIXES ============ -->
+<section class="lab" id="prefixes">
+  <div class="lab-head"><span class="num">02</span><h2>Prefixes</h2><span class="done" id="done-prefixes" hidden>Done</span></div>
+  <div class="grid">
+    <div class="explain">
+      <p>Prefixes stop us writing lots of zeros. Each one is a power of ten stuck in front of the unit.</p>
+      <div class="ladder" id="ladder"></div>
+      <p>To convert <b>to the base unit</b>, replace the prefix with its power of ten: 450 µm = 450 × 10⁻⁶ m = 4.5 × 10⁻⁴ m.</p>
+      <div class="tip"><b>Common slip:</b> m is <b>milli</b> (10⁻³) but M is <b>mega</b> (10⁶). Capital letters matter.</div>
+    </div>
+    <div class="bench">
+      <p class="task" id="pxQ">…</p>
+      <div class="row">
+        <input type="text" id="pxIn" aria-label="Your answer" placeholder="e.g. 4.5e-4" autocomplete="off">
+        <span id="pxUnit" style="font:700 16px var(--f-mono)"></span>
+        <button class="btn" id="pxCheck">Check</button>
+        <button class="btn ghost" id="pxNext">Next</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted)">Type numbers like 0.00045, 4.5e-4 or 4.5×10^-4.</p>
+      <p class="status" id="pxStatus" aria-live="polite"></p>
+      <p class="streak" id="pxStreak">Correct in a row: 0 / 5</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3 ORDERS OF MAGNITUDE ============ -->
+<section class="lab" id="magnitude">
+  <div class="lab-head"><span class="num">03</span><h2>Orders of magnitude</h2><span class="done" id="done-magnitude" hidden>Done</span></div>
+  <div class="grid">
+    <div class="explain">
+      <p>The <b>order of magnitude</b> is the power of ten nearest to a size. A person is about 10⁰ m, a hair is about 10⁻⁴ m wide, and the Earth is about 10⁷ m across. That is a range of 17 powers of ten from an atom to the Earth.</p>
+      <p>Drag the slider to zoom through the powers of ten.</p>
+      <div class="try"><b>Try this:</b> a red blood cell and a grain of sand look like “tiny things”, but one is about 60 times bigger than the other. Find them both.</div>
+    </div>
+    <div class="bench">
+      <svg id="magSvg" viewBox="0 0 560 190" role="img" aria-label="Logarithmic scale of sizes from an atom to the Earth"></svg>
+      <div class="ctl"><label for="magS">Zoom <output id="magOut">10⁰ m</output></label><input id="magS" type="range" min="0" max="13" value="8"></div>
+      <div class="readout"><div><span>object</span><b id="magName">person</b></div><div><span>size</span><b id="magSize">1.7 m</b></div><div><span>with a prefix</span><b id="magPre">170 cm</b></div></div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="explain">
+      <h3>Size challenge</h3>
+      <p>Put the five objects in order, <b>smallest first</b>, by clicking them in turn. Get two rounds right in a row to complete the activity.</p>
+    </div>
+    <div class="bench">
+      <div class="sorter" id="ordBox"></div>
+      <div class="row"><button class="btn ghost" id="ordNew">New round</button></div>
+      <p class="status" id="ordStatus" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 INSTRUMENTS ============ -->
+<section class="lab" id="instruments">
+  <div class="lab-head"><span class="num">04</span><h2>Measuring instruments</h2><span class="done" id="done-instruments" hidden>Done</span></div>
+  <div class="grid">
+    <div class="explain">
+      <p>Pick the instrument by the <b>range</b> you need and the <b>precision</b> you want.</p>
+      <div class="readout" style="grid-template-columns:repeat(2,1fr)">
+        <div><span>metre rule</span><b>0.1 cm</b></div><div><span>measuring tape</span><b>0.1 cm</b></div>
+        <div><span>vernier caliper</span><b>0.01 cm</b></div><div><span>micrometer</span><b>0.01 mm</b></div>
+      </div>
+      <h3>Vernier caliper</h3>
+      <p>Read the <b>main scale</b> just left of the vernier’s zero. Then find the <b>one vernier mark</b> that lines up exactly with a main-scale mark. Each vernier division adds 0.01 cm.</p>
+      <span class="eq">reading = main scale + (mark × 0.01 cm)</span>
+      <div class="tip"><b>Zero error:</b> close the jaws first. If the vernier zero is to the right of the main zero, the zero error is <b>positive</b>. Corrected reading = reading − zero error.</div>
+    </div>
+    <div class="bench">
+      <div class="row"><div class="seg" id="vMode"><button aria-pressed="true" data-m="read">Plain reading</button><button aria-pressed="false" data-m="zero">With zero error</button></div></div>
+      <svg id="vSvg" viewBox="0 0 600 170" role="img" aria-label="Magnified vernier caliper scales"></svg>
+      <svg id="vZeroSvg" viewBox="0 0 600 170" role="img" aria-label="Vernier scale with the jaws closed, showing the zero error" hidden></svg>
+      <p class="task" id="vTask">Read the vernier caliper, in cm.</p>
+      <div class="row">
+        <input type="text" id="vIn" aria-label="Your vernier reading in cm" placeholder="0.00" autocomplete="off"><span style="font:700 16px var(--f-mono)">cm</span>
+        <button class="btn" id="vCheck">Check</button><button class="btn ghost" id="vNext">New object</button>
+      </div>
+      <p class="status" id="vStatus" aria-live="polite"></p>
+      <p class="streak" id="vStreak">Correct: 0 / 3</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="explain">
+      <h3>Micrometer screw gauge</h3>
+      <p>Read the <b>sleeve</b> first: whole millimetres above the line, and a half-millimetre mark below it if one is showing past the thimble. Then add the <b>thimble</b> mark that sits on the datum line, × 0.01 mm.</p>
+      <span class="eq">reading = sleeve + (thimble × 0.01 mm)</span>
+      <div class="tip"><b>Easy mark to lose:</b> a visible half-millimetre mark below the line adds 0.50 mm. Check for it every time.</div>
+      <p>Always turn the <b>ratchet</b>, not the thimble, so the wire is gripped with the same small force every time.</p>
+    </div>
+    <div class="bench">
+      <svg id="mSvg" viewBox="0 0 600 200" role="img" aria-label="Micrometer sleeve and thimble scales"></svg>
+      <p class="task">Read the micrometer, in mm.</p>
+      <div class="row">
+        <input type="text" id="mIn" aria-label="Your micrometer reading in mm" placeholder="0.00" autocomplete="off"><span style="font:700 16px var(--f-mono)">mm</span>
+        <button class="btn" id="mCheck">Check</button><button class="btn ghost" id="mNext">New wire</button>
+      </div>
+      <p class="status" id="mStatus" aria-live="polite"></p>
+      <p class="streak" id="mStreak">Correct: 0 / 3</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 TIME ============ -->
+<section class="lab" id="time">
+  <div class="lab-head"><span class="num">05</span><h2>Timing short intervals</h2><span class="done" id="done-time" hidden>Done</span></div>
+  <div class="grid">
+    <div class="explain">
+      <p>A pendulum’s <b>period</b> is the time for one complete oscillation: there and back again. It is usually under 2 s, and your <b>reaction time</b> on a stopwatch is about 0.2 to 0.3 s. That error is huge compared with one period.</p>
+      <p>The fix: time <b>20 oscillations</b>, then divide by 20. The reaction-time error is shared out over all 20, so it becomes 20 times smaller.</p>
+      <div class="tip"><b>Practical tip:</b> start and stop the watch as the bob passes the <b>centre</b> (the fiducial marker), where it moves fastest and the moment is easiest to judge.</div>
+      <div class="try"><b>Try this:</b> time 1 oscillation, then time 20. Compare your percentage errors.</div>
+    </div>
+    <div class="bench">
+      <svg id="penSvg" viewBox="0 0 400 250" role="img" aria-label="A swinging pendulum with a fiducial marker at the centre"></svg>
+      <div class="row">
+        <div class="ctl"><label for="penL">String length <output id="penLOut">0.60 m</output></label><input id="penL" type="range" min="20" max="100" value="60"></div>
+        <div class="ctl"><label>Oscillations to time</label><div class="seg" id="penN"><button aria-pressed="false" data-n="1">1</button><button aria-pressed="false" data-n="5">5</button><button aria-pressed="true" data-n="20">20</button></div></div>
+      </div>
+      <div class="row"><button class="btn" id="penBtn">Start stopwatch</button><span class="readout" style="flex:1"><div><span>stopwatch</span><b id="penWatch">0.00 s</b></div><div><span>oscillations</span><b id="penCount">0</b></div></span></div>
+      <p class="status" id="penStatus" aria-live="polite">Press Start as the bob passes the centre marker. Press Stop when it passes the centre, going the same way, after the number of oscillations you chose.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 VECTORS ============ -->
+<section class="lab" id="vectors">
+  <div class="lab-head"><span class="num">06</span><h2>Scalars and vectors</h2><span class="done" id="done-vectors" hidden>Done</span></div>
+  <div class="grid">
+    <div class="explain">
+      <p>A <b>scalar</b> has magnitude only: 5 kg, 20 °C, 3 s. A <b>vector</b> has magnitude <b>and direction</b>: 5 N downwards, 20 m/s due north.</p>
+      <p>Sort each quantity. Ask yourself: does it make sense to say which way it points?</p>
+    </div>
+    <div class="bench">
+      <div class="sorter" id="svBox"></div>
+      <p class="status" id="svStatus" aria-live="polite">10 quantities to sort.</p>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="explain">
+      <h3>Adding two vectors</h3>
+      <p>Draw them <b>tip to tail</b> to scale. The <b>resultant</b> goes from the tail of the first to the tip of the second. Two 5 N forces can add up to anything from 0 N to 10 N, depending on the angle between them.</p>
+      <div class="try"><b>Try this:</b> set both forces to 5 N and swing the angle between them from 0° to 180°. Watch the resultant shrink from 10 N to 0 N.</div>
+    </div>
+    <div class="bench">
+      <svg id="vecSvg" viewBox="0 0 500 300" role="img" aria-label="Two force vectors drawn tip to tail with their resultant"></svg>
+      <div class="row">
+        <div class="ctl"><label for="vA">Force A <output id="vAOut">6 N</output></label><input id="vA" type="range" min="1" max="10" value="6"></div>
+        <div class="ctl"><label for="vB">Force B <output id="vBOut">4 N</output></label><input id="vB" type="range" min="1" max="10" value="4"></div>
+        <div class="ctl"><label for="vT">Angle between them <output id="vTOut">60°</output></label><input id="vT" type="range" min="0" max="180" value="60"></div>
+      </div>
+      <div class="readout"><div><span>resultant</span><b id="vR">8.7 N</b></div><div><span>angle to A</span><b id="vRA">23.4°</b></div><div><span>scale</span><b>1 square = 1 N</b></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="lab" id="quiz">
+  <div class="lab-head"><span class="num">✓</span><h2>Check yourself</h2><span class="done" id="done-quiz" hidden>Done</span></div>
+  <div class="score"><span>Score</span><b id="score">0 / 8</b><button class="btn ghost" id="qReset">Start again</button></div>
+  <div class="quiz" id="quizBox"></div>
+</section>
+
+<footer>
+  <span>CuriousLab Labs · Chapter 1 · Physical quantities, units and measurement.</span>
+  <span>Your progress is saved on this device. Inside the CuriousLab journal it is also sent to your journal.</span>
+</footer>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   Progress bridge. Every CuriousLab lab reports the same events, so the
+   journal can collect them. Outside the journal it only uses this device.
+     window.parent.postMessage({ source: 'curiouslab-lab', lab, event, data, at }, '*')
+   events: 'activity-complete' {id, score?, of?} · 'attempt' {id, correct} · 'quiz-complete' {score, of}
+------------------------------------------------------------------- */
+const LAB = { id: 'p6091-ch01-measurement', activities: ['units', 'prefixes', 'magnitude', 'vernier', 'micrometer', 'time', 'vectors', 'quiz'] };
+const Progress = (() => {
+  let state = { done: {} };
+  try { state = JSON.parse(localStorage.getItem(LAB.id) || '{"done":{}}'); } catch (e) {}
+  const save = () => { try { localStorage.setItem(LAB.id, JSON.stringify(state)); } catch (e) {} };
+  function emit(event, data) {
+    if (window.parent !== window) {
+      try { window.parent.postMessage({ source: 'curiouslab-lab', lab: LAB.id, event, data, at: new Date().toISOString() }, '*'); } catch (e) {}
+    }
+  }
+  function paint() {
+    const n = LAB.activities.filter(a => state.done[a]).length;
+    document.getElementById('progTxt').textContent = `${n}/${LAB.activities.length}`;
+    document.getElementById('progBar').style.width = (n / LAB.activities.length * 100) + '%';
+    const sec = { units: 'units', prefixes: 'prefixes', magnitude: 'magnitude', vernier: 'instruments', micrometer: 'instruments', time: 'time', vectors: 'vectors', quiz: 'quiz' };
+    Object.entries(sec).forEach(([a, s]) => {
+      const both = s === 'instruments' ? state.done.vernier && state.done.micrometer : state.done[a];
+      const badge = document.getElementById('done-' + s); if (badge) badge.hidden = !both;
+    });
+  }
+  return {
+    complete(id, data = {}) { if (!state.done[id]) { state.done[id] = { at: new Date().toISOString(), ...data }; save(); emit('activity-complete', { id, ...data }); } paint(); },
+    attempt(id, correct) { emit('attempt', { id, correct }); },
+    emit, paint, isDone: id => !!state.done[id],
+  };
+})();
+
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = { ray: css('--ray'), hot: css('--hot'), glass: css('--glass'), glassFill: css('--glass-fill'), muted: css('--muted'), text: css('--text'), teal: css('--teal'), violet: css('--violet'), line: css('--line'), metal: css('--metal'), metal2: css('--metal2'), good: css('--good') };
+  const R = d => d * Math.PI / 180, D = r => r * 180 / Math.PI;
+  function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function clear(s) { while (s.firstChild) s.removeChild(s.firstChild); }
+  function line(s, x1, y1, x2, y2, stroke, w = 1.5, extra = {}) { return el('line', Object.assign({ x1, y1, x2, y2, stroke, 'stroke-width': w, 'stroke-linecap': 'round' }, extra), s); }
+  function text(s, x, y, t, fill, size = 13, anchor = 'start', extra = {}) { const e = el('text', Object.assign({ x, y, fill, 'font-size': size, 'text-anchor': anchor }, extra), s); e.textContent = t; return e; }
+  function arrow(s, x1, y1, x2, y2, color, w = 3.5) {
+    line(s, x1, y1, x2, y2, color, w);
+    const a = Math.atan2(y2 - y1, x2 - x1), h = 12;
+    el('polygon', { points: `${x2},${y2} ${x2 - h * Math.cos(a - .4)},${y2 - h * Math.sin(a - .4)} ${x2 - h * Math.cos(a + .4)},${y2 - h * Math.sin(a + .4)}`, fill: color }, s);
+  }
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const sup = n => String(n).replace(/-/g, '⁻').replace(/[0-9]/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]);
+  function parseNum(raw) {
+    let s = String(raw).trim().replace(/\s+/g, '').replace(/−/g, '-').replace(/,/g, '');
+    s = s.replace(/[x×]10\^?\(?(-?\d+)\)?/i, 'e$1');
+    const v = Number(s); return s === '' || isNaN(v) ? null : v;
+  }
+  const status = (id, msg, kind = '') => { const e = document.getElementById(id); e.textContent = msg; e.className = 'status ' + kind; };
+  const segment = (box, cb) => { const bs = [...box.querySelectorAll('button')]; bs.forEach(b => b.addEventListener('click', () => { bs.forEach(x => x.setAttribute('aria-pressed', x === b)); cb(b.dataset); })); };
+
+  /* ---------------- hero caliper ---------------- */
+  (function hero() {
+    const s = document.getElementById('heroSvg');
+    el('rect', { x: 20, y: 60, width: 400, height: 34, rx: 4, fill: '#2b3955', stroke: C.metal2 }, s);
+    for (let k = 0; k <= 100; k++) { const x = 60 + k * 3.4; line(s, x, 60, x, 60 + (k % 10 === 0 ? 16 : k % 5 === 0 ? 11 : 7), C.metal, 1); if (k % 10 === 0) text(s, x, 90, k / 10, C.metal, 10, 'middle'); }
+    el('path', { d: 'M20 60 H60 V200 L40 212 H20 Z', fill: '#34466a', stroke: C.metal2 }, s);
+    el('path', { d: 'M150 60 H250 V94 H190 V200 L170 212 H150 Z', fill: '#3d5280', stroke: C.metal, 'stroke-width': 1.5 }, s);
+    el('rect', { x: 60, y: 130, width: 90, height: 56, rx: 6, fill: C.ray, opacity: .9 }, s);
+    el('ellipse', { cx: 150, cy: 158, rx: 8, ry: 28, fill: '#e8b93a' }, s);
+    for (let k = 0; k <= 10; k++) { const x = 150 + k * 3.06 * 3; line(s, x, 94, x, 94 + (k % 5 === 0 ? 12 : 7), C.ray, 1.2); }
+    text(s, 250, 140, 'main scale', C.muted, 13); text(s, 250, 160, '+ vernier scale', C.ray, 13); text(s, 250, 180, '= 0.01 cm precision', C.teal, 13);
+  })();
+
+  /* ---------------- 1 units match ---------------- */
+  (function units() {
+    const pairs = [['mass', 'kilogram (kg)'], ['length', 'metre (m)'], ['time', 'second (s)'], ['electric current', 'ampere (A)'], ['temperature', 'kelvin (K)'], ['amount of substance', 'mole (mol)']];
+    const mq = document.getElementById('mq'), mu = document.getElementById('mu');
+    let selQ = null, selU = null, found = 0;
+    const make = (parent, label, key, side) => {
+      const b = document.createElement('button'); b.className = 'tile'; b.textContent = label; b.dataset.key = key;
+      b.addEventListener('click', () => {
+        if (b.classList.contains('ok')) return;
+        parent.querySelectorAll('.tile').forEach(t => t.classList.remove('sel')); b.classList.add('sel');
+        if (side === 'q') selQ = b; else selU = b;
+        if (selQ && selU) {
+          if (selQ.dataset.key === selU.dataset.key) {
+            [selQ, selU].forEach(t => { t.classList.remove('sel'); t.classList.add('ok'); }); found++;
+            status('matchStatus', found === 6 ? 'All six matched. These six build every other unit in physics.' : `${found} of 6 matched.`, found === 6 ? 'good' : '');
+            if (found === 6) Progress.complete('units');
+          } else {
+            [selQ, selU].forEach(t => { t.classList.remove('sel'); t.classList.add('no'); setTimeout(() => t.classList.remove('no'), 400); });
+            status('matchStatus', 'Not a pair. Try again.', 'bad');
+          }
+          Progress.attempt('units', selQ.dataset.key === selU.dataset.key);
+          selQ = selU = null;
+        }
+      });
+      parent.appendChild(b);
+    };
+    shuffle(pairs.map((p, i) => [p[0], i])).forEach(([l, i]) => make(mq, l, i, 'q'));
+    shuffle(pairs.map((p, i) => [p[1], i])).forEach(([l, i]) => make(mu, l, i, 'u'));
+  })();
+
+  /* ---------------- 2 prefixes ---------------- */
+  const PREFIX = [['T', 'tera', 12], ['G', 'giga', 9], ['M', 'mega', 6], ['k', 'kilo', 3], ['', '(unit)', 0], ['d', 'deci', -1], ['c', 'centi', -2], ['m', 'milli', -3], ['µ', 'micro', -6], ['n', 'nano', -9]];
+  (function ladder() {
+    const box = document.getElementById('ladder');
+    PREFIX.filter(p => p[0] !== '').forEach(([sym, name, pow]) => {
+      const d = document.createElement('div'); d.className = 'rung';
+      d.innerHTML = `<b>${sym}</b><span>${name}</span><span>10${sup(pow)}</span>`; box.appendChild(d);
+    });
+  })();
+  (function prefixes() {
+    let q = null, streak = 0;
+    const units = [['m', 'metre'], ['g', 'gram'], ['s', 'second'], ['A', 'ampere'], ['W', 'watt'], ['Hz', 'hertz']];
+    function next() {
+      const p = pick(PREFIX.filter(x => x[0] !== '' && x[0] !== 'd'));
+      const [u] = pick(units.filter(x => x[0] !== 'g' || ['m', 'µ', 'n'].includes(p[0])));   // no kg (a base unit) or megagrams
+      const mant = pick([1.5, 2.4, 3.6, 4.5, 7.2, 8, 12, 25, 45, 250, 450, 680]);
+      const toBase = Math.random() < .7;
+      if (toBase) q = { text: `${mant} ${p[0]}${u} = ? ${u}`, answer: mant * 10 ** p[2], unit: u, why: `${p[1]} = 10${sup(p[2])}, so ${mant} ${p[0]}${u} = ${mant} × 10${sup(p[2])} ${u}` };
+      else {
+        const v = mant * 10 ** p[2], e = Math.floor(Math.log10(v) + 1e-9);
+        const shown = Math.abs(p[2]) <= 3 ? String(Number(v.toPrecision(4))) : `${Number((v / 10 ** e).toPrecision(3))} × 10${sup(e)}`;
+        q = { text: `${shown} ${u} = ? ${p[0]}${u}`, answer: mant, unit: p[0] + u, why: `divide by 10${sup(p[2])}: the answer is ${mant} ${p[0]}${u}` };
+      }
+      document.getElementById('pxQ').textContent = 'Convert: ' + q.text;
+      document.getElementById('pxUnit').textContent = q.unit;
+      document.getElementById('pxIn').value = ''; status('pxStatus', '');
+    }
+    function check() {
+      const v = parseNum(document.getElementById('pxIn').value);
+      if (v === null) { status('pxStatus', 'Type a number first, for example 4.5e-4.', 'bad'); return; }
+      const ok = Math.abs(v - q.answer) <= Math.abs(q.answer) * 1e-6;
+      Progress.attempt('prefixes', ok);
+      streak = ok ? streak + 1 : 0;
+      status('pxStatus', ok ? `Correct. ${q.why}.` : `Not quite: ${q.why}.`, ok ? 'good' : 'bad');
+      document.getElementById('pxStreak').textContent = `Correct in a row: ${Math.min(streak, 5)} / 5`;
+      if (streak >= 5) Progress.complete('prefixes', { score: 5, of: 5 });
+      if (ok) setTimeout(next, 1400);
+    }
+    document.getElementById('pxCheck').addEventListener('click', check);
+    document.getElementById('pxIn').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    document.getElementById('pxNext').addEventListener('click', next);
+    next();
+  })();
+
+  /* ---------------- 3 orders of magnitude ---------------- */
+  const THINGS = [
+    ['hydrogen atom', 1e-10], ['flu virus', 1e-7], ['red blood cell', 8e-6], ['width of a hair', 7e-5], ['grain of sand', 5e-4], ['ant', 4e-3],
+    ['10-cent coin', 2e-2], ['smartphone', 1.5e-1], ['person', 1.7], ['bus', 12], ['Marina Bay Sands (height)', 194], ['Mount Everest (height)', 8850],
+    ['Singapore (east to west)', 5e4], ['Earth (diameter)', 1.27e7]];
+  function withPrefix(m) {
+    const opts = [['km', 1e3], ['m', 1], ['cm', 1e-2], ['mm', 1e-3], ['µm', 1e-6], ['nm', 1e-9]];
+    for (const [u, f] of opts) if (m >= f * 0.999) return `${Number((m / f).toPrecision(3))} ${u}`;
+    return `${Number((m / 1e-9).toPrecision(3))} nm`;
+  }
+  const sci = m => { const e = Math.floor(Math.log10(m)), c = m / 10 ** e; return (Math.abs(c - 1) < 1e-9 ? '' : Number(c.toPrecision(3)) + ' × ') + '10' + sup(e) + ' m'; };
+  (function magnitude() {
+    const s = document.getElementById('magSvg'), sl = document.getElementById('magS');
+    const lo = -10, hi = 8, X = e => 30 + (e - lo) / (hi - lo) * 500;
+    function draw() {
+      clear(s);
+      const k = +sl.value, [name, m] = THINGS[k], e = Math.log10(m);
+      line(s, 30, 120, 530, 120, C.muted, 1.5);
+      for (let p = lo; p <= hi; p++) { line(s, X(p), 114, X(p), 126, C.muted, 1); if (p % 2 === 0) text(s, X(p), 145, '10' + sup(p), C.muted, 11, 'middle'); }
+      THINGS.forEach(([n, v], i) => { const x = X(Math.log10(v)); el('circle', { cx: x, cy: 120, r: i === k ? 7 : 4, fill: i === k ? C.ray : C.glass, opacity: i === k ? 1 : .6 }, s); });
+      const x = X(e);
+      line(s, x, 112, x, 60, C.ray, 1.5);
+      text(s, Math.min(Math.max(x, 90), 470), 50, name, C.ray, 16, 'middle');
+      text(s, 30, 180, 'atom', C.muted, 11); text(s, 530, 180, 'Earth', C.muted, 11, 'end');
+      text(s, 280, 180, 'each tick is 10 times bigger than the one before', C.muted, 11, 'middle');
+      document.getElementById('magOut').textContent = '≈ 10' + sup(Math.round(e)) + ' m';
+      document.getElementById('magName').textContent = name;
+      document.getElementById('magSize').textContent = sci(m);
+      document.getElementById('magPre').textContent = withPrefix(m);
+    }
+    sl.addEventListener('input', draw); draw();
+
+    let round = [], clicked = [], wins = 0;
+    function newRound() {
+      round = shuffle(THINGS).slice(0, 5); clicked = [];
+      const box = document.getElementById('ordBox'); box.innerHTML = '';
+      round.forEach(([n, v]) => {
+        const c = document.createElement('button'); c.className = 'tile'; c.textContent = n;
+        c.addEventListener('click', () => {
+          if (c.disabled) return; clicked.push(v); c.disabled = true; c.classList.add('sel');
+          c.textContent = `${clicked.length}. ${n}`;
+          if (clicked.length === 5) {
+            const ok = clicked.every((x, i) => i === 0 || x >= clicked[i - 1]);
+            Progress.attempt('magnitude', ok);
+            wins = ok ? wins + 1 : 0;
+            const answer = round.slice().sort((a, b) => a[1] - b[1]).map(([n2, v2]) => `${n2} (${sci(v2)})`).join(' < ');
+            status('ordStatus', (ok ? `Correct! ${wins >= 2 ? 'Activity complete.' : 'One more round.'} ` : 'Not quite. ') + answer, ok ? 'good' : 'bad');
+            if (wins >= 2) Progress.complete('magnitude');
+          }
+        });
+        box.appendChild(c);
+      });
+      status('ordStatus', 'Click the smallest first.');
+    }
+    document.getElementById('ordNew').addEventListener('click', newRound); newRound();
+  })();
+
+  /* ---------------- 4a vernier caliper ---------------- */
+  (function vernier() {
+    const PX = 26;                                   // SVG units per mm (magnified)
+    let mode = 'read', reading = 0, zero = 0, correct = 0;
+    function drawScale(s, rMM, title) {
+      clear(s);
+      const start = Math.max(-3, Math.floor(rMM) - 3), X = mm => 30 + (mm - start) * PX;
+      text(s, 16, 20, title, C.muted, 12);
+      el('rect', { x: 10, y: 30, width: 580, height: 58, fill: '#1d2a44', stroke: C.line }, s);
+      for (let mm = Math.max(0, start); X(mm) < 590; mm++) {
+        const h = mm % 10 === 0 ? 26 : mm % 5 === 0 ? 19 : 12;
+        line(s, X(mm), 88, X(mm), 88 - h, C.metal, mm % 10 === 0 ? 2 : 1.3);
+        if (mm % 10 === 0) text(s, X(mm), 52, mm / 10, C.metal, 15, 'middle');
+      }
+      text(s, 585, 46, 'cm', C.muted, 11, 'end');
+      const vx = X(rMM);
+      el('rect', { x: vx - 16, y: 88, width: 10 * 0.9 * PX + 32, height: 52, fill: '#27385c', stroke: C.ray, 'stroke-width': 1.2, rx: 3 }, s);
+      for (let k = 0; k <= 10; k++) {
+        const x = X(rMM + 0.9 * k);
+        line(s, x, 88, x, 88 + (k % 5 === 0 ? 22 : 14), C.ray, k % 5 === 0 ? 2 : 1.3);
+        text(s, x, 128, k, C.ray, 12, 'middle');
+      }
+      text(s, vx + 10 * 0.9 * PX + 12, 160, 'vernier (0.01 cm per mark)', C.muted, 11, 'end');
+    }
+    function highlight(s, rMM) {
+      // the vernier mark k that lines up: rMM + 0.9k is a whole number of mm
+      const tenth = Math.round((rMM - Math.floor(rMM + 1e-9)) * 10) % 10;
+      const k = (tenth + 10) % 10, start = Math.max(-3, Math.floor(rMM) - 3), x = 30 + (rMM + 0.9 * k - start) * PX;
+      el('rect', { x: x - 9, y: 60, width: 18, height: 56, fill: 'none', stroke: C.good, 'stroke-width': 2.5, rx: 4 }, s);
+    }
+    function next() {
+      reading = rnd(105, 489) / 100;                 // cm, 2 dp
+      zero = mode === 'zero' ? pick([-4, -3, -2, 2, 3, 4]) / 100 : 0;
+      drawScale(document.getElementById('vSvg'), (reading + zero) * 10, mode === 'zero' ? 'Measuring the object' : 'Measuring the object (magnified)');
+      const z = document.getElementById('vZeroSvg'); z.hidden = mode !== 'zero';
+      if (mode === 'zero') drawScale(z, zero * 10, 'Jaws closed: read the zero error first');
+      document.getElementById('vTask').textContent = mode === 'zero' ? 'Find the corrected length of the object, in cm.' : 'Read the vernier caliper, in cm.';
+      document.getElementById('vIn').value = ''; status('vStatus', '');
+    }
+    function check() {
+      const v = parseNum(document.getElementById('vIn').value);
+      if (v === null) { status('vStatus', 'Type your reading, for example 2.47.', 'bad'); return; }
+      const ok = Math.abs(v - reading) < 0.0051;
+      Progress.attempt('vernier', ok);
+      const shown = reading + zero;
+      highlight(document.getElementById('vSvg'), shown * 10);
+      if (mode === 'zero') highlight(document.getElementById('vZeroSvg'), zero * 10);
+      const main = Math.floor(shown * 10 + 1e-9) / 10, mark = Math.round((shown - main) * 100);
+      let why = `Main scale ${main.toFixed(1)} cm, vernier mark ${mark} lines up: ${main.toFixed(1)} + 0.0${mark} = ${shown.toFixed(2)} cm.`;
+      if (mode === 'zero') why += ` Zero error ${zero > 0 ? '+' : '−'}${Math.abs(zero).toFixed(2)} cm, so corrected = ${shown.toFixed(2)} − (${zero.toFixed(2)}) = ${reading.toFixed(2)} cm.`;
+      if (ok) correct++;
+      status('vStatus', (ok ? 'Correct. ' : 'Not quite. ') + why, ok ? 'good' : 'bad');
+      document.getElementById('vStreak').textContent = `Correct: ${Math.min(correct, 3)} / 3`;
+      if (correct >= 3) Progress.complete('vernier', { score: correct });
+    }
+    segment(document.getElementById('vMode'), d => { mode = d.m; next(); });
+    document.getElementById('vCheck').addEventListener('click', check);
+    document.getElementById('vIn').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    document.getElementById('vNext').addEventListener('click', next);
+    next();
+  })();
+
+  /* ---------------- 4b micrometer ---------------- */
+  (function micrometer() {
+    const PX = 30, s = document.getElementById('mSvg'), DATUM = 100, DIV = 11;   // 30 units per mm on the sleeve
+    let reading = 0, correct = 0;
+    function draw(showAnswer) {
+      clear(s);
+      const sleeve = Math.floor(reading * 2 + 1e-9) / 2, th = Math.round((reading - sleeve) * 100);
+      const X = mm => 30 + mm * PX, edge = X(reading);   // the thimble edge sits at the full reading
+      el('rect', { x: 10, y: 70, width: edge - 10, height: 60, fill: '#27385c', stroke: C.metal2 }, s);   // sleeve
+      line(s, 10, DATUM, edge, DATUM, C.metal, 1.6);
+      for (let mm = 0; X(mm) <= edge + 0.5; mm++) {
+        line(s, X(mm), DATUM, X(mm), DATUM - (mm % 5 === 0 ? 20 : 13), C.metal, 1.5);
+        if (mm % 5 === 0) text(s, X(mm), DATUM - 26, mm, C.metal, 14, 'middle');
+      }
+      for (let h = 0.5; X(h) <= edge + 0.5; h += 1) line(s, X(h), DATUM, X(h), DATUM + 12, C.metal, 1.5);
+      // thimble
+      el('rect', { x: edge, y: 40, width: 150, height: 120, rx: 6, fill: '#3d5280', stroke: C.metal, 'stroke-width': 1.4 }, s);
+      el('rect', { x: edge + 150, y: 70, width: 60, height: 60, rx: 4, fill: '#34466a', stroke: C.metal2 }, s);
+      text(s, edge + 180, 150, 'ratchet', C.muted, 11, 'middle');
+      for (let d = -5; d <= 5; d++) {
+        const k = ((th + d) % 50 + 50) % 50, y = DATUM - d * DIV;
+        line(s, edge, y, edge + (k % 5 === 0 ? 22 : 13), y, C.ray, k % 5 === 0 ? 2 : 1.3);
+        if (k % 5 === 0) text(s, edge + 28, y + 5, k, C.ray, 13);
+      }
+      line(s, edge, DATUM, edge + 60, DATUM, C.metal, 1, { opacity: .35 });
+      text(s, 16, 186, 'sleeve: mm above the line, half-mm below', C.muted, 11);
+      text(s, edge + 75, 30, 'thimble: 0.01 mm per mark', C.muted, 11, 'middle');
+      if (showAnswer) el('rect', { x: edge - 2, y: DATUM - 7, width: 50, height: 14, fill: 'none', stroke: C.good, 'stroke-width': 2, rx: 3 }, s);
+      return { sleeve, th };
+    }
+    function next() { reading = rnd(55, 1150) / 100; draw(false); document.getElementById('mIn').value = ''; status('mStatus', ''); }
+    function check() {
+      const v = parseNum(document.getElementById('mIn').value);
+      if (v === null) { status('mStatus', 'Type your reading, for example 5.78.', 'bad'); return; }
+      const ok = Math.abs(v - reading) < 0.0051; Progress.attempt('micrometer', ok);
+      const { sleeve, th } = draw(true);
+      if (ok) correct++;
+      status('mStatus', `${ok ? 'Correct.' : 'Not quite.'} Sleeve ${sleeve.toFixed(2)} mm${sleeve % 1 ? ' (a half-mm mark is showing)' : ''} + thimble ${th} × 0.01 = ${reading.toFixed(2)} mm.`, ok ? 'good' : 'bad');
+      document.getElementById('mStreak').textContent = `Correct: ${Math.min(correct, 3)} / 3`;
+      if (correct >= 3) Progress.complete('micrometer', { score: correct });
+    }
+    document.getElementById('mCheck').addEventListener('click', check);
+    document.getElementById('mIn').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    document.getElementById('mNext').addEventListener('click', next);
+    next();
+  })();
+
+  /* ---------------- 5 pendulum timing ---------------- */
+  (function pendulum() {
+    const s = document.getElementById('penSvg'), Ls = document.getElementById('penL'), g = 9.81, A0 = R(14);
+    let N = 20, running = false, tStart = 0, t0 = performance.now(), attempts = { 1: null, 20: null };
+    segment(document.getElementById('penN'), d => { N = +d.n; });
+    const period = () => 2 * Math.PI * Math.sqrt(+Ls.value / 100 / g);
+    Ls.addEventListener('input', () => { document.getElementById('penLOut').textContent = (+Ls.value / 100).toFixed(2) + ' m'; t0 = performance.now(); });
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function frame(now) {
+      const T = period(), t = (now - t0) / 1000, th = still ? A0 : A0 * Math.sin(2 * Math.PI * t / T);
+      const L = 60 + +Ls.value * 1.6, px = 200 + L * Math.sin(th), py = 20 + L * Math.cos(th);
+      clear(s);
+      line(s, 140, 20, 260, 20, C.metal, 4);
+      line(s, 200, 20, 200, 20 + L + 22, C.teal, 1.2, { 'stroke-dasharray': '4 5' });
+      text(s, 206, 20 + L + 34, 'fiducial marker', C.teal, 11);
+      line(s, 200, 20, px, py, C.metal, 1.5);
+      el('circle', { cx: px, cy: py, r: 13, fill: C.ray }, s);
+      if (running) {
+        const el2 = (now - tStart) / 1000;
+        document.getElementById('penWatch').textContent = el2.toFixed(2) + ' s';
+        // count full oscillations completed since the press, measured from the bob's actual motion
+        document.getElementById('penCount').textContent = Math.floor(el2 / T);
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    document.getElementById('penBtn').addEventListener('click', e => {
+      const b = e.currentTarget;
+      if (!running) { running = true; tStart = performance.now(); b.textContent = 'Stop stopwatch'; status('penStatus', `Counting… stop after ${N} oscillation${N > 1 ? 's' : ''}.`); return; }
+      running = false; b.textContent = 'Start stopwatch';
+      const t = (performance.now() - tStart) / 1000, T = period(), Tm = t / N, err = Math.abs(Tm - T) / T * 100;
+      document.getElementById('penWatch').textContent = t.toFixed(2) + ' s';
+      if (N === 1 || N === 20) attempts[N] = err;
+      let msg = `You timed ${t.toFixed(2)} s for ${N}, so T = ${t.toFixed(2)} ÷ ${N} = ${Tm.toFixed(3)} s. The true period is ${T.toFixed(3)} s: an error of ${err.toFixed(1)}%.`;
+      if (attempts[1] !== null && attempts[20] !== null) msg += ` Timing 1 swing: ${attempts[1].toFixed(1)}% error. Timing 20: ${attempts[20].toFixed(1)}%.`;
+      status('penStatus', msg, err < 3 ? 'good' : 'bad');
+      Progress.attempt('time', err < 3);
+      if (N === 20 && err < 3) Progress.complete('time', { error: +err.toFixed(2) });
+    });
+  })();
+
+  /* ---------------- 6a scalar or vector ---------------- */
+  (function sorter() {
+    const Q = [['mass', 's'], ['weight', 'v'], ['speed', 's'], ['velocity', 'v'], ['distance', 's'], ['displacement', 'v'], ['time', 's'], ['force', 'v'], ['energy', 's'], ['acceleration', 'v']];
+    const box = document.getElementById('svBox'); let done = 0;
+    shuffle(Q).forEach(([n, k]) => {
+      const c = document.createElement('div'); c.className = 'card';
+      c.innerHTML = `<b>${n}</b><div class="seg"><button data-k="s">scalar</button><button data-k="v">vector</button></div>`;
+      c.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        if (c.classList.contains('ok')) return;
+        const ok = b.dataset.k === k; Progress.attempt('vectors', ok);
+        c.classList.remove('no'); c.classList.add(ok ? 'ok' : 'no'); b.setAttribute('aria-pressed', 'true');
+        if (ok) { done++; c.querySelectorAll('button').forEach(x => x.disabled = true); }
+        else setTimeout(() => b.setAttribute('aria-pressed', 'false'), 600);
+        status('svStatus', done === 10 ? 'All sorted. Mass, speed, distance, time and energy are scalars; the rest have a direction.' : `${done} of 10 sorted.`, done === 10 ? 'good' : '');
+        if (done === 10) Progress.complete('vectors');
+      }));
+      box.appendChild(c);
+    });
+  })();
+
+  /* ---------------- 6b vector addition ---------------- */
+  (function vectors() {
+    const s = document.getElementById('vecSvg'), A = document.getElementById('vA'), B = document.getElementById('vB'), T = document.getElementById('vT');
+    function draw() {
+      clear(s);
+      const a = +A.value, b = +B.value, t = +T.value, u = 22;          // 22 units per newton
+      document.getElementById('vAOut').textContent = a + ' N'; document.getElementById('vBOut').textContent = b + ' N'; document.getElementById('vTOut').textContent = t + '°';
+      for (let x = 0; x <= 500; x += u) line(s, x, 0, x, 300, 'rgba(255,255,255,.05)', 1);
+      for (let y = 0; y <= 300; y += u) line(s, 0, y, 500, y, 'rgba(255,255,255,.05)', 1);
+      const O = [u * 2, 300 - u * 2];
+      const P = [O[0] + a * u, O[1]];
+      const Q = [P[0] + b * u * Math.cos(R(t)), P[1] - b * u * Math.sin(R(t))];
+      const rx = a + b * Math.cos(R(t)), ry = b * Math.sin(R(t)), r = Math.hypot(rx, ry), ang = D(Math.atan2(ry, rx));
+      arrow(s, O[0], O[1], P[0], P[1], C.ray); arrow(s, P[0], P[1], Q[0], Q[1], C.violet);
+      if (r > 0.05) arrow(s, O[0], O[1], Q[0], Q[1], C.teal, 3);
+      line(s, P[0], P[1], P[0] + 60, P[1], C.muted, 1, { 'stroke-dasharray': '4 4' });
+      text(s, (O[0] + P[0]) / 2, O[1] + 20, `A = ${a} N`, C.ray, 13, 'middle');
+      text(s, (P[0] + Q[0]) / 2 + 10, (P[1] + Q[1]) / 2, `B = ${b} N`, C.violet, 13);
+      if (r > 0.05) text(s, (O[0] + Q[0]) / 2 - 10, (O[1] + Q[1]) / 2 - 8, `R = ${r.toFixed(1)} N`, C.teal, 14, 'end');
+      document.getElementById('vR').textContent = r.toFixed(1) + ' N';
+      document.getElementById('vRA').textContent = r > 0.05 ? ang.toFixed(1) + '°' : '—';
+    }
+    [A, B, T].forEach(x => x.addEventListener('input', draw)); draw();
+  })();
+
+  /* ---------------- quiz ---------------- */
+  (function quiz() {
+    const Q = [
+      ['Which of these is a base quantity?', ['force', 'speed', 'electric current', 'energy'], 2, 'The six base quantities are mass, length, time, current, temperature and amount of substance.'],
+      ['What is 5.0 mm in metres?', ['5.0 × 10⁻³ m', '5.0 × 10⁻² m', '5.0 × 10³ m', '5.0 × 10⁻⁶ m'], 0, 'milli = 10⁻³.'],
+      ['What does the prefix µ (micro) stand for?', ['10⁻³', '10⁻⁶', '10⁻⁹', '10⁶'], 1, 'micro = 10⁻⁶. Don’t confuse with m (10⁻³).'],
+      ['Which of these is a vector quantity?', ['mass', 'time', 'energy', 'displacement'], 3, 'Displacement has a direction; distance does not.'],
+      ['Which instrument is best for measuring the diameter of a thin wire?', ['metre rule', 'measuring tape', 'vernier caliper', 'micrometer screw gauge'], 3, 'A micrometer reads to 0.01 mm, the best precision here.'],
+      ['A vernier caliper has a zero error of +0.02 cm. It reads 3.46 cm on an object. What is the object’s length?', ['3.48 cm', '3.46 cm', '3.44 cm', '3.42 cm'], 2, 'Corrected = reading − zero error = 3.46 − 0.02 = 3.44 cm.'],
+      ['Why do we time 20 oscillations of a pendulum instead of 1?', ['To make the pendulum swing faster', 'To reduce the effect of reaction time', 'Because 1 oscillation cannot be timed', 'To change the period'], 1, 'The ~0.2 s reaction time error is shared across 20 swings.'],
+      ['What is the order of magnitude of the width of a red blood cell?', ['10⁻² m', '10⁻⁸ m', '10⁻⁵ m', '10⁻¹⁰ m'], 2, 'About 8 µm = 8 × 10⁻⁶ m, closest to 10⁻⁵ m.'],
+    ];
+    const key = LAB.id + '-quiz', box = document.getElementById('quizBox');
+    let ans = {}; try { ans = JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) {}
+    const save = () => { try { localStorage.setItem(key, JSON.stringify(ans)); } catch (e) {} };
+    function render() {
+      box.innerHTML = ''; let sc = 0;
+      Q.forEach(([q, opts, ok, why], qi) => {
+        const card = document.createElement('div'); card.className = 'qcard';
+        const h = document.createElement('h3'); h.textContent = `${qi + 1}. ${q}`; card.appendChild(h);
+        const w = document.createElement('div'); w.className = 'opts';
+        opts.forEach((o, oi) => {
+          const b = document.createElement('button'); b.className = 'opt'; b.textContent = 'ABCD'[oi] + '   ' + o;
+          if (qi in ans) { if (oi === ok) b.classList.add('right'); else if (oi === ans[qi]) b.classList.add('wrong'); b.disabled = true; }
+          b.addEventListener('click', () => { ans[qi] = oi; save(); Progress.attempt('quiz-q' + (qi + 1), oi === ok); render(); });
+          w.appendChild(b);
+        });
+        const fb = document.createElement('p'); fb.className = 'fb';
+        if (qi in ans) { fb.textContent = (ans[qi] === ok ? 'Correct. ' : 'Not quite. ') + why; if (ans[qi] === ok) sc++; }
+        card.appendChild(w); card.appendChild(fb); box.appendChild(card);
+      });
+      document.getElementById('score').textContent = `${sc} / ${Q.length}`;
+      if (Object.keys(ans).length === Q.length && !Progress.isDone('quiz')) { Progress.emit('quiz-complete', { score: sc, of: Q.length }); Progress.complete('quiz', { score: sc, of: Q.length }); }
+    }
+    document.getElementById('qReset').addEventListener('click', () => { ans = {}; save(); render(); });
+    render();
+  })();
+
+  /* ---------------- nav ---------------- */
+  const links = [...document.querySelectorAll('nav a')], secs = links.map(a => document.querySelector(a.getAttribute('href')));
+  addEventListener('scroll', () => { let cur = 0; secs.forEach((s, k) => { if (s.getBoundingClientRect().top < 140) cur = k; }); links.forEach((a, k) => a.classList.toggle('on', k === cur)); }, { passive: true });
+  links[0].classList.add('on');
+  Progress.paint();
+  Progress.emit('lab-open', { activities: LAB.activities });
+})();
+</script>
