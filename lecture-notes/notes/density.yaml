@@ -1,0 +1,243 @@
+# Density: a Sec 1–2 (ages 13–14) mock, using the junior theme.
+# Same pieces as the upper-secondary notes; `theme: junior` restyles them,
+# and `xp:` on any piece adds an XP sticker in the gutter.
+
+meta:
+  title: Density Mission
+  course: Lower Secondary Science · Density
+  series: CuriousLab Mission Log
+  theme: junior
+
+elements:
+
+  - type: cover
+    chapter: Mission 04 · Matter
+    title: How does a 100 000-tonne ship ==float==?
+    hook: A steel bolt drops straight to the bottom of the sea. A steel ship the size of a shopping mall floats. Same metal, same sea. By the end of this mission you’ll know exactly why, and you’ll be able to prove it with numbers.
+    chips: [Sec 1–2, 5 stages, 100 XP to earn, 3 badges]
+    art: cover-ship.svg
+    outcomes_title: Mission goals · by the end you can
+    outcomes:
+      - explain what **mass** and **volume** mean, with their units
+      - calculate **density** using **ρ = m / V**
+      - measure the volume of odd-shaped objects by **displacement**
+      - predict whether something will **float or sink**
+
+  - type: tracker
+    title: Your mission route
+    stages: [Predict, "Mass & volume", Density, Measure it, "Float or sink?"]
+    total: 100
+    step: 10
+    badges: [Predictor, Card collector, Density detective]
+
+  # ------------------------------------------------ STAGE 1
+  - type: heading
+    title: Predict
+    intro: Make a guess before you learn anything. Being wrong is fine!
+
+  - type: predict
+    xp: 10
+    tag: Predict first · no calculator, just your gut
+    title: A steel bolt sinks. A steel ship floats. What’s different?
+    options: [The ship’s steel is a lighter kind of steel, The ship is mostly air inside, Salt water holds up big things but not small things]
+    lines: 2
+    answer:
+      - "**The ship is mostly air inside.** Both are made of the same steel, which is about 8 times denser than water."
+      - "But the hull is hollow. Steel plus all that air has an *average* density lower than sea water, so the ship floats. Fill it with water (a hole in the hull) and it sinks."
+
+  # ------------------------------------------------ STAGE 2
+  - type: heading
+    title: Mass and volume
+    intro: Two things you need to know about any object.
+
+  - type: concept
+    cues:
+      - What is mass?
+      - What is volume?
+      - How many cm³ is 1 mL?
+    text: |
+      **Mass** is ==how much matter (stuff) is in an object==. We measure it in **grams (g)** or **kilograms (kg)** using an electronic balance.
+
+      **Volume** is ==how much space an object takes up==. We measure it in **cubic centimetres (cm³)** or **cubic metres (m³)**. For liquids we often use millilitres, and **1 mL = 1 cm³**.
+
+  - type: compare
+    left:
+      title: Same volume, different mass
+      items:
+        - "A 1 cm³ cube of cork: 0.24 g"
+        - "A 1 cm³ cube of water: 1 g"
+        - "A 1 cm³ cube of steel: 7.8 g"
+    right:
+      title: Same mass, different volume
+      items:
+        - "1 kg of feathers fills a pillowcase"
+        - "1 kg of water fills a 1 L bottle"
+        - "1 kg of gold is smaller than a phone"
+
+  # ------------------------------------------------ STAGE 3
+  - type: heading
+    title: Density
+    intro: How tightly the stuff is packed.
+
+  - type: concept
+    cues:
+      - Define density in your own words.
+    text: |
+      **Density** tells you ==how much mass is packed into each cm³== of a material. Two things made of the same material have the same density, however big or small they are. A steel paper clip and a steel ship’s plate have the same density.
+
+  - type: formula
+    eq: ρ = m / V
+    where:
+      - [ρ, "density (say “rho”)", "g/cm³"]
+      - [m, mass, g]
+      - [V, volume, cm³]
+    note: "Memory trick: density = mass ÷ volume. Mass goes on top because it is the “stuff”."
+
+  - type: cards
+    xp: 10
+    title: Collect all four · read them, then test a friend
+    items:
+      - {name: Cork, big: "0.24", unit: g/cm³, text: So light it floats on almost any liquid. Used for fishing floats.}
+      - {name: Ice, big: "0.92", unit: g/cm³, text: "Less dense than water, so icebergs float, with most of their bulk underwater."}
+      - {name: Water, big: "1.00", unit: g/cm³, text: "The benchmark. Denser than 1 sinks in water; less than 1 floats."}
+      - {name: Gold, big: "19.3", unit: g/cm³, text: A gold bar the size of a phone weighs more than a big bag of rice.}
+
+  - type: worked-example
+    xp: 10
+    text: A block measures 2 cm × 3 cm × 5 cm. Its mass is 81 g. Find its density.
+    marks: 2
+    space: 32
+    solution:
+      - do: Work out the volume first.
+        work: "V = 2 × 3 × 5 = 30 cm³"
+      - do: Divide mass by volume.
+        work: "ρ = 81 ÷ 30 = 2.7 g/cm³"
+        note: 2.7 g/cm³ is the density of aluminium, so the block is probably aluminium.
+    final: "2.7 g/cm³"
+
+  - type: error-hunt
+    xp: 10
+    text: "Jia Hui worked out the density of a 60 g rubber ball with a volume of 50 cm³."
+    working:
+      - ρ = V / m
+      - ρ = 50 / 60
+      - ρ = 0.83 g/cm³, so it floats
+    space: 18
+    answer:
+      - "**L1 is wrong.** It should be mass ÷ volume, not volume ÷ mass."
+      - "ρ = 60 ÷ 50 = **1.2 g/cm³**. That is more than 1, so the ball **sinks**."
+      - "Tip: say it out loud, “density equals mass over volume”, before you write anything."
+
+  # ------------------------------------------------ STAGE 4
+  - type: heading
+    title: Measure it
+    intro: What if the object is a weird shape?
+
+  - type: concept
+    cues:
+      - How do you find the volume of a stone?
+    text: |
+      For a box shape, multiply **length × breadth × height**. A stone has no neat sides, so we use the **displacement method**:
+    steps:
+      - Pour water into a measuring cylinder. Read the volume at the bottom of the curved surface (the meniscus), with your eye level with it.
+      - Tie the stone to a thread and lower it in gently, so no water splashes out.
+      - Read the new volume.
+      - "Volume of the stone = new reading − first reading."
+
+  - type: figure
+    src: displacement.svg
+    width: 80
+    caption: "The water rises by exactly the stone’s volume, because the stone pushes that much water out of the way."
+
+  - type: question
+    xp: 10
+    level: warm-up
+    text: "A stone has a mass of 54 g. It is lowered into a measuring cylinder, and the water level rises from 50 cm³ to 70 cm³."
+    parts:
+      - text: Find the volume of the stone.
+        marks: 1
+        space: 12
+        answer: "V = 70 − 50 = **20 cm³**"
+      - text: Find the density of the stone.
+        marks: 2
+        space: 16
+        answer: "ρ = 54 ÷ 20 = **2.7 g/cm³**"
+
+  # ------------------------------------------------ STAGE 5
+  - type: heading
+    title: Float or sink?
+    intro: The rule that explains the ship.
+
+  - type: concept
+    cues:
+      - When does an object float?
+    text: |
+      Compare the density of the object with the density of the liquid.
+    bullets:
+      - "Object ==less dense== than the liquid → it **floats**."
+      - "Object ==more dense== than the liquid → it **sinks**."
+      - "Liquids stack up the same way: the densest liquid sinks to the bottom."
+
+  - type: row
+    cols: 1.1fr 1fr
+    items:
+      - type: figure
+        src: density-column.svg
+        caption: Each object sinks until it reaches a layer denser than itself.
+      - type: fact
+        big: Dead Sea
+        text: The Dead Sea is so salty (density about 1.24 g/cm³) that people float on it easily while reading a newspaper. Your body is about 1.0 g/cm³.
+
+  - type: mcq
+    xp: 10
+    text: "An object has a mass of 30 g and a volume of 40 cm³. What happens when you drop it in water?"
+    options: ["It sinks: density 1.33 g/cm³", "It floats: density 0.75 g/cm³", "It sinks: density 0.75 g/cm³", "It floats: density 1.33 g/cm³"]
+    two: true
+    answer: B
+    explain: "ρ = 30 ÷ 40 = 0.75 g/cm³. That is less than water (1.00), so it floats."
+
+  - type: activity
+    xp: 10
+    tag: Try it at home · with an adult
+    title: Rainbow in a glass
+    need: a tall clear glass, honey or syrup, water with food colouring, cooking oil, a grape, a small cork
+    steps:
+      - Pour in a layer of honey. Then slowly pour coloured water down the side of the glass.
+      - Slowly pour in the oil last.
+      - Drop in the grape and the cork. Watch where each one stops.
+    question: Explain where the grape stopped, using the word density.
+    lines: 3
+    answer:
+      - "The grape (about 1.1 g/cm³) is **denser than oil and water**, so it sinks through them."
+      - "It is **less dense than honey** (1.42 g/cm³), so it stops on top of the honey layer."
+
+  - type: stickies
+    xp: 10
+    title: Sticky-note challenge · do all three in your book
+    items:
+      - title: Draw
+        text: Draw the ship from the cover. Label the steel and the air, and write “average density < 1.03 g/cm³”.
+        lines: 2
+      - title: Explain
+        text: In one sentence, tell a Primary 5 kid why a life jacket helps you float.
+        lines: 2
+        answer: "A life jacket is full of foam or air, which has a very low density, so it lowers your **average density** below that of water and you float."
+      - title: Challenge
+        text: Ice is 0.92 g/cm³. Sea water is 1.03 g/cm³. Will an ice cube float higher in sea water or in tap water?
+        lines: 2
+        answer: "**Higher in sea water.** Sea water is denser, so less of the ice needs to be under the surface to hold it up."
+
+  - type: summary
+    prompt: "Mission debrief · explain how a steel ship floats, using the word density"
+    lines: 3
+
+  - type: confidence
+    title: How do you feel about density? Tick one
+    options:
+      - [Still wobbly, "Re-read stage 3 and redo the worked example."]
+      - [Getting it, "Redo the error hunt and the stone question."]
+      - [Nailed it, "Try the sticky-note challenge on a friend."]
+
+  - type: annex
+    title: Answers · check your mission
+    intro: Only look after you have tried. Colour in the XP you earned on the tracker at the start.

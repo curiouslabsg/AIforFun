@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 240" font-family="Fredoka, Nunito, sans-serif" role="img" aria-label="A hollow steel ship floats at the surface while a small solid steel bolt lies on the sea bed">
+  <rect x="0" y="0" width="480" height="240" rx="14" fill="#eaf0ff" stroke="#172033" stroke-width="3"/>
+  <rect x="3" y="96" width="474" height="141" rx="0" fill="#9cc0ff"/>
+  <path d="M3 96 Q43 86 83 96 T163 96 T243 96 T323 96 T403 96 T477 96" fill="none" stroke="#2f5bff" stroke-width="3"/>
+  <!-- ship, cut away to show the air inside -->
+  <path d="M120 70 L360 70 L330 128 L150 128 Z" fill="#ff6b5a" stroke="#172033" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M142 78 L338 78 L320 118 L160 118 Z" fill="#ffffff" stroke="#172033" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="240" y="104" font-size="15" font-weight="700" fill="#172033" text-anchor="middle">mostly AIR inside</text>
+  <rect x="200" y="40" width="70" height="30" rx="4" fill="#ffd23f" stroke="#172033" stroke-width="3"/>
+  <rect x="280" y="24" width="14" height="46" fill="#172033"/>
+  <!-- bolt on the sea bed -->
+  <rect x="60" y="208" width="42" height="14" rx="3" fill="#8a93a8" stroke="#172033" stroke-width="2.5"/>
+  <rect x="100" y="203" width="10" height="24" rx="2" fill="#8a93a8" stroke="#172033" stroke-width="2.5"/>
+  <text x="120" y="220" font-size="14" font-weight="700" fill="#172033">solid steel bolt: sinks</text>
+  <text x="360" y="54" font-size="14" font-weight="700" fill="#172033">steel ship: floats</text>
+  <g fill="#ffffff" stroke="#172033" stroke-width="1.5"><circle cx="420" cy="170" r="6"/><circle cx="432" cy="150" r="4"/><circle cx="424" cy="132" r="3"/></g>
+</svg>

@@ -1,0 +1,374 @@
+# Tutorial 5 · Light (O-Level Physics 6091)
+# Structure follows the CuriousLab Tutorials skill:
+#   cover · one-page concept summary · Paper 1 (20 MCQ, 30 min) · Paper 2 (40 marks, 45 min) · answer key
+# MCQ answers are spread 5 A / 5 B / 5 C / 5 D, and all five option patterns are used:
+#   grid (2 × 2), row (4 in a row), list (full sentences), roman (I, II, III + combinations), table (data rows A–D)
+
+meta:
+  number: 5
+  title: Light
+  subtitle: Reflection · Refraction · Total internal reflection · Thin converging lenses
+  course: O-Level Physics 6091
+  series: CuriousLab Tutorials
+  quote:
+    text: "All these fifty years of conscious brooding have brought me no nearer to the answer to the question, ‘What are light quanta?’"
+    by: Albert Einstein, letter to Michele Besso, 1951
+
+summary:
+  - title: Reflection
+    colour: cyan
+    items:
+      - "Angles are measured from the **normal** (at 90° to the surface)."
+      - "Law: **i = r**; incident ray, reflected ray and normal lie in one plane."
+      - "Plane mirror image: **virtual, upright, same size, laterally inverted**, as far behind the mirror as the object is in front."
+  - title: Refraction
+    colour: yellow
+    items:
+      - "Bending of light when it changes **speed** passing from one medium to another."
+      - "Into a denser medium (slower): bends **towards** the normal. Out of it: **away**."
+      - "Along the normal: no bending, but speed still changes."
+  - title: Refractive index
+    colour: deepblue
+    items:
+      - "**n = sin i / sin r** (i in air, r in the medium). Snell’s law: the ratio is constant."
+      - "**n = c / v**, c = 3.0 × 10^{8} m/s. n has no unit and is always > 1."
+      - "Glass 1.5, water 1.33, diamond 2.42."
+  - title: Total internal reflection
+    colour: green
+    items:
+      - "Needs **dense → less dense** AND **i > c**."
+      - "**sin c = 1 / n**. Glass c = 41.8°, water c = 48.8°."
+      - "Optical fibres: core has higher n than cladding. Uses: telecom, endoscopes. More data, less loss, no electrical interference, secure."
+  - title: Thin converging lens
+    colour: purple
+    items:
+      - "**Focal length f**: optical centre to principal focus F."
+      - "Rays: parallel → through F; through C → straight; through near F → parallel."
+      - "Beyond 2F: real, inverted, diminished (camera). At 2F: same size. F–2F: magnified (projector). Inside F: virtual, upright, magnified (magnifying glass)."
+  - title: Exam pitfalls
+    colour: red
+    items:
+      - "Angle given from the **surface**? Use 90° − angle."
+      - "n < 1 or a Math ERROR means a fraction is upside down."
+      - "Ray diagrams: ruler, arrows, virtual lines **dashed**, image labelled."
+      - "Real/virtual, upright/inverted, magnified/diminished: give all three."
+
+paper1:
+  time: 30 minutes
+  questions:
+    - stem: "A ray of light strikes a plane mirror, making an angle of 30° with the surface of the mirror. What is the angle of incidence?"
+      pattern: grid
+      options: ["60°", "30°", "90°", "120°"]
+      answer: A
+      explain: "Angles are measured from the normal: 90° − 30° = 60°."
+
+    - stem: "The angle of incidence of a ray on a plane mirror is 35°. What is the angle between the incident ray and the reflected ray?"
+      pattern: row
+      options: ["35°", "70°", "110°", "145°"]
+      answer: B
+      explain: "i + r = 35° + 35° = 70°."
+
+    - stem: "Which statement describes the image of an object formed by a plane mirror?"
+      pattern: list
+      options:
+        - "It is real, upright and the same size as the object."
+        - "It is virtual, inverted and the same size as the object."
+        - "It is virtual, upright, the same size and laterally inverted."
+        - "It is real, inverted and smaller than the object."
+      answer: C
+      explain: "A plane mirror image cannot be caught on a screen, is upright, same size and left–right reversed."
+
+    - stem: "Which statements about refraction are correct?"
+      pattern: roman
+      statements:
+        - "Light bends because its speed changes at the boundary between two media."
+        - "A ray entering a glass block along the normal does not change direction."
+        - "Light speeds up when it passes from air into glass."
+      options: ["I only", "II only", "II and III only", "I and II only"]
+      answer: D
+      explain: "III is false: light slows down in glass."
+
+    - stem: "The refractive index of a type of glass is 1.6. What is the speed of light in this glass? (Speed of light in a vacuum = 3.0 × 10^{8} m/s.)"
+      pattern: grid
+      options: ["1.9 × 10^{8} m/s", "3.0 × 10^{8} m/s", "4.8 × 10^{8} m/s", "5.3 × 10^{7} m/s"]
+      answer: A
+      explain: "v = c / n = 3.0 × 10^{8} / 1.6 = 1.9 × 10^{8} m/s."
+
+    - stem: "Light enters four different materials from air, each time at an angle of incidence of 40°. The angles of refraction are shown. Which material has the greatest refractive index?"
+      pattern: table
+      table:
+        headers: ["", "angle of incidence", "angle of refraction"]
+        rows:
+          - ["40°", "30°"]
+          - ["40°", "25°"]
+          - ["40°", "35°"]
+          - ["40°", "38°"]
+      answer: B
+      explain: "Same i, so the smallest r means the greatest bending and the largest n."
+
+    - stem: "A ray of light in air strikes a block at an angle of incidence of 45°. The angle of refraction is 28°. What is the refractive index of the block?"
+      pattern: grid
+      options: ["0.66", "1.33", "1.51", "1.61"]
+      answer: C
+      explain: "n = sin 45° / sin 28° = 0.707 / 0.469 = 1.51."
+
+    - stem: "A ray of light passes from water into air. The angle of incidence is less than the critical angle. What happens to the ray at the surface?"
+      pattern: list
+      options:
+        - "It bends towards the normal and speeds up."
+        - "It bends towards the normal and slows down."
+        - "It bends away from the normal and slows down."
+        - "It bends away from the normal and speeds up."
+      answer: D
+      explain: "Light speeds up entering air (less dense), so it bends away from the normal."
+
+    - stem: "A material has a refractive index of 1.25. What is its critical angle?"
+      pattern: row
+      options: ["53°", "37°", "39°", "51°"]
+      answer: A
+      explain: "sin c = 1 / 1.25 = 0.80, so c = 53°."
+
+    - stem: "Which conditions are needed for total internal reflection?"
+      pattern: roman
+      statements:
+        - "Light travels from an optically denser medium towards a less dense medium."
+        - "The angle of incidence is greater than the critical angle."
+        - "The light must be of one colour only."
+      options: ["I only", "I and II only", "II and III only", "I, II and III"]
+      answer: B
+      explain: "Colour is irrelevant to whether TIR occurs."
+
+    - stem: "Why is the cladding of an optical fibre made of glass with a lower refractive index than the core?"
+      pattern: list
+      options:
+        - "So that it absorbs any light escaping from the core."
+        - "So that the fibre is flexible enough to bend."
+        - "So that light striking the core–cladding boundary at large angles is totally internally reflected."
+        - "So that light refracts into the cladding and travels faster."
+      answer: C
+      explain: "TIR can only happen going from higher n (core) to lower n (cladding)."
+
+    - stem: "The critical angle of a glass is 42°. A ray inside the glass strikes the glass–air surface at an angle of incidence of 50°. What happens to the ray?"
+      pattern: grid
+      options: ["It refracts out, bending towards the normal.", "It travels along the surface.", "It passes straight through.", "It is totally internally reflected."]
+      answer: D
+      explain: "50° > 42°, so total internal reflection occurs."
+
+    - stem: "What is an advantage of using optical fibres rather than copper cables for telecommunication?"
+      pattern: list
+      options:
+        - "They carry much more information with less signal loss."
+        - "They are easier to repair when broken."
+        - "They can carry electric current as well as light."
+        - "They can be bent at sharp right angles without losing any light."
+      answer: A
+      explain: "High data capacity and low loss are the key advantages."
+
+    - stem: "The focal length of a converging lens is the distance between"
+      pattern: grid
+      options: ["the lens and the image.", "the optical centre and the principal focus.", "the object and the image.", "the principal focus and 2F."]
+      answer: B
+      explain: "By definition."
+
+    - stem: "Which row correctly describes the image formed by a thin converging lens?"
+      pattern: table
+      table:
+        headers: ["", "object position", "nature of image"]
+        rows:
+          - ["beyond 2F", "virtual, upright, diminished"]
+          - ["at 2F", "real, inverted, magnified"]
+          - ["between F and 2F", "real, inverted, magnified"]
+          - ["between F and the lens", "real, upright, magnified"]
+      answer: C
+      explain: "At 2F the image is the same size; inside F it is virtual; beyond 2F it is real and diminished."
+
+    - stem: "An object is placed 10 cm from a converging lens of focal length 10 cm. Where is the image formed?"
+      pattern: row
+      options: ["10 cm", "20 cm", "5 cm", "at infinity"]
+      answer: D
+      explain: "An object at F gives parallel rays: no image is formed (at infinity)."
+
+    - stem: "A converging lens is used as a magnifying glass. What type of image does it form?"
+      pattern: list
+      options:
+        - "virtual, upright and magnified"
+        - "real, inverted and magnified"
+        - "virtual, inverted and diminished"
+        - "real, upright and the same size"
+      answer: A
+      explain: "Object inside F: virtual, upright, magnified."
+
+    - stem: "Which statements about a real image are correct?"
+      pattern: roman
+      statements:
+        - "It can be formed on a screen."
+        - "It is formed where rays of light actually meet."
+        - "It is always upright."
+      options: ["I only", "I and II only", "II and III only", "I, II and III"]
+      answer: B
+      explain: "Real images from a single converging lens are inverted."
+
+    - stem: "An object is placed 20 cm from a converging lens of focal length 10 cm. How far from the lens is the image?"
+      pattern: grid
+      options: ["10 cm", "15 cm", "20 cm", "40 cm"]
+      answer: C
+      explain: "The object is at 2F, so the image is at 2F: 20 cm."
+
+    - stem: "In a slide projector, where is the slide placed relative to the converging lens?"
+      pattern: grid
+      options: ["beyond 2F", "at 2F", "at F", "between F and 2F"]
+      answer: D
+      explain: "Between F and 2F gives a real, inverted, magnified image on the screen."
+
+paper2:
+  time: 45 minutes
+  sectionA:
+    - stem: "This question is about reflection and refractive index."
+      parts:
+        - text: "State the two laws of reflection."
+          marks: 2
+          lines: 3
+          answer: "The angle of incidence equals the angle of reflection. The incident ray, the reflected ray and the normal lie in the same plane."
+        - text: "Define the refractive index of a medium in terms of the speed of light."
+          marks: 1
+          lines: 2
+          answer: "Refractive index = speed of light in a vacuum ÷ speed of light in the medium."
+        - text: "Light travels at 2.25 × 10^{8} m/s in water. Calculate the refractive index of water."
+          marks: 2
+          calc: {label: refractive index, unit: ""}
+          answer:
+            - {do: Use n = c / v., work: "n = 3.0 × 10^{8} / 2.25 × 10^{8} = 1.33"}
+
+    - stem: "A ray of light in air strikes the surface of a rectangular glass block at an angle of incidence of 40°. The refractive index of the glass is 1.52."
+      parts:
+        - text: "Calculate the angle of refraction."
+          marks: 2
+          calc: {label: angle of refraction, unit: "°"}
+          answer:
+            - {do: Rearrange n = sin i / sin r., work: "sin r = sin 40° / 1.52 = 0.643 / 1.52 = 0.423"}
+            - {do: Inverse sine., work: "r = 25.0°"}
+        - text: "Calculate the speed of light in the glass."
+          marks: 2
+          calc: {label: speed, unit: m/s}
+          answer: [{do: Use v = c / n., work: "v = 3.0 × 10^{8} / 1.52 = 1.97 × 10^{8} m/s"}]
+        - text: "The ray leaves through the opposite, parallel face of the block. State and explain the direction of the emergent ray compared with the incident ray."
+          marks: 2
+          lines: 3
+          answer: "It is **parallel** to the incident ray (displaced sideways). The ray meets the second face at 25.0°, so by reversibility it leaves at 40° to the normal."
+        - text: "Explain why a ray that strikes the block along the normal does not bend."
+          marks: 1
+          lines: 2
+          answer: "Its angle of incidence is 0°, so sin r = 0 and r = 0°: it slows down but does not change direction."
+
+    - stem: "An endoscope uses optical fibres made of glass of refractive index 1.48."
+      parts:
+        - text: "Define critical angle."
+          marks: 1
+          lines: 2
+          answer: "The angle of incidence in the optically denser medium for which the angle of refraction is 90°."
+        - text: "Calculate the critical angle of the glass."
+          marks: 2
+          calc: {label: critical angle, unit: "°"}
+          answer: [{do: Use sin c = 1 / n., work: "sin c = 1 / 1.48 = 0.676, so c = 42.5°"}]
+        - text: "Explain how light travels along a curved optical fibre."
+          marks: 2
+          lines: 3
+          answer: "Light strikes the core–cladding boundary at an angle of incidence **greater than the critical angle**, so it is **totally internally reflected**. This repeats all along the fibre, even round bends."
+        - text: "State one advantage of using an endoscope instead of surgery to examine a patient’s stomach."
+          marks: 1
+          lines: 2
+          answer: "Only a small opening (or none) is needed, so less pain, lower risk of infection and faster recovery."
+
+    - stem: "An object 2.0 cm tall is placed 8.0 cm from a thin converging lens of focal length 5.0 cm. The grid is drawn to scale: 1 square represents 1 cm."
+      figure: tut-lens-task.svg
+      parts:
+        - text: "Complete the ray diagram to locate the image. Label the image."
+          marks: 3
+          answer:
+            - "Ray parallel to the axis refracts through F; ray through C is undeviated; they cross at the image tip."
+            - {figure: tut-lens-answer.svg, width: 90}
+        - text: "Measure the distance of the image from the lens."
+          marks: 1
+          calc: {label: image distance, unit: cm}
+          answer: "13.3 cm (accept 12.5–14.0 cm)"
+        - text: "Measure the height of the image."
+          marks: 1
+          calc: {label: height, unit: cm}
+          answer: "3.3 cm (accept 3.0–3.6 cm)"
+        - text: "State three characteristics of the image."
+          marks: 2
+          lines: 2
+          answer: "Real, inverted, magnified. (3 correct: 2 marks; 2 correct: 1 mark)"
+        - text: "Name one optical device that uses this arrangement."
+          marks: 1
+          lines: 1
+          answer: "A projector."
+
+    - stem: "A small lamp is fixed to the bottom of a swimming pool. The refractive index of water is 1.33."
+      parts:
+        - text: "Calculate the critical angle for water."
+          marks: 2
+          calc: {label: critical angle, unit: "°"}
+          answer: [{do: Use sin c = 1 / n., work: "sin c = 1 / 1.33 = 0.752, so c = 48.8°"}]
+        - text: "A ray from the lamp strikes the water surface at an angle of incidence of 30°. Calculate the angle the ray makes with the normal in the air."
+          marks: 2
+          calc: {label: angle, unit: "°"}
+          answer:
+            - {do: The larger angle is in air., work: "sin θ = 1.33 × sin 30° = 0.665"}
+            - {do: Inverse sine., work: "θ = 41.7°"}
+        - text: "Another ray strikes the surface at an angle of incidence of 60°. Describe and explain what happens to this ray."
+          marks: 2
+          lines: 3
+          answer: "It is **totally internally reflected** back into the water, because 60° is **greater than the critical angle** of 48.8° and the light is going from water to air."
+
+  sectionB:
+    - stem: "A student uses a converging lens of focal length 8.0 cm as a magnifying glass to look at a stamp."
+      figure: tut-mag-task.svg
+      parts:
+        - text: "Define principal focus."
+          marks: 1
+          lines: 2
+          answer: "The point on the principal axis where rays parallel to the axis converge after passing through the lens."
+        - text: "The stamp detail, 1.5 cm tall, is 5.0 cm from the lens. On the grid (1 square = 1 cm), complete a ray diagram to find the image. Label the image."
+          marks: 3
+          answer:
+            - "Draw the parallel ray through F and the ray through C; they diverge, so extend both back with dashed lines until they meet."
+            - {figure: tut-mag-answer.svg, width: 90}
+        - text: "State the distance of the image from the lens and its height."
+          marks: 2
+          lines: 2
+          answer: "13.3 cm from the lens, on the same side as the stamp (accept 12.5–14.0 cm); height 4.0 cm (accept 3.7–4.3 cm)."
+        - text: "The student moves the lens so that the stamp is 12 cm from it. Describe the image now formed."
+          marks: 2
+          lines: 2
+          answer: "The stamp is now between F and 2F, so the image is **real, inverted and magnified**, on the opposite side of the lens (beyond 2F)."
+
+    - stem: "A student investigates refraction using a ray box and a rectangular glass block. For five angles of incidence i, she measures the angle of refraction r."
+      table:
+        headers: ["i / °", "r / °", "sin i", "sin r"]
+        rows:
+          - ["20", "13.2", "0.342", "0.228"]
+          - ["30", "19.5", "0.500", "0.334"]
+          - ["40", "25.4", "", ""]
+          - ["50", "30.7", "0.766", "0.511"]
+          - ["60", "35.3", "", ""]
+      figure: snell-graph-task.svg
+      parts:
+        - text: "Describe how she can mark the path of the ray inside the block to measure r."
+          marks: 2
+          lines: 3
+          answer: "Mark the incident and emergent rays with crosses (or pins) far apart, remove the block, join the entry and exit points with a straight line, then draw the normal and measure r with a protractor."
+        - text: "Complete the table."
+          marks: 2
+          answer: "i = 40°: sin i = 0.643, sin r = 0.429. i = 60°: sin i = 0.866, sin r = 0.578."
+        - text: "Plot sin i against sin r on the grid and draw the best-fit line. Use it to find the refractive index of the glass."
+          marks: 3
+          calc: {label: refractive index, unit: ""}
+          answer:
+            - "Points lie on a straight line through the origin, so sin i / sin r is constant (Snell’s law)."
+            - {figure: snell-graph-answer.svg, width: 70}
+            - {do: "Gradient from a large triangle.", work: "n = 0.60 / 0.40 = 1.5"}
+        - text: "State one precaution to improve the accuracy of her measurements."
+          marks: 1
+          lines: 2
+          answer: "Use a narrow ray; read the protractor with the eye directly above; mark the ray at points far apart; repeat and average."

@@ -462,6 +462,42 @@ def cover():
     s.save("cover-light.svg")
 
 
+def snell_graph(answer):
+    """Graph grid for the Snell's law practical: sin i (y) against sin r (x), glass n = 1.50."""
+    x0, y0, W, H = 52, 14, 300, 250          # plot area in SVG units
+    xmax, ymax = 0.60, 1.00
+    s = SVG(372, 300, "Graph grid of sin i against sin r" + (" with five plotted points and a best-fit line of gradient 1.5" if answer else ""), "sg")
+    X = lambda v: x0 + v / xmax * W
+    Y = lambda v: y0 + H - v / ymax * H
+    for k in range(31):                       # minor lines every 0.02 on x
+        s.line(X(k * 0.02), y0, X(k * 0.02), y0 + H, color=GRID, width=1.2 if k % 5 == 0 else 0.6)
+    for k in range(51):                       # minor lines every 0.02 on y
+        s.line(x0, Y(k * 0.02), x0 + W, Y(k * 0.02), color=GRID, width=1.2 if k % 5 == 0 else 0.6)
+    s.line(x0, y0 + H, x0 + W, y0 + H, color=INK, width=1.4)
+    s.line(x0, y0, x0, y0 + H, color=INK, width=1.4)
+    for k in range(0, 7):
+        s.text(X(k * 0.1), y0 + H + 14, f"{k * 0.1:.1f}", 9, MUTED, "middle", 600)
+    for k in range(0, 6):
+        s.text(x0 - 6, Y(k * 0.2) + 3, f"{k * 0.2:.1f}", 9, MUTED, "end", 600)
+    s.text(x0 + W / 2, y0 + H + 30, "sin r", 11, INK, "middle", 900, italic=True)
+    s.add(f'<text x="16" y="{y0 + H/2}" font-size="11" font-weight="900" font-style="italic" fill="{INK}" text-anchor="middle" transform="rotate(-90 16 {y0 + H/2})">sin i</text>')
+    if answer:
+        s.line(X(0), Y(0), X(0.6), Y(0.9), color=BLUE, width=1.6)
+        for i in (20, 30, 40, 50, 60):
+            si = math.sin(math.radians(i))
+            sr = si / N_GLASS
+            cx, cy = X(sr), Y(si)
+            s.line(cx - 4, cy - 4, cx + 4, cy + 4, color=CORAL, width=1.8)
+            s.line(cx - 4, cy + 4, cx + 4, cy - 4, color=CORAL, width=1.8)
+        # gradient triangle from (0.10, 0.15) to (0.50, 0.75)
+        s.line(X(0.1), Y(0.15), X(0.5), Y(0.15), color=MUTED, width=1.1, dash="4 3")
+        s.line(X(0.5), Y(0.15), X(0.5), Y(0.75), color=MUTED, width=1.1, dash="4 3")
+        s.text(X(0.3), Y(0.15) + 13, "Δ sin r = 0.40", 9.5, INK, "middle", 800)
+        s.text(X(0.5) + 5, Y(0.45), "Δ sin i = 0.60", 9.5, INK, weight=800)
+        s.text(X(0.08), Y(0.92), "gradient = 0.60 / 0.40 = 1.5", 10.5, BLUE, weight=900)
+    s.save("snell-graph-" + ("answer" if answer else "task") + ".svg")
+
+
 def ambulance():
     s = SVG(300, 70, "The word AMBULANCE printed in mirror writing", "am")
     s.add(f'<rect x="1" y="1" width="298" height="68" rx="8" fill="#ffffff" stroke="{CORAL}" stroke-width="2"/>')
@@ -496,5 +532,12 @@ if __name__ == "__main__":
     for mode in ("task", "answer"):
         lens_diagram(f"lens-mag-{mode}", f=6, u=4, h=2, px=12, xmin=-16, xmax=14, ymax=8, ymin=-3, show=mode,
                      label="Grid for a scale ray diagram: converging lens of focal length 6 cm, object 2 cm tall placed 4 cm from the lens")
+    # tutorial: Paper 2 Q4 (object between F and 2F) and Q6 (magnifying glass)
+    for mode in ("task", "answer"):
+        lens_diagram(f"tut-lens-{mode}", f=5, u=8, h=2, px=12, xmin=-12, xmax=19, ymax=4, ymin=-5, show=mode,
+                     label="Grid for a scale ray diagram: converging lens of focal length 5 cm, object 2 cm tall placed 8 cm from the lens")
+        lens_diagram(f"tut-mag-{mode}", f=8, u=5, h=1.5, px=11, xmin=-18, xmax=12, ymax=6, ymin=-2, show=mode,
+                     label="Grid for a scale ray diagram: converging lens of focal length 8 cm, object 1.5 cm tall placed 5 cm from the lens")
+        snell_graph(mode == "answer")
     cover()
     print(f"glass block r = {r:.1f} deg, critical angle = {c:.1f} deg")

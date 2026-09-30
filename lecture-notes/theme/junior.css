@@ -1,0 +1,80 @@
+/* Junior theme (ages 13–14, Sec 1–2): a sticker-bright mission log.
+   Loaded after notes.css when a note sets `meta: {theme: junior}`. Only overrides. */
+:root{
+  --ink:#172033; --muted:#566079; --rule:#d6dcea;
+  --teal:#2f5bff; --teal-tint:#eaf0ff; --teal-soft:#c4d3ff;   /* primary becomes electric blue */
+  --amber:#ffd23f; --hl:rgba(255,210,63,.7); --amber-tint:#fff6d1;
+  --coral:#ff6b5a; --coral-tint:#ffe9e5;
+  --mint:#2ec4a0; --mint-tint:#dcf6ee;
+  --blue:#7a4dff; --blue-tint:#efe9ff;
+  --grid:rgba(47,91,255,.12);
+  --f-display:"Fredoka","Nunito","M PLUS Rounded 1c",sans-serif;
+}
+body{font-size:12pt;line-height:1.55}
+h1,h2,h3,.glabel,.cbig,.formula-box .eq,.fact .big,.el-heading .num,.compare h4,.card .cname{font-family:var(--f-display)}
+h1,h2,h3{font-weight:700}
+.tag{color:var(--teal)}
+
+/* gutter: dotted blue trail instead of a red margin rule */
+.el > .g{border-right:2.5px dotted var(--teal)}
+.cue{color:var(--ink)}
+.cue::before{background:var(--teal)}
+.xp{font-family:var(--f-display);font-weight:700;font-size:10pt;background:var(--amber);border:2px solid var(--ink);box-shadow:1mm 1mm 0 var(--ink);transform:rotate(-4deg);padding:.6mm 2.8mm}
+
+/* chunky sticker objects */
+.callout,.formula-box,.tracker,.card,.compare > div,.summary-box,.space,.handwork,.conf div,.kw div,.tbl{border:2.2px solid var(--ink)!important;box-shadow:1.6mm 1.6mm 0 var(--ink);border-radius:4mm}
+.space{box-shadow:none;border-style:dashed!important;border-color:var(--teal)!important}
+
+/* headings become mission stages */
+.el-heading{margin-top:6mm}
+.el-heading > .b{border-bottom:0;background:var(--teal);color:#fff;border-radius:4mm;padding:4mm 5mm;box-shadow:1.6mm 1.6mm 0 var(--ink);border:2.2px solid var(--ink)}
+.el-heading h2{color:#fff;font-size:22pt}
+.el-heading .intro{color:#dfe7ff;font-size:11.5pt}
+.el-heading > .g{border-right-color:transparent;align-items:flex-end;justify-content:center}
+.el-heading .num{font-size:30pt;color:var(--teal);-webkit-text-stroke:0}
+.el-heading .num::before{content:"STAGE";display:block;font:700 8pt var(--f-body);letter-spacing:.12em;color:var(--muted)}
+
+/* cover */
+.cover .chapter{color:var(--teal)}
+.cover h1{font-size:38pt;font-weight:700}
+.cover h1 .hl{background:var(--amber);border-radius:2mm;padding:0 .12em;border:2.5px solid var(--ink)}
+.chip{border:2px solid var(--ink);color:var(--ink);background:#fff}
+.chip.solid{background:var(--amber);color:var(--ink)}
+.outcomes{background:var(--mint-tint);border:2.2px solid var(--ink);box-shadow:1.6mm 1.6mm 0 var(--ink)}
+.outcomes .tag{color:var(--ink)!important}
+
+/* colour roles */
+.predict{background:var(--amber-tint)}
+.predict .tag{color:#9a6a00}
+.fact{background:var(--mint-tint);border-style:solid!important}
+.fact .tag,.fact .big{color:#0f7a61}
+.examiner{background:var(--coral-tint)}
+.examiner .tag{color:#c23b2b}
+.activity{background:var(--blue-tint)}
+.activity .tag{color:var(--blue)}
+.formula-box{background:var(--amber-tint)}
+.formula-box .eq{color:var(--ink);font-size:24pt}
+.formula-box td:first-child{color:var(--teal)}
+.compare > div:first-child{background:var(--coral-tint)}
+.compare > div:last-child{background:var(--mint-tint)}
+.opt .box{border-width:2px;border-radius:50%}
+.hl{background:var(--hl);border-radius:1mm}
+
+/* collectable cards */
+.card{background:#fff}
+.card:nth-child(4n+1){background:var(--teal-tint)}
+.card:nth-child(4n+2){background:var(--amber-tint)}
+.card:nth-child(4n+3){background:var(--mint-tint)}
+.card:nth-child(4n+4){background:var(--coral-tint)}
+.cbig{color:var(--ink);font-size:24pt}
+
+/* sticky notes, slightly askew */
+.sticky{box-shadow:1mm 1.5mm 0 rgba(23,32,51,.25)}
+.sticky:nth-child(1){background:#fff1a8;transform:rotate(-1.2deg)}
+.sticky:nth-child(2){background:#d8e4ff;transform:rotate(.8deg)}
+.sticky:nth-child(3){background:#ccf3e6;transform:rotate(-.6deg)}
+
+/* annex: calmer */
+.step .n{background:var(--teal)}
+.step .w{color:var(--teal)}
+.ans-final{background:var(--amber)}

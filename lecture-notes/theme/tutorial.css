@@ -1,0 +1,134 @@
+/* CuriousLab tutorial: Kurzgesagt-style colour boxes on white exam pages, A4.
+   Layout: exam margins (left 20 mm, right 25 mm); cover and paper covers are their own pages. */
+:root{
+  --navy:#0e1b33; --navy2:#1b2d52; --ink:#1a2233; --muted:#5b6479; --rule:#d7dce6; --paper:#ffffff;
+  --cyan:#00a6d6; --cyan-t:#e2f5fb; --yellow:#ffbf1f; --yellow-t:#fff5d9; --green:#11b58a; --green-t:#def6ee;
+  --red:#ef5a44; --red-t:#fde8e4; --purple:#7a4bd6; --purple-t:#efe8fb; --deepblue:#1f58b8; --deepblue-t:#e3ecfa;
+  --f-body:"Nunito","M PLUS Rounded 1c","Segoe UI",sans-serif;
+  --f-display:"Fredoka","Nunito",sans-serif;
+}
+@page{size:A4;margin:18mm 25mm 18mm 20mm;
+  @top-left{font:800 8pt var(--f-body);color:#1f58b8;letter-spacing:.04em}
+  @top-right{font:700 8pt var(--f-body);color:#5b6479}
+  @bottom-center{content:"Page " counter(page) " of " counter(pages);font:700 8pt var(--f-body);color:#5b6479}}
+@page cover{margin:0; @top-left{content:none} @top-right{content:none} @bottom-center{content:none}}
+@page pcover{@top-left{content:none} @top-right{content:none}}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{margin:0;background:var(--paper);color:var(--ink)}
+body{font:400 10.5pt/1.5 var(--f-body)}
+h1,h2,h3{margin:0;line-height:1.15;font-family:var(--f-display);font-weight:600}
+p{margin:0}
+sub,sup{font-size:.72em;line-height:0}
+b,strong{font-weight:800}
+figure{margin:2mm 0;display:flex;justify-content:center}
+figure svg{width:100%;height:auto}
+
+/* ---------- cover (full bleed) ---------- */
+.tcover{page:cover;width:210mm;height:297mm;background:var(--navy);color:#fff;padding:16mm 18mm;display:flex;flex-direction:column;gap:6mm;break-after:page;
+  background-image:radial-gradient(circle at 85% 12%,rgba(0,166,214,.35),transparent 40%),radial-gradient(circle at 10% 90%,rgba(122,75,214,.35),transparent 45%)}
+.ctop{display:flex;justify-content:space-between;font:800 8.5pt var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:#9fc3ff}
+.cnum{font:600 14pt var(--f-display);color:var(--yellow);letter-spacing:.04em;margin-top:6mm}
+.tcover h1{font-size:64pt;font-weight:700;letter-spacing:-.01em;color:#fff}
+.csub{font-size:12.5pt;color:#c8d6f2}
+blockquote{margin:2mm 0;background:rgba(255,255,255,.08);border-left:4px solid var(--yellow);border-radius:0 3mm 3mm 0;padding:4mm 6mm;display:flex;flex-direction:column;gap:2mm}
+blockquote p{font:italic 600 11.5pt/1.45 var(--f-body);color:#fff}
+blockquote cite{font:700 8.5pt var(--f-body);font-style:normal;color:var(--yellow);letter-spacing:.04em}
+.cart{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.cart svg{max-height:78mm;width:auto;max-width:100%}
+.placeholder{border:2px dashed rgba(255,255,255,.45);border-radius:3mm;height:30mm;display:grid;place-items:center;font:700 9pt var(--f-body);color:#9fb0cf;text-align:center;padding:0 8mm}
+.cfoot{display:flex;justify-content:space-between;gap:3mm;font:800 8.5pt var(--f-body);color:#fff}
+.cfoot span{flex:1;text-align:center;background:var(--navy2);border-radius:10mm;padding:2mm}
+
+/* ---------- concept summary ---------- */
+.page{break-before:page}
+.shead{font-size:20pt;color:var(--navy);margin-bottom:4mm;display:flex;align-items:center;gap:3mm}
+.shead::before{content:"";width:9mm;height:9mm;border-radius:50%;background:var(--yellow)}
+.kcols{columns:2;column-gap:5mm}
+.kbox{break-inside:avoid;border-radius:3mm;border:1.6px solid;padding:3mm 4mm 3.2mm;margin:0 0 4.5mm;background:var(--paper)}
+.kbox h3{font-size:12pt;margin-bottom:1.5mm}
+.kbox ul{margin:0;padding-left:4.5mm;display:grid;gap:1mm;font-size:9.4pt;line-height:1.42}
+.k-cyan{border-color:var(--cyan);background:var(--cyan-t)} .k-cyan h3{color:#00749a}
+.k-yellow{border-color:var(--yellow);background:var(--yellow-t)} .k-yellow h3{color:#9a6a00}
+.k-green{border-color:var(--green);background:var(--green-t)} .k-green h3{color:#0a7d5f}
+.k-red{border-color:var(--red);background:var(--red-t)} .k-red h3{color:#c23b28}
+.k-purple{border-color:var(--purple);background:var(--purple-t)} .k-purple h3{color:#5b2fb0}
+.k-deepblue{border-color:var(--deepblue);background:var(--deepblue-t)} .k-deepblue h3{color:var(--deepblue)}
+
+/* ---------- paper covers ---------- */
+.pcover{page:pcover;break-before:page;break-after:page;display:flex;flex-direction:column;gap:7mm;min-height:250mm}
+.pc-top{display:flex;justify-content:space-between;font:800 8.5pt var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--deepblue);border-bottom:2px solid var(--navy);padding-bottom:2mm}
+.pc-title{display:flex;flex-direction:column;gap:1.5mm;margin-top:10mm}
+.pc-sub{font:700 11pt var(--f-body);color:var(--muted)}
+.pc-title h2{font-size:28pt;color:var(--navy)}
+.pc-time{font:800 11pt var(--f-body);color:var(--red)}
+.cand{border-collapse:collapse;width:100%}
+.cand td{border:1.3px solid var(--ink);padding:3mm 4mm;font-weight:800;font-size:10pt}
+.cand td:first-child{width:40mm;background:#f3f5f9}
+.instr{border:2px solid var(--navy);border-radius:2mm;padding:4mm 6mm}
+.instr h3{font:900 10pt var(--f-body);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2mm}
+.instr ul{margin:0;padding-left:5mm;display:grid;gap:1.5mm;font-size:10pt}
+.exam-use{border-collapse:collapse;align-self:flex-end;width:80mm;margin-top:auto}
+.exam-use th{background:var(--navy);color:#fff;font:800 9pt var(--f-body);padding:2mm;text-align:left}
+.exam-use td{border:1.2px solid var(--ink);padding:2mm 3mm;font-size:9.5pt}
+.exam-use td:nth-child(2){width:18mm}
+.exam-use td:last-child{width:14mm;text-align:center;color:var(--muted)}
+.exam-use .tot td{font-weight:900}
+
+/* ---------- paper 1 ---------- */
+.mcq{display:grid;grid-template-columns:8mm 1fr 16mm;gap:2mm;padding:3.2mm 0;border-bottom:1px solid var(--rule);break-inside:avoid}
+.qn{font:800 11pt var(--f-body)}
+.qb{display:flex;flex-direction:column;gap:2mm;min-width:0}
+.bracket{align-self:end;font:700 11pt var(--f-body);text-align:right;white-space:nowrap}
+.L{display:inline-block;width:6mm;font-weight:900}
+.og{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 6mm}
+.orow{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm}
+.olist{display:flex;flex-direction:column;gap:1.2mm}
+.olist > div{display:flex}
+.roman{border-collapse:collapse;margin:0 auto 1mm 0}
+.roman td{padding:.6mm 3mm .6mm 0;vertical-align:top}
+.roman td:first-child{font-weight:900;width:9mm;text-align:right;padding-right:4mm}
+.otable{border-collapse:collapse;align-self:flex-start;min-width:110mm}
+.otable th,.otable td{border:1.2px solid var(--ink);padding:1.4mm 4mm;text-align:center}
+.otable thead th{background:#eef1f6;font-weight:800}
+.otable tbody th{width:10mm}
+.end{text-align:center;font:800 9pt var(--f-body);color:var(--muted);margin-top:5mm;letter-spacing:.1em;text-transform:uppercase}
+
+/* ---------- paper 2 ---------- */
+.sec{font-size:15pt;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:1.5mm;margin-bottom:3mm;display:flex;align-items:baseline;gap:4mm}
+.sec small{font:600 10pt var(--f-body);color:var(--muted)}
+.sec.newpage{break-before:page}
+.sq{margin-bottom:6mm;display:flex;flex-direction:column;gap:2.5mm}
+.stem{display:grid;grid-template-columns:8mm 1fr;gap:2mm}
+.part{display:grid;grid-template-columns:8mm 1fr 10mm;gap:2mm;margin-left:8mm;break-inside:avoid}
+.pl{font-weight:800}
+.pm{font-weight:800;text-align:right}
+.pt{display:flex;flex-direction:column;gap:1.5mm;min-width:0}
+.dl div{height:8mm;border-bottom:1.4px dotted #6b7385}
+.calc{display:flex;flex-direction:column;gap:1mm}
+.calc .work{height:20mm}
+.calc .res{align-self:flex-end;font-weight:700}
+.calc .dots{display:inline-block;width:40mm;border-bottom:1.4px dotted #6b7385}
+.totalm{text-align:right;font-weight:900;break-before:avoid}
+.part:last-of-type{break-after:avoid}
+.dtable{border-collapse:collapse;margin-left:10mm;align-self:flex-start;break-inside:avoid}
+.dtable th,.dtable td{border:1.2px solid var(--ink);padding:1.4mm 5mm;text-align:center;min-width:18mm}
+.dtable th{background:#eef1f6}
+.dtable td.blank{background:#fffbea}
+
+/* ---------- answer key ---------- */
+.keybox{margin-bottom:5mm;break-inside:auto}
+.keybox h3 small{font:700 9pt var(--f-body);color:var(--muted)}
+.keyt{width:100%;border-collapse:collapse;font-size:9.4pt;background:#fff}
+.keyt th{background:var(--cyan);color:#fff;text-align:left;padding:1.4mm 2.5mm}
+.keyt td{padding:1.2mm 2.5mm;border-bottom:1px solid var(--rule);vertical-align:top}
+.keyt td.letter{font-weight:900;color:#00749a;text-align:center;width:10mm}
+.keyt td:first-child{width:8mm;font-weight:800}
+.kp{display:grid;grid-template-columns:8mm 1fr 10mm;gap:2mm;padding:1.8mm 0;border-top:1px dashed rgba(10,125,95,.35);break-inside:avoid}
+.kp:first-of-type{border-top:0}
+.ans{font-size:9.8pt}
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:6mm 1fr;gap:2.5mm;padding:1mm 0}
+.step .note{grid-column:2;font-size:8.5pt;color:var(--muted)}
+.step .n{width:5mm;height:5mm;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font:900 7.5pt var(--f-body);margin-top:.5mm}
+.step .w{display:block;font-weight:800;color:#0a7d5f}
+.step > span:empty{display:none}

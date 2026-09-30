@@ -89,6 +89,8 @@ class Note:
         if cls == "raw":  # piece renders its own rows (the annex)
             return b
         tag = f'<span class="typelabel">{t}</span>' if self.labels else ""
+        if el.get("xp"):
+            g = f'<span class="xp">+{el["xp"]} XP</span>' + g
         if cls and "full" in cls:
             return f'<section class="el {cls}">{tag}<div class="b">{b}</div></section>'
         return f'<section class="el el-{t} {cls or ""}">{tag}<div class="g">{g}</div><div class="b">{b}</div></section>'
@@ -197,6 +199,36 @@ class Note:
         items = "".join(f"<div><b>{md(k)}</b><span>{md(v)}</span></div>" for k, v in el["items"])
         head = f'<span class="tag">{md(el.get("title", "Key words"))}</span>'
         return cues_html(el), f'{head}<div class="kw">{items}</div>', ""
+
+    def r_tracker(self, el):
+        """Mission route plus boxes to colour in as XP is earned."""
+        stops = "".join(f'<span class="stop"><b>{i + 1}</b>{md(x)}</span>' for i, x in enumerate(el["stages"]))
+        total = int(el.get("total", 100))
+        step = int(el.get("step", 10))
+        boxes = "".join(f'<i>{v}</i>' for v in range(step, total + 1, step))
+        badges = "".join(f'<span class="badge"><span></span>{md(x)}</span>' for x in el.get("badges", []))
+        b = f"""<div class="tracker"><span class="tag">{md(el.get('title', 'Your mission route'))}</span>
+            <div class="route">{stops}</div>
+            <div class="xpbar"><span class="tag">Colour in your XP</span><div class="xpboxes">{boxes}</div></div>
+            <div class="badges">{badges}</div></div>"""
+        return cues_html(el), b, ""
+
+    def r_cards(self, el):
+        """Collectable fact cards: a big number up front, the story underneath."""
+        cards = "".join(
+            f'<div class="card"><span class="cname">{md(c["name"])}</span><span class="cbig">{md(c["big"])}</span>'
+            f'<span class="cunit">{md(c.get("unit", ""))}</span><p>{md(c["text"])}</p></div>' for c in el["items"])
+        head = f'<span class="tag">{md(el["title"])}</span>' if el.get("title") else ""
+        return cues_html(el), f'{head}<div class="cards">{cards}</div>', ""
+
+    def r_stickies(self, el):
+        """Sticky-note tasks that send students back to pen and paper."""
+        notes = "".join(f'<div class="sticky"><h3>{md(n["title"])}</h3><p>{md(n["text"])}</p>{space_html(n)}</div>' for n in el["items"])
+        for n in el["items"]:
+            if n.get("answer"):
+                self.solve(f'Sticky note · {n["title"]}', self.answer_html(n["answer"]))
+        head = f'<span class="tag">{md(el["title"])}</span>' if el.get("title") else ""
+        return cues_html(el), f'{head}<div class="stickies">{notes}</div>', ""
 
     # --- callouts
     def r_examiner(self, el):
@@ -372,9 +404,13 @@ def build(src, labels=False, html_only=False):
     note = Note(meta, labels)
     body = "\n".join(note.render(el) for el in expand(doc["elements"], os.path.dirname(os.path.abspath(src))))
 
+    theme_css = f'<link rel="stylesheet" href="../theme/{meta["theme"]}.css">' if meta.get("theme") else ""
+    # Chromium has no running strings, so the header text goes straight into the @page rule
+    q = lambda t: html.escape(str(t)).replace('"', "'")
+    theme_css += f'<style>@page{{@top-left{{content:"{q(meta.get("course", ""))}"}} @top-right{{content:"{q(meta.get("series", ""))}"}}}}</style>'
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>{html.escape(meta.get('title', 'Lecture notes'))}</title>
-<link rel="stylesheet" href="../theme/fonts.css"><link rel="stylesheet" href="../theme/notes.css">
+<link rel="stylesheet" href="../theme/fonts.css"><link rel="stylesheet" href="../theme/notes.css">{theme_css}
 </head><body>
 <div class="running" data-course="{html.escape(meta.get('course', ''))}" data-series="{html.escape(meta.get('series', ''))}"></div>
 {body}

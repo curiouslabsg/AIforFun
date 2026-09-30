@@ -14,8 +14,8 @@
 }
 @page{
   size:A4; margin:18mm 14mm 16mm 14mm;
-  @top-left{content:string(course);font:700 8pt var(--f-body);color:#0f6e74;letter-spacing:.04em}
-  @top-right{content:string(series);font:700 8pt var(--f-body);color:#5d6577;letter-spacing:.04em}
+  @top-left{font:700 8pt var(--f-body);color:#0f6e74;letter-spacing:.04em}
+  @top-right{font:700 8pt var(--f-body);color:#5d6577;letter-spacing:.04em}
   @bottom-right{content:counter(page);font:800 9pt var(--f-body);color:#0f6e74}
   @bottom-left{content:"Blank spaces are for your working. Solutions are in the Annex at the back.";font:italic 7.5pt var(--f-body);color:#5d6577}
 }
@@ -193,3 +193,27 @@ ol.numbered li::marker{font-weight:900;color:var(--coral)}
 .ans{font-size:10.5pt}
 .ans .pl{font-weight:900;color:var(--teal);margin-right:1.5mm}
 .ans-final{display:inline-block;background:var(--hl);font-weight:900;padding:0 1.5mm;border-radius:1mm}
+
+/* ---------- XP, tracker, cards, stickies (any theme; junior.css makes them louder) ---------- */
+.xp{align-self:flex-start;font:900 8.5pt var(--f-body);background:var(--amber);color:var(--ink);border-radius:10mm;padding:.8mm 2.6mm}
+.tracker{border:1.5px solid var(--teal);border-radius:3mm;padding:3.5mm 4mm;display:flex;flex-direction:column;gap:3mm}
+.route{display:flex;flex-wrap:wrap;gap:2mm;align-items:center}
+.stop{display:flex;align-items:center;gap:1.5mm;font:800 9.5pt var(--f-body);background:var(--teal-tint);border-radius:10mm;padding:1mm 3mm 1mm 1mm}
+.stop b{width:5.5mm;height:5.5mm;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:8pt}
+.xpbar{display:flex;flex-direction:column;gap:1.5mm}
+.xpboxes{display:grid;grid-template-columns:repeat(10,1fr);gap:1.2mm}
+.xpboxes i{font:800 7.5pt var(--f-body);font-style:normal;color:var(--muted);border:1.3px solid var(--ink);border-radius:1.5mm;height:8mm;display:flex;align-items:flex-end;justify-content:flex-end;padding:.6mm 1mm}
+.badges{display:flex;flex-wrap:wrap;gap:3mm}
+.badge{display:flex;align-items:center;gap:1.5mm;font:800 9pt var(--f-body)}
+.badge span{width:9mm;height:9mm;border-radius:50%;border:1.5px dashed var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(30mm,1fr));gap:3mm}
+.card{border:1.5px solid var(--teal);border-radius:3mm;padding:3mm;display:flex;flex-direction:column;gap:.5mm}
+.cname{font:800 8pt var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cbig{font:900 20pt/1.05 var(--f-body);color:var(--teal)}
+.cunit{font:700 8.5pt var(--f-body);color:var(--muted)}
+.card p{font-size:9pt;line-height:1.4;margin-top:1mm}
+.stickies{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+.sticky{padding:3mm 3.5mm;border-radius:1mm 1mm 4mm 1mm;display:flex;flex-direction:column;gap:1.5mm;background:var(--amber-tint)}
+.sticky h3{font-size:12pt}
+.sticky p{font-size:9.8pt}
+.sticky .lines div{height:7.5mm}
