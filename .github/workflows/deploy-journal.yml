@@ -1,0 +1,70 @@
+# Tests the workshop journal's security rules on every push and pull request,
+# and deploys to Firebase (aiforfun-sg) when main changes and the tests pass.
+#
+# No stored keys: GitHub proves its identity to Google with a short-lived OIDC token
+# (Workload Identity Federation). Google only accepts tokens from this repo's main branch.
+name: Journal — test and deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workshop-journal/**'
+      - '.github/workflows/deploy-journal.yml'
+  pull_request:
+    paths:
+      - 'workshop-journal/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: journal-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workshop-journal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workshop-journal/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --no-audit --no-fund
+      - name: Security rules tests (Firestore emulator)
+        run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: workshop-journal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workshop-journal/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/902697161492/locations/global/workloadIdentityPools/github/providers/aiforfun
+          service_account: github-deploy@aiforfun-sg.iam.gserviceaccount.com
+      - name: Deploy site and security rules
+        run: npx firebase deploy --project aiforfun-sg --only hosting,firestore:rules --non-interactive

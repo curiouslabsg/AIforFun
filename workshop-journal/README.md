@@ -30,7 +30,9 @@ AI for Fun workshops show AI-specific versions of the design brief, prototype an
 | Database region | asia-southeast1 (Singapore) |
 | First admin | lloydgoh@gmail.com |
 
-To deploy changes: `npm install`, `npx firebase login`, then `npx firebase deploy --project aiforfun-sg --only hosting,firestore:rules`.
+**Deploys are automatic.** Every push to `main` that touches `workshop-journal/` runs the security rules tests in GitHub Actions (`.github/workflows/deploy-journal.yml`) and, if they pass, deploys the site and rules to `aiforfun-sg`. Pull requests run the tests only.
+
+GitHub signs in to Google without a stored key (Workload Identity Federation): the `github` pool's `aiforfun` provider only accepts this repo (ID `1386575510`) on `main`, and the `github-deploy` service account can deploy hosting and rules but cannot read Firestore data. To deploy by hand instead: `npx firebase login`, then `npx firebase deploy --project aiforfun-sg --only hosting,firestore:rules`.
 
 ## What's in it
 
