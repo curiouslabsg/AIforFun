@@ -21,6 +21,11 @@ const state = {
 // Form class and teacher come from the class list (teacher-only), keyed by teaching group + name.
 const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
 const teacherOf = (st) => state.details.get(st.class)?.teachers?.[st.name] ?? st.teacher ?? '';
+// Teacher names in the class list are matched loosely: "Mr Lloyd Goh", "lloyd goh" and "LLOYD GOH" are the same person.
+const nameKey = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ')
+  .replace(/^\s*(mr|mrs|ms|mdm|miss|dr)\s+/, '').replace(/\s+/g, ' ').trim();
+const isMe = (teacherName) => !!state.myName && nameKey(teacherName) === nameKey(state.myName);
+
 function teacherNames() {
   const names = new Set(state.settingsTeachers);
   for (const d of state.details.values()) for (const t of Object.values(d.teachers ?? {})) if (t) names.add(t);
@@ -110,8 +115,11 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
       return;
     }
     state.email = user.email;
-    $('t-email').textContent = `${user.email}${state.role === 'admin' ? ' · admin' : ''}`;
+    $('t-email').textContent = `${user.email} · ${state.role === 'admin' ? 'Admin rights' : 'Teacher rights'}`;
     $('t-manage').hidden = state.role !== 'admin';
+    // Teachers only view; admins open, close and activate workshops.
+    $('t-create').hidden = state.role !== 'admin';
+    $('t-viewer-note').hidden = state.role === 'admin';
     screen('t-app');
     view('t-list');
     await loadSettings();
@@ -190,7 +198,7 @@ async function loadWorkshops({ show = true } = {}) {
       }, active ? 'Deactivate' : 'Make active')
       : null);
   };
-  $('t-cards').replaceChildren(...(state.workshops.length ? state.workshops.map(card) : [h('p', { class: 'muted' }, 'No workshops yet. Create one above, then make it active.')]));
+  $('t-cards').replaceChildren(...(state.workshops.length ? state.workshops.map(card) : [h('p', { class: 'muted' }, state.role === 'admin' ? 'No workshops yet. Create one above, then make it active.' : 'No workshops yet. Your admin will open them here.')]));
   const activeNow = state.workshops.filter((w) => state.active.includes(w.code));
   if (!activeNow.length && state.workshops.length) {
     $('t-cards').prepend(h('p', { class: 'msg warn', style: 'grid-column:1/-1' }, 'No workshop is active, so students see "No workshop is open". An admin can press Make active on one.'));
@@ -268,6 +276,7 @@ function openWorkshop(code) {
   }, lost);
   state.unsub = () => { u1(); u2(); };
   $('ws-delete').hidden = state.role !== 'admin';
+  $('ws-toggle').hidden = state.role !== 'admin';
 }
 
 function renderToggle() {
@@ -287,7 +296,7 @@ $('ws-toggle').addEventListener('click', async () => {
   }
 });
 
-// "My students" = students who picked this teacher's name when joining.
+// "My students" = students the class list puts under this teacher's name.
 function renderFilters() {
   const seg = (scope, label) => h('button', {
     type: 'button', class: 'seg-btn', 'aria-pressed': String(state.scope === scope),
@@ -308,7 +317,7 @@ function renderFilters() {
     select('Filter by class', 'cls', classes, 'All classes'),
   ];
   const names = teacherNames();
-  if (state.scope === 'mine' && !names.includes(state.myName)) {
+  if (state.scope === 'mine' && !names.some(isMe)) {
     const pick = h('select', {
       'aria-label': 'Which teacher are you?',
       onchange: async (e) => {
@@ -328,7 +337,7 @@ function renderFilters() {
 }
 
 function visibleStudents() {
-  return state.students.filter((st) => (state.scope === 'all' || teacherOf(st) === state.myName)
+  return state.students.filter((st) => (state.scope === 'all' || isMe(teacherOf(st)))
     && (!state.tg || st.class === state.tg)
     && (!state.cls || classOf(st) === state.cls));
 }
@@ -342,7 +351,7 @@ function joinedSummary() {
     if (state.tg && tg !== state.tg) continue;
     const d = state.details.get(tg) ?? {};
     for (const name of g.students ?? []) {
-      if (state.scope === 'mine' && (d.teachers?.[name] ?? '') !== state.myName) continue;
+      if (state.scope === 'mine' && !isMe(d.teachers?.[name])) continue;
       if (state.cls && (d.classes?.[name] ?? '') !== state.cls) continue;
       total++;
       if (joined.has(`${tg}|${name}`)) inn++;
@@ -734,7 +743,7 @@ async function loadTeachers() {
   $('t-team-rows').replaceChildren(...rows.map((t) => {
     const self = t.email === state.email;
     const role = h('select', { 'aria-label': `Role for ${t.email}`, disabled: self ? true : null, onchange: (e) => changeRole(t.email, e.target.value) },
-      h('option', { value: 'teacher' }, 'Teacher'), h('option', { value: 'admin' }, 'Admin'));
+      h('option', { value: 'teacher' }, 'Teacher rights'), h('option', { value: 'admin' }, 'Admin rights'));
     role.value = t.role ?? 'teacher';
     const remove = self ? h('span', { class: 'small muted' }, 'You') : h('button', {
       class: 'btn quiet', type: 'button',
@@ -788,7 +797,7 @@ $('t-add').addEventListener('submit', async (e) => {
 async function changeRole(email, role) {
   try {
     await updateDoc(doc(db, `teachers/${email}`), { role });
-    addMsg(`${email} is now ${role === 'admin' ? 'an admin' : 'a teacher'}.`, 'info');
+    addMsg(`${email} now has ${role === 'admin' ? 'admin' : 'teacher'} rights.`, 'info');
   } catch (err) {
     console.error(err);
     addMsg('Could not change the role. Try again.');
@@ -816,6 +825,8 @@ function rosterMsg(text, kind = 'err') {
 }
 
 function renderCurrentRoster() {
+  // Suggest the teacher names from the class lists when adding someone.
+  $('a-names').replaceChildren(...teacherNames().map((n) => h('option', { value: n })));
   const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (!tgs.length) {
     $('r-current').replaceChildren(h('p', { class: 'muted small' }, 'No class lists yet. Students can’t join until you upload one.'));

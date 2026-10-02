@@ -39,6 +39,7 @@
         </label>
         <button class="btn" type="submit">Create workshop</button>
       </form>
+      <p id="t-viewer-note" class="small muted" hidden>Your admin opens and closes workshops. Click one to see its students: <b>My students</b> shows the ones the class list puts under your name, <b>Whole school</b> shows everyone.</p>
       <p id="t-create-msg" class="msg err" hidden></p>
       <div id="t-cards" class="cards"></div>
     </main>
@@ -72,13 +73,18 @@
       <div><button id="t-team-back" class="btn quiet" type="button">← All workshops</button></div>
       <div>
         <h2>Teachers &amp; class lists</h2>
-        <p class="muted">People on this list can sign in to the dashboard and read every journal. Admins can also add and remove teachers, and upload class lists.</p>
+        <p class="muted">People on this list can sign in to the dashboard.</p>
+        <ul class="small muted rights">
+          <li><b>Teacher rights:</b> view every workshop and journal (their own students or the whole school), see and reset PINs, download CSVs, delete student journals.</li>
+          <li><b>Admin rights:</b> everything teachers can do, plus open, close, activate and delete workshops, add teachers and upload class lists.</li>
+        </ul>
+        <p class="small muted">A teacher's <b>Name</b> should match the <b>Teacher</b> column in the class list (titles like Mr/Ms and capitals don't matter), so <b>My students</b> shows their students straight away.</p>
       </div>
       <form id="t-add" class="create" novalidate>
         <label class="field"><span>Google email</span><input id="a-email" type="text" inputmode="email" autocomplete="off" maxlength="120" placeholder="ms.tan@school.edu.sg" required></label>
-        <label class="field"><span>Name</span><input id="a-name" type="text" maxlength="60" placeholder="Ms Tan"></label>
+        <label class="field"><span>Name</span><input id="a-name" type="text" maxlength="60" placeholder="Ms Tan" list="a-names" autocomplete="off"><datalist id="a-names"></datalist></label>
         <label class="field" style="flex:0 1 180px"><span>Role</span>
-          <select id="a-role"><option value="teacher">Teacher</option><option value="admin">Admin</option></select>
+          <select id="a-role"><option value="teacher">Teacher rights</option><option value="admin">Admin rights</option></select>
         </label>
         <button class="btn" type="submit">Add teacher</button>
       </form>

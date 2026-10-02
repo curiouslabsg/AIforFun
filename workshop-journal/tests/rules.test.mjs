@@ -111,7 +111,8 @@ test('closed workshop blocks joins and edits but keeps journals readable', async
   const db = device('a');
   await join(db, 'a');
   await setDoc(doc(db, `workshops/${CODE}/students/${SID}/entries/define`), entry());
-  await assertSucceeds(updateDoc(doc(teacher(), `workshops/${CODE}`), { open: false }));
+  await assertFails(updateDoc(doc(teacher(), `workshops/${CODE}`), { open: false }));
+  await assertSucceeds(updateDoc(doc(admin(), `workshops/${CODE}`), { open: false }));
   await assertFails(setDoc(doc(db, `workshops/${CODE}/students/${SID}/entries/define`), entry('late')));
   await assertFails(join(device('n'), 'n', 't1-new-kid'));
   await assertSucceeds(getDoc(doc(db, `workshops/${CODE}/students/${SID}/entries/define`)));
@@ -146,9 +147,12 @@ test('teacher reads everything; non-teacher Google users read nothing', async ()
   await assertFails(setDoc(doc(stranger(), 'workshops/NEWCODE'), { name: 'x', track: 'ai', open: true, createdAt: 1, createdBy: 'someone@else.test' }));
 });
 
-test('teacher creates a workshop; students cannot', async () => {
-  await assertSucceeds(setDoc(doc(teacher(), 'workshops/AIF9Q3M'), { name: '2E3', track: 'ai', open: true, createdAt: 1, createdBy: 'teacher@school.test' }));
+test('only admins open workshops; teachers and students cannot', async () => {
+  await assertSucceeds(setDoc(doc(admin(), 'workshops/AIF9Q3M'), { name: '2E3', track: 'ai', open: true, createdAt: 1, createdBy: 'admin@school.test' }));
+  await assertFails(setDoc(doc(teacher(), 'workshops/AIF2222'), { name: 'x', track: 'ai', open: true, createdAt: 1, createdBy: 'teacher@school.test' }));
   await assertFails(setDoc(doc(device('a'), 'workshops/AIF1111'), { name: 'x', track: 'ai', open: true, createdAt: 1, createdBy: 'teacher@school.test' }));
+  await assertFails(updateDoc(doc(teacher(), 'workshops/AIF9Q3M'), { name: 'renamed' }));
+  await assertSucceeds(getDocs(collection(teacher(), 'workshops')));
   await assertFails(deleteDoc(doc(teacher(), 'workshops/AIF9Q3M')));
 });
 
@@ -260,10 +264,10 @@ test('teachers can set their own display name but not their role', async () => {
 });
 
 test('custom workshop codes must be 4-12 capital letters or digits', async () => {
-  const w = { name: 'Demo', track: 'code', open: true, createdAt: 1, createdBy: 'teacher@school.test' };
-  await assertSucceeds(setDoc(doc(teacher(), 'workshops/ESSS26'), w));
-  await assertFails(setDoc(doc(teacher(), 'workshops/es-26'), w));
-  await assertFails(setDoc(doc(teacher(), 'workshops/ABC'), w));
+  const w = { name: 'Demo', track: 'code', open: true, createdAt: 1, createdBy: 'admin@school.test' };
+  await assertSucceeds(setDoc(doc(admin(), 'workshops/ESSS26'), w));
+  await assertFails(setDoc(doc(admin(), 'workshops/es-26'), w));
+  await assertFails(setDoc(doc(admin(), 'workshops/ABC'), w));
 });
 
 // ---------- team sync, locks, teacher deletes ----------

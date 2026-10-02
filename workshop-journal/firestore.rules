@@ -124,14 +124,15 @@ service cloud.firestore {
       // Students check a code with a single get; only teachers can list codes.
       allow get: if signedIn();
       allow list: if isTeacher();
-      allow create: if isTeacher()
+      // Only admins open, close, rename and delete workshops; teachers just view them.
+      allow create: if isAdmin()
         && code.matches('^[A-Z0-9]{4,12}$')
         && request.resource.data.keys().hasOnly(['name', 'track', 'open', 'createdAt', 'createdBy'])
         && shortString(request.resource.data.name, 80)
         && request.resource.data.track in ['code', 'ai']
         && request.resource.data.open is bool
         && request.resource.data.createdBy == request.auth.token.email;
-      allow update: if isTeacher()
+      allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'open']);
       allow delete: if isAdmin();
 
