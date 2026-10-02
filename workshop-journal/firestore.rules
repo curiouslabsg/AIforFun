@@ -10,7 +10,7 @@ rules_version = '2';
 //   workshops/{code}/students/{sid}/feedback/{noteId}  peer feedback sticky notes from the gallery walk
 //   workshops/{code}/teams/{key}                       shared team journal; key is "<class>-t<team>", e.g. "1A-t1"
 //     members/{uid}  entries/{stageId}  images/{id}  feedback/{id}  locks/{stage__prompt}
-//   settings/school                                    activeWorkshop (where students land) + legacy teacher list
+//   settings/school                                    activeWorkshops (where students land, up to 5) + legacy fields
 //   roster/{tg}                                        teaching group: level + student names (students pick from it)
 //   rosterDetails/{tg}                                 teacher-only: each student's form class and teacher
 //
@@ -86,11 +86,16 @@ service cloud.firestore {
     match /settings/school {
       allow get: if signedIn();
       allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['teachers', 'activeWorkshop', 'updatedAt', 'updatedBy'])
+        && request.resource.data.keys().hasOnly(['teachers', 'activeWorkshop', 'activeWorkshops', 'updatedAt', 'updatedBy'])
         && (!('teachers' in request.resource.data)
             || (request.resource.data.teachers is list && request.resource.data.teachers.size() <= 50))
         && (!('activeWorkshop' in request.resource.data)
-            || request.resource.data.activeWorkshop.matches('^[A-Z0-9]{4,12}$'));
+            || request.resource.data.activeWorkshop.matches('^[A-Z0-9]{4,12}$'))
+        // Up to 5 workshop codes students can join at the same time.
+        && (!('activeWorkshops' in request.resource.data)
+            || (request.resource.data.activeWorkshops is list
+                && (request.resource.data.activeWorkshops.size() == 0
+                    || request.resource.data.activeWorkshops.join(',').matches('^[A-Z0-9]{4,12}(,[A-Z0-9]{4,12}){0,4}$'))));
     }
 
     // Class list. Students see teaching groups and names only, to pick themselves when joining.

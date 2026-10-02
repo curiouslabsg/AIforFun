@@ -269,26 +269,41 @@ setInterval(() => { if (state.teamKey && $('panel')) applyLockState(); }, 10000)
 
 // ---------- join ----------
 
-// The join screen: active workshop -> teaching group -> name -> (team, new PIN) or PIN.
-const joinState = { code: null, workshop: null, roster: new Map(), existing: null };
+// The join screen: active workshop(s) -> teaching group -> name -> (team, new PIN) or PIN.
+const joinState = { code: null, workshop: null, open: [], roster: new Map(), existing: null };
+
+// Active workshop codes: the list, or the older single-code field.
+function activeCodes(settings) {
+  const d = settings?.data() ?? {};
+  if (Array.isArray(d.activeWorkshops)) return d.activeWorkshops;
+  return d.activeWorkshop ? [d.activeWorkshop] : [];
+}
 
 async function loadJoinScreen() {
   joinMessage('');
   $('j-btn').disabled = true;
   try {
     const settings = await getDoc(doc(db, 'settings/school'));
-    const code = settings.exists() ? settings.data().activeWorkshop : null;
-    const ws = code ? await getDoc(doc(db, `workshops/${code}`)) : null;
-    if (!ws?.exists() || ws.data().open !== true) {
+    const found = await Promise.all(activeCodes(settings).map(async (code) => {
+      try {
+        const ws = await getDoc(doc(db, `workshops/${code}`));
+        return ws.exists() && ws.data().open === true ? { code, ...ws.data() } : null;
+      } catch { return null; }
+    }));
+    joinState.open = found.filter(Boolean);
+    $('j-ws-field').hidden = joinState.open.length < 2;
+    if (!joinState.open.length) {
+      joinState.code = null;
       $('j-workshop').hidden = true;
       $('j-tg').replaceChildren(h('option', { value: '' }, '—'));
       joinMessage('No workshop is open right now. Ask your teacher.', 'warn');
       return;
     }
-    joinState.code = code;
-    joinState.workshop = ws.data();
-    $('j-workshop').textContent = ws.data().name;
-    $('j-workshop').hidden = false;
+    if (joinState.open.length > 1) {
+      $('j-ws').replaceChildren(h('option', { value: '' }, 'Choose your workshop…'),
+        ...joinState.open.map((w) => h('option', { value: w.code }, w.name)));
+    }
+    pickWorkshop(joinState.open.length === 1 ? joinState.open[0].code : '');
     const roster = await getDocs(collection(db, 'roster'));
     joinState.roster = new Map(roster.docs.map((d) => [d.id, d.data()]));
     const tgs = [...joinState.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
@@ -298,6 +313,15 @@ async function loadJoinScreen() {
     console.error(err);
     joinMessage(friendlyError(err));
   }
+}
+
+function pickWorkshop(code) {
+  const w = joinState.open.find((x) => x.code === code) ?? null;
+  joinState.code = w?.code ?? null;
+  joinState.workshop = w;
+  $('j-workshop').textContent = w?.name ?? '';
+  $('j-workshop').hidden = !w || joinState.open.length > 1;
+  onNamePicked();
 }
 
 function fillNames() {
@@ -318,16 +342,20 @@ async function onNamePicked() {
   $('j-pin-field').hidden = true;
   $('j-btn').disabled = true;
   joinMessage('');
-  if (!tg || !name) return;
+  const code = joinState.code;
+  if (!tg || !name || !code) return;
   const sid = rosterSid(tg, name);
+  let existing;
   try {
-    const snap = await getDoc(doc(db, `workshops/${joinState.code}/students/${sid}`));
-    joinState.existing = snap.exists();
+    const snap = await getDoc(doc(db, `workshops/${code}/students/${sid}`));
+    existing = snap.exists();
   } catch (err) {
     if (err.code !== 'permission-denied') { joinMessage(friendlyError(err)); return; }
-    joinState.existing = true; // exists, but belongs to another laptop
+    existing = true; // exists, but belongs to another laptop
   }
-  if ($('j-name').value !== name) return; // changed while we were checking
+  // Something changed while we were checking.
+  if ($('j-name').value !== name || $('j-tg').value !== tg || joinState.code !== code) return;
+  joinState.existing = existing;
   $('j-team-field').hidden = joinState.existing;
   $('j-pin-field').hidden = false;
   $('j-pin-label').textContent = joinState.existing ? 'Your PIN' : 'Make up a 4-digit PIN';
@@ -348,7 +376,11 @@ async function onJoin(e) {
   const team = Number.parseInt($('j-team').value, 10);
   const group = joinState.roster.get(tg);
 
-  if (!code) return joinMessage('No workshop is open right now. Ask your teacher.', 'warn');
+  if (!code) {
+    return joinState.open.length > 1
+      ? joinMessage('Choose your workshop first.')
+      : joinMessage('No workshop is open right now. Ask your teacher.', 'warn');
+  }
   if (!group || !name) return joinMessage('Choose your teaching group and your name.');
   if (!joinState.existing && !(team >= 1 && team <= 40)) return joinMessage('Enter your team number (1–40).');
   if (!/^\d{4}$/.test(pin)) return joinMessage('Your PIN must be exactly 4 digits.');
@@ -720,6 +752,7 @@ $('hero-art').append(...[...STAGES, LOG_STYLE].map((st) => {
   b.append(icon(st.icon, 22));
   return b;
 }));
+$('j-ws').addEventListener('change', () => pickWorkshop($('j-ws').value));
 $('j-tg').addEventListener('change', fillNames);
 $('j-name').addEventListener('change', onNamePicked);
 $('join-form').addEventListener('submit', onJoin);

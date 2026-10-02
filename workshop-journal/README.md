@@ -36,7 +36,7 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 ## What's in it
 
-**Students** open the site and land in the **active workshop** (no code). They pick their **teaching group**, then **their name** from the class list, then their team number and a 4-digit PIN. Returning students only type their PIN. Sec 1 groups get Code for Fun; Sec 2 groups get AI for Fun (laptop-only, digital solutions).
+**Students** open the site and land in the **active workshop** (no code; if several are active, they pick one). They pick their **teaching group**, then **their name** from the class list, then their team number and a 4-digit PIN. Returning students only type their PIN. Sec 1 groups get Code for Fun; Sec 2 groups get AI for Fun (laptop-only, digital solutions).
 - **Prototype**: upload a photo of a paper sketch, or draw on the built-in sketch pad. Images are shrunk to under 900 KB and stored in Firestore.
 - **Test & feedback**: *Visitor mode* turns the laptop into a feedback form (I like / I wish / What if / would the user use it). Each visitor's note sticks to the team's wall. Students can't delete notes; teachers can.
 
@@ -46,7 +46,7 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 **Class lists.** On *Teachers & class lists*, an admin uploads CSV or Excel files with columns *Teaching group*, *Name*, *Class* (optional *Level*, *Teacher*). Students only ever see teaching groups and names; form class and teacher are stored separately and only teachers can read them. Uploading replaces all groups.
 
-**Active workshop.** An admin presses *Make active* on a workshop card; that's where students land. Other workshops stay readable on the dashboard.
+**Active workshops.** An admin presses *Make active* on a workshop card; that's where students land. Up to 5 workshops can be active at the same time (e.g. one for Sec 1 and one for Sec 2): students then pick their workshop by name before their teaching group. *Deactivate* takes a workshop off the join screen; its journals stay readable on the dashboard.
 
 **Teachers** sign in with Google at `/teacher.html`.
 - *My students* shows students who chose your name when joining; *Whole school* shows everyone. Filter by class.

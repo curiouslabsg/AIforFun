@@ -387,6 +387,19 @@ test('only admins choose the active workshop', async () => {
   await assertFails(setDoc(doc(admin(), 'settings/school'), { activeWorkshop: 'not a code' }));
 });
 
+test('admins can make up to 5 workshops active at once', async () => {
+  const set = (who, list) => setDoc(doc(who, 'settings/school'), { activeWorkshops: list, updatedBy: 'admin@school.test', updatedAt: 1 });
+  await assertSucceeds(set(admin(), [CODE, 'AIF2B']));
+  await assertSucceeds(set(admin(), ['AAAA', 'BBBB', 'CCCC', 'DDDD', 'EEEE']));
+  await assertSucceeds(set(admin(), []));
+  await assertFails(set(teacher(), [CODE, 'AIF2B']));
+  await assertFails(set(admin(), ['AAAA', 'BBBB', 'CCCC', 'DDDD', 'EEEE', 'FFFF']));
+  await assertFails(set(admin(), [CODE, 'bad code']));
+  await assertFails(set(admin(), [CODE, 'AB,CDEF']));
+  await assertFails(set(admin(), [CODE, 42]));
+  await assertFails(set(admin(), CODE));
+});
+
 test('any student can browse team titles, but not team answers', async () => {
   const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
   await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');

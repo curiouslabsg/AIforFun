@@ -2,7 +2,7 @@ import {
   GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, onSnapshot, serverTimestamp, writeBatch,
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, onSnapshot, serverTimestamp, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, pinHash } from './firebase.js';
 import { trackForLevel } from './school.js';
@@ -11,7 +11,7 @@ import { STAGES, TRACK_LABEL, promptFor, isPersonal } from './prompts.js';
 
 const $ = (id) => document.getElementById(id);
 const state = {
-  email: null, role: null, myName: '', settingsTeachers: [], activeWorkshop: null,
+  email: null, role: null, myName: '', settingsTeachers: [], active: [],
   // Class lists: roster = teaching group -> { level, students }; details = group -> { classes, teachers }.
   roster: new Map(), details: new Map(),
   workshops: [], ws: null, students: [], unsub: null,
@@ -124,7 +124,8 @@ async function loadSettings() {
   try {
     const snap = await getDoc(doc(db, 'settings/school'));
     state.settingsTeachers = snap.data()?.teachers ?? [];
-    state.activeWorkshop = snap.data()?.activeWorkshop ?? null;
+    const d = snap.data() ?? {};
+    state.active = Array.isArray(d.activeWorkshops) ? d.activeWorkshops : (d.activeWorkshop ? [d.activeWorkshop] : []);
   } catch (err) { console.warn('Could not read settings', err); }
   await loadRoster();
 }
@@ -137,15 +138,33 @@ async function loadRoster() {
   } catch (err) { console.warn('Could not read class lists', err); }
 }
 
-async function makeActive(code) {
+const MAX_ACTIVE = 5;
+
+// Several workshops can be active at once; students pick one when more than one is open.
+async function setActive(codes) {
   try {
-    await setDoc(doc(db, 'settings/school'), { activeWorkshop: code, updatedBy: state.email, updatedAt: serverTimestamp() }, { merge: true });
-    state.activeWorkshop = code;
+    await setDoc(doc(db, 'settings/school'), {
+      activeWorkshops: codes, activeWorkshop: deleteField(), updatedBy: state.email, updatedAt: serverTimestamp(),
+    }, { merge: true });
+    state.active = codes;
     await loadWorkshops();
   } catch (err) {
     console.error(err);
-    msg('t-create-msg', 'Could not change the active workshop. Only admins can.');
+    msg('t-create-msg', 'Could not change the active workshops. Only admins can.');
   }
+}
+
+async function makeActive(code) {
+  msg('t-create-msg', '');
+  // Drop codes whose workshop was deleted, so they don't use up a slot.
+  const live = state.active.filter((c) => c !== code && state.workshops.some((w) => w.code === c));
+  if (live.length >= MAX_ACTIVE) { msg('t-create-msg', `Up to ${MAX_ACTIVE} workshops can be active. Deactivate one first.`); return; }
+  await setActive([...live, code]);
+}
+
+async function deactivate(code) {
+  msg('t-create-msg', '');
+  await setActive(state.active.filter((c) => c !== code));
 }
 
 // ---------- workshop list ----------
@@ -155,7 +174,7 @@ async function loadWorkshops({ show = true } = {}) {
   state.workshops = snap.docs.map((d) => ({ code: d.id, ...d.data() }))
     .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
   const card = (w) => {
-    const active = w.code === state.activeWorkshop;
+    const active = state.active.includes(w.code);
     return h('article', {
       class: `ws-card${active ? ' active' : ''}`, tabindex: '0', role: 'button',
       onclick: () => openWorkshop(w.code), onkeydown: (e) => { if (e.key === 'Enter') openWorkshop(w.code); },
@@ -164,13 +183,19 @@ async function loadWorkshops({ show = true } = {}) {
     h('h3', {}, w.name),
     h('span', { class: 'code' }, w.code),
     h('span', { class: 'small muted' }, w.open ? 'Open for writing' : 'Closed (read-only)'),
-    !active && state.role === 'admin'
-      ? h('button', { class: 'btn ghost small-btn', type: 'button', onclick: (e) => { e.stopPropagation(); makeActive(w.code); } }, 'Make active')
+    state.role === 'admin'
+      ? h('button', {
+        class: 'btn ghost small-btn', type: 'button',
+        onclick: (e) => { e.stopPropagation(); (active ? deactivate : makeActive)(w.code); },
+      }, active ? 'Deactivate' : 'Make active')
       : null);
   };
   $('t-cards').replaceChildren(...(state.workshops.length ? state.workshops.map(card) : [h('p', { class: 'muted' }, 'No workshops yet. Create one above, then make it active.')]));
-  if (!state.activeWorkshop && state.workshops.length) {
+  const activeNow = state.workshops.filter((w) => state.active.includes(w.code));
+  if (!activeNow.length && state.workshops.length) {
     $('t-cards').prepend(h('p', { class: 'msg warn', style: 'grid-column:1/-1' }, 'No workshop is active, so students see "No workshop is open". An admin can press Make active on one.'));
+  } else if (activeNow.length > 1) {
+    $('t-cards').prepend(h('p', { class: 'msg', style: 'grid-column:1/-1' }, `${activeNow.length} workshops are active, so students first pick their workshop by name.`));
   }
   if (show) view('t-list');
 }
@@ -199,8 +224,8 @@ $('t-create').addEventListener('submit', async (e) => {
     }
     await setDoc(doc(db, `workshops/${code}`), { name, track: trackId, open: true, createdAt: serverTimestamp(), createdBy: state.email });
     $('t-create').reset();
-    if (!state.activeWorkshop && state.role === 'admin') await makeActive(code);
-    await loadWorkshops();
+    await loadWorkshops({ show: false });
+    if (!state.workshops.some((w) => state.active.includes(w.code)) && state.role === 'admin') await makeActive(code);
     openWorkshop(code);
   } catch (err) {
     console.error(err);
@@ -625,6 +650,7 @@ $('ws-delete').addEventListener('click', async () => {
     state.unsub?.();
     await deleteDoc(doc(db, `workshops/${code}`));
     closeDrawer();
+    if (state.active.includes(code)) await setActive(state.active.filter((c) => c !== code));
     await loadWorkshops();
   } catch (err) {
     console.error(err);
