@@ -24,46 +24,28 @@
       <p>Empathise, define, ideate, build and test. Track every step of your project over the two days.</p>
     </div>
     <form id="join-form" novalidate>
+      <p id="j-workshop" class="workshop-pill" hidden></p>
       <label class="field">
-        <span>Workshop code</span>
-        <input id="j-code" class="code-input" type="text" autocomplete="off" autocapitalize="characters" maxlength="10" placeholder="CFF7K2P" required>
-        <small>Your teacher shows this on the screen.</small>
+        <span>Teaching group</span>
+        <select id="j-tg" required><option value="">Loading…</option></select>
       </label>
-      <div class="row3">
-        <label class="field">
-          <span>Level</span>
-          <select id="j-level" required>
-            <option value="">Choose…</option>
-            <option value="1">Sec 1</option>
-            <option value="2">Sec 2</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Class</span>
-          <select id="j-class" required disabled><option value="">Pick level first</option></select>
-        </label>
-      </div>
       <label class="field">
-        <span>Teacher</span>
-        <select id="j-teacher" required><option value="">Choose your teacher…</option></select>
+        <span>Your name</span>
+        <select id="j-name" required disabled><option value="">Pick your teaching group first</option></select>
+        <small>Not on the list? Tell your teacher.</small>
       </label>
-      <div class="row">
-        <label class="field">
-          <span>Team</span>
-          <input id="j-team" type="number" min="1" max="40" inputmode="numeric" required>
-        </label>
-        <label class="field">
-          <span>Your name</span>
-          <input id="j-name" type="text" autocomplete="off" maxlength="40" placeholder="e.g. Aisha" required>
-        </label>
-      </div>
-      <label class="field">
-        <span>4-digit PIN</span>
-        <input id="j-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required>
-        <small>First time? Make one up and remember it. You'll need it if you switch laptops.</small>
+      <label class="field" id="j-team-field" hidden>
+        <span>Team number</span>
+        <input id="j-team" type="number" min="1" max="40" inputmode="numeric">
+        <small>Your teacher tells you this. Everyone in your team uses the same number.</small>
+      </label>
+      <label class="field" id="j-pin-field" hidden>
+        <span id="j-pin-label">4-digit PIN</span>
+        <input id="j-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+        <small id="j-pin-hint">First time? Make one up and remember it. You'll need it if you switch laptops.</small>
       </label>
       <p id="j-msg" class="msg" hidden></p>
-      <button id="j-btn" class="btn big" type="submit">Open my journal →</button>
+      <button id="j-btn" class="btn big" type="submit" disabled>Open my journal →</button>
     </form>
     <p class="small muted">Only you and your teachers can read your journal. Don't write anything you wouldn't want your teacher to see.</p>
   </main>

@@ -60,7 +60,7 @@ export const STAGES = [
     prompts: [
       {
         id: 'input', q: 'INPUT: Which sensor are you using, and what does it measure?', hint: 'e.g. accelerometer, measures tilt in degrees',
-        ai: { q: 'INPUT: What will your model look at or listen to?', hint: 'e.g. webcam image of a lunch tray' },
+        ai: { q: 'INPUT: What will your model look at, listen to or read?', hint: 'Laptop only, no hardware: webcam, mic, online pictures or typed text' },
       },
       {
         id: 'rule', q: 'PROCESS: Write your IF / THEN rule, with a number and unit.', hint: 'IF temperature < 60 °C THEN buzz 3 times',

@@ -10,7 +10,9 @@ rules_version = '2';
 //   workshops/{code}/students/{sid}/feedback/{noteId}  peer feedback sticky notes from the gallery walk
 //   workshops/{code}/teams/{key}                       shared team journal; key is "<class>-t<team>", e.g. "1A-t1"
 //     members/{uid}  entries/{stageId}  images/{id}  feedback/{id}  locks/{stage__prompt}
-//   settings/school                                    teacher names for the student sign-up list
+//   settings/school                                    activeWorkshop (where students land) + legacy teacher list
+//   roster/{tg}                                        teaching group: level + student names (students pick from it)
+//   rosterDetails/{tg}                                 teacher-only: each student's form class and teacher
 //
 // Students sign in anonymously. A device owns a journal once it has written a
 // claim doc whose pinHash matches the student's pinHash. Teachers sign in with
@@ -84,9 +86,33 @@ service cloud.firestore {
     match /settings/school {
       allow get: if signedIn();
       allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['teachers', 'updatedAt', 'updatedBy'])
-        && request.resource.data.teachers is list
-        && request.resource.data.teachers.size() <= 50;
+        && request.resource.data.keys().hasOnly(['teachers', 'activeWorkshop', 'updatedAt', 'updatedBy'])
+        && (!('teachers' in request.resource.data)
+            || (request.resource.data.teachers is list && request.resource.data.teachers.size() <= 50))
+        && (!('activeWorkshop' in request.resource.data)
+            || request.resource.data.activeWorkshop.matches('^[A-Z0-9]{4,12}$'));
+    }
+
+    // Class list. Students see teaching groups and names only, to pick themselves when joining.
+    match /roster/{tg} {
+      allow get, list: if signedIn();
+      allow create, update: if isAdmin()
+        && tg.matches('^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$')
+        && request.resource.data.keys().hasOnly(['level', 'students', 'updatedAt', 'updatedBy'])
+        && request.resource.data.level in [1, 2]
+        && request.resource.data.students is list
+        && request.resource.data.students.size() <= 300;
+      allow delete: if isAdmin();
+    }
+
+    // Form class and teacher for each student: teachers only, never sent to student devices.
+    match /rosterDetails/{tg} {
+      allow read: if isTeacher();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['classes', 'teachers', 'updatedAt'])
+        && request.resource.data.classes is map
+        && request.resource.data.teachers is map;
+      allow delete: if isAdmin();
     }
 
     match /workshops/{code} {
@@ -112,10 +138,12 @@ service cloud.firestore {
         allow create: if signedIn()
           && workshopOpen(code)
           && request.resource.data.keys().hasOnly(['name', 'team', 'level', 'class', 'teacher', 'pin', 'pinHash', 'createdAt', 'progress', 'lastActive'])
-          && shortString(request.resource.data.name, 40)
-          && request.resource.data.level in [1, 2]
-          && shortString(request.resource.data['class'], 6)
-          && shortString(request.resource.data.teacher, 60)
+          && shortString(request.resource.data.name, 60)
+          // 'class' holds the teaching group; the name must be on that group's class list.
+          && exists(/databases/$(database)/documents/roster/$(request.resource.data['class']))
+          && request.resource.data.name in get(/databases/$(database)/documents/roster/$(request.resource.data['class'])).data.students
+          && request.resource.data.level == get(/databases/$(database)/documents/roster/$(request.resource.data['class'])).data.level
+          && (!('teacher' in request.resource.data) || request.resource.data.teacher.size() <= 60)
           && request.resource.data.pin.matches('^[0-9]{4}$')
           && request.resource.data.team is int
           && request.resource.data.team >= 1 && request.resource.data.team <= 40
@@ -204,11 +232,13 @@ service cloud.firestore {
           return resource.data.at < request.time - duration.value(45, 's');
         }
 
-        allow get: if isMember() || isTeacher();
-        allow list: if isTeacher();
+        // Team docs hold only progress and the project title, so any student can browse
+        // them for the gallery walk. Answers stay in the members-only subcollections.
+        allow get, list: if signedIn();
         allow create, update: if isMember()
           && workshopOpen(code)
-          && request.resource.data.keys().hasOnly(['progress', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['progress', 'title', 'updatedAt'])
+          && (!('title' in request.resource.data) || request.resource.data.title.size() <= 120)
           && request.resource.data.progress is map
           && request.resource.data.progress.size() <= 20;
         allow delete: if isTeacher();
@@ -254,11 +284,21 @@ service cloud.firestore {
           allow update: if false;
         }
 
+        // Notes come from Visitor mode on a member's laptop, or from a visitor's own journal
+        // on the gallery walk. A visitor's note is stored under their own student id, so each
+        // visitor leaves at most one note per team and can't post as someone else.
+        function visitorNote(noteId) {
+          return request.resource.data.fromSid == noteId
+            && exists(/databases/$(database)/documents/workshops/$(code)/students/$(noteId)/claims/$(request.auth.uid))
+            && request.resource.data.from == get(/databases/$(database)/documents/workshops/$(code)/students/$(noteId)).data.name;
+        }
         match /feedback/{noteId} {
           allow read: if isMember() || isTeacher();
-          allow create: if isMember()
+          allow create: if signedIn()
+            && (isMember() || visitorNote(noteId))
             && workshopOpen(code)
-            && request.resource.data.keys().hasOnly(['from', 'like', 'wish', 'whatif', 'use', 'createdAt'])
+            && request.resource.data.keys().hasOnly(['from', 'fromSid', 'fromTg', 'like', 'wish', 'whatif', 'use', 'createdAt'])
+            && (!('fromTg' in request.resource.data) || request.resource.data.fromTg.size() <= 30)
             && shortString(request.resource.data.from, 60)
             && request.resource.data.like.size() <= 300
             && request.resource.data.wish.size() <= 300

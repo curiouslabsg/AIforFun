@@ -1,17 +1,19 @@
 import { signInAnonymously, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, writeBatch, collection, onSnapshot, serverTimestamp,
+  doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc, writeBatch, collection, onSnapshot, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { auth, db, configured, studentId, pinHash, normaliseCode } from './firebase.js';
+import { auth, db, configured, rosterSid, pinHash } from './firebase.js';
 import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor, isPersonal } from './prompts.js';
 import { PROBLEMS, OWN_IDEA, CATEGORY, problemLabel, findProblem } from './problems.js';
 import { icon } from './icons.js';
 import { celebrate } from './confetti.js';
-import { LEVELS, DEFAULT_TEACHERS, trackForLevel } from './school.js';
+import { trackForLevel } from './school.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'journal.session';
 const LOG_ID = 'log';
+const GALLERY_ID = 'gallery';
+const GALLERY_STYLE = { color: '#ca8a04', icon: 'test' };
 
 const state = {
   code: null, sid: null, workshop: null, student: null,
@@ -154,6 +156,10 @@ async function saveField(stageId, p, value) {
   const data = { kind: 'stage', stage: stageId, answers: { [p.id]: value }, updatedAt: serverTimestamp() };
   if (!exists) data.createdAt = serverTimestamp();
   const write = setDoc(ref, data, { merge: true });
+  // Visitors on the gallery walk see the team's chosen problem as its project title.
+  if (stageId === 'empathise' && p.id === 'problem' && !personal) {
+    saving(setDoc(doc(db, teamPath()), { title: value, updatedAt: serverTimestamp() }, { merge: true }));
+  }
   saving(write);
   write.then(() => { if (drafts.get(k) === value) drafts.delete(k); }, () => {});
 
@@ -263,31 +269,93 @@ setInterval(() => { if (state.teamKey && $('panel')) applyLockState(); }, 10000)
 
 // ---------- join ----------
 
+// The join screen: active workshop -> teaching group -> name -> (team, new PIN) or PIN.
+const joinState = { code: null, workshop: null, roster: new Map(), existing: null };
+
+async function loadJoinScreen() {
+  joinMessage('');
+  $('j-btn').disabled = true;
+  try {
+    const settings = await getDoc(doc(db, 'settings/school'));
+    const code = settings.exists() ? settings.data().activeWorkshop : null;
+    const ws = code ? await getDoc(doc(db, `workshops/${code}`)) : null;
+    if (!ws?.exists() || ws.data().open !== true) {
+      $('j-workshop').hidden = true;
+      $('j-tg').replaceChildren(h('option', { value: '' }, '—'));
+      joinMessage('No workshop is open right now. Ask your teacher.', 'warn');
+      return;
+    }
+    joinState.code = code;
+    joinState.workshop = ws.data();
+    $('j-workshop').textContent = ws.data().name;
+    $('j-workshop').hidden = false;
+    const roster = await getDocs(collection(db, 'roster'));
+    joinState.roster = new Map(roster.docs.map((d) => [d.id, d.data()]));
+    const tgs = [...joinState.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    $('j-tg').replaceChildren(h('option', { value: '' }, tgs.length ? 'Choose your teaching group…' : 'No class lists yet. Ask your teacher.'),
+      ...tgs.map((tg) => h('option', { value: tg }, tg)));
+  } catch (err) {
+    console.error(err);
+    joinMessage(friendlyError(err));
+  }
+}
+
+function fillNames() {
+  const tg = $('j-tg').value;
+  const names = [...(joinState.roster.get(tg)?.students ?? [])].sort((a, b) => a.localeCompare(b));
+  $('j-name').replaceChildren(h('option', { value: '' }, tg ? 'Choose your name…' : 'Pick your teaching group first'),
+    ...names.map((n) => h('option', { value: n }, n)));
+  $('j-name').disabled = !tg;
+  onNamePicked();
+}
+
+// New students set a team and make up a PIN; returning students only type their PIN.
+async function onNamePicked() {
+  const tg = $('j-tg').value;
+  const name = $('j-name').value;
+  joinState.existing = null;
+  $('j-team-field').hidden = true;
+  $('j-pin-field').hidden = true;
+  $('j-btn').disabled = true;
+  joinMessage('');
+  if (!tg || !name) return;
+  const sid = rosterSid(tg, name);
+  try {
+    const snap = await getDoc(doc(db, `workshops/${joinState.code}/students/${sid}`));
+    joinState.existing = snap.exists();
+  } catch (err) {
+    if (err.code !== 'permission-denied') { joinMessage(friendlyError(err)); return; }
+    joinState.existing = true; // exists, but belongs to another laptop
+  }
+  if ($('j-name').value !== name) return; // changed while we were checking
+  $('j-team-field').hidden = joinState.existing;
+  $('j-pin-field').hidden = false;
+  $('j-pin-label').textContent = joinState.existing ? 'Your PIN' : 'Make up a 4-digit PIN';
+  $('j-pin-hint').textContent = joinState.existing
+    ? 'Welcome back! Type the PIN you made last time. Forgot it? Your teacher can see it.'
+    : "Remember it: you'll need it if you switch laptops.";
+  $('j-btn').disabled = false;
+  (joinState.existing ? $('j-pin') : $('j-team')).focus();
+}
+
 async function onJoin(e) {
   e.preventDefault();
   joinMessage('');
-  const code = normaliseCode($('j-code').value);
-  const team = Number.parseInt($('j-team').value, 10);
-  const name = $('j-name').value.trim().replace(/\s+/g, ' ');
+  const code = joinState.code;
+  const tg = $('j-tg').value;
+  const name = $('j-name').value;
   const pin = $('j-pin').value.trim();
-  const level = Number.parseInt($('j-level').value, 10);
-  const klass = $('j-class').value;
-  const teacher = $('j-teacher').value;
+  const team = Number.parseInt($('j-team').value, 10);
+  const group = joinState.roster.get(tg);
 
-  if (code.length < 4) return joinMessage('Enter the workshop code from the screen.');
-  if (!LEVELS[level]) return joinMessage('Choose your level (Sec 1 or Sec 2).');
-  if (!klass) return joinMessage('Choose your class.');
-  if (!teacher) return joinMessage('Choose your teacher.');
-  if (!(team >= 1 && team <= 40)) return joinMessage('Enter your team number (1–40).');
-  if (!/[a-z]/i.test(name) || name.length < 2) return joinMessage('Enter your name.');
+  if (!code) return joinMessage('No workshop is open right now. Ask your teacher.', 'warn');
+  if (!group || !name) return joinMessage('Choose your teaching group and your name.');
+  if (!joinState.existing && !(team >= 1 && team <= 40)) return joinMessage('Enter your team number (1–40).');
   if (!/^\d{4}$/.test(pin)) return joinMessage('Your PIN must be exactly 4 digits.');
 
-  const sid = studentId(team, name);
+  const sid = rosterSid(tg, name);
   $('j-btn').disabled = true;
   try {
-    const ws = await getDoc(doc(db, `workshops/${code}`));
-    if (!ws.exists()) return joinMessage("We couldn't find that workshop code. Check it with your teacher.");
-    const open = ws.data().open === true;
     const hash = await pinHash(sid, pin);
     const studentRef = doc(db, `workshops/${code}/students/${sid}`);
     const claimRef = doc(db, `workshops/${code}/students/${sid}/claims/${auth.currentUser.uid}`);
@@ -300,24 +368,22 @@ async function onJoin(e) {
     }
 
     if (snap?.exists()) {
-      // This device already owns this journal.
+      // This laptop already owns this journal.
     } else if (snap) {
-      if (!open) return joinMessage('This workshop is closed, so new journals can’t be started.');
       const batch = writeBatch(db);
       batch.set(studentRef, {
-        name, team, level, class: klass, teacher, pin, pinHash: hash,
+        name, team, level: group.level, class: tg, pin, pinHash: hash,
         createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp(),
       });
       batch.set(claimRef, { pinHash: hash, at: serverTimestamp() });
       await batch.commit();
     } else {
-      // The journal exists and belongs to another device: prove it's ours with the PIN.
-      if (!open) return joinMessage('This workshop is closed. Open your journal on the laptop you used before, or ask your teacher.');
+      // The journal exists and was started on another laptop: prove it's yours with the PIN.
       try {
         await setDoc(claimRef, { pinHash: hash, at: serverTimestamp() });
       } catch (err) {
         if (err.code !== 'permission-denied') throw err;
-        return joinMessage(`Someone called "${name}" in team ${team} already has a journal, and that PIN doesn't match. If it's you, check your PIN or ask your teacher, who can see it. If it isn't you, add your surname initial to your name.`);
+        return joinMessage("That PIN doesn't match. Try again, or ask your teacher. They can see your PIN.");
       }
     }
     writeSession({ code, sid });
@@ -358,6 +424,13 @@ async function openJournal(code, sid) {
   const memberRef = doc(db, teamPath(`/members/${auth.currentUser.uid}`));
   if (!(await getDoc(memberRef)).exists()) {
     await setDoc(memberRef, { sid, name: student.name, at: serverTimestamp() });
+  }
+  // Make sure the team shows up on the gallery walk straight away.
+  if (state.workshop.open) {
+    const teamRef = doc(db, teamPath());
+    getDoc(teamRef)
+      .then((t) => (t.exists() ? null : setDoc(teamRef, { progress: {}, updatedAt: serverTimestamp() })))
+      .catch((err) => console.warn('team doc', err));
   }
   let migrated = false;
   const watch = (path, map, after) => onSnapshot(collection(db, path), (snap) => {
@@ -426,7 +499,7 @@ async function switchStudent() {
   // A fresh anonymous account means the next student on this laptop can't open the last one's journal.
   await signOut(auth);
   $('join-form').reset();
-  fillClasses();
+  fillNames();
   joinMessage('');
   show('loading');
 }
@@ -444,7 +517,8 @@ function renderNav() {
   }, h('span', { class: `dot ${dotClass}` }, icon(dotClass === 'done' ? 'check' : style.icon, 16)), h('span', {}, title, h('small', {}, sub)));
 
   const items = [h('div', { class: 'stage-sep' }, 'Anytime'),
-    btn(LOG_ID, 'Learning log', `${logCount} ${logCount === 1 ? 'entry' : 'entries'}`, logCount ? 'part' : '', LOG_STYLE)];
+    btn(LOG_ID, 'Learning log', `${logCount} ${logCount === 1 ? 'entry' : 'entries'}`, logCount ? 'part' : '', LOG_STYLE),
+    btn(GALLERY_ID, 'Gallery walk', 'Give other teams feedback', '', GALLERY_STYLE)];
   let day = null;
   let done = 0;
   let answeredAll = 0;
@@ -470,6 +544,7 @@ function renderNav() {
 function renderPanel() {
   flushSaves();
   if (state.current === LOG_ID) renderLog();
+  else if (state.current === GALLERY_ID) renderGallery();
   else renderStage(STAGES.find((s) => s.id === state.current));
   $('panel').scrollIntoView?.({ block: 'nearest' });
 }
@@ -645,28 +720,10 @@ $('hero-art').append(...[...STAGES, LOG_STYLE].map((st) => {
   b.append(icon(st.icon, 22));
   return b;
 }));
-function fillClasses() {
-  const classes = LEVELS[$('j-level').value] ?? [];
-  $('j-class').replaceChildren(h('option', { value: '' }, classes.length ? 'Choose…' : 'Pick level first'),
-    ...classes.map((c) => h('option', { value: c }, c)));
-  $('j-class').disabled = !classes.length;
-}
-
-async function loadTeacherNames() {
-  let names = DEFAULT_TEACHERS;
-  try {
-    const snap = await getDoc(doc(db, 'settings/school'));
-    if (snap.exists() && snap.data().teachers?.length) names = snap.data().teachers;
-  } catch (err) { console.warn('Using default teacher list', err); }
-  const current = $('j-teacher').value;
-  $('j-teacher').replaceChildren(h('option', { value: '' }, 'Choose your teacher…'), ...names.map((n) => h('option', { value: n }, n)));
-  $('j-teacher').value = names.includes(current) ? current : '';
-}
-
-$('j-level').addEventListener('change', fillClasses);
+$('j-tg').addEventListener('change', fillNames);
+$('j-name').addEventListener('change', onNamePicked);
 $('join-form').addEventListener('submit', onJoin);
 $('switch').addEventListener('click', switchStudent);
-$('j-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
 
 if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
   show('setup');
@@ -680,8 +737,8 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     if (saved?.code && saved?.sid) {
       try { await openJournal(saved.code, saved.sid); return; } catch (err) { console.warn('Saved journal could not be opened', err); writeSession(null); }
     }
-    await loadTeacherNames();
     show('join');
+    await loadJoinScreen();
   });
 }
 
@@ -899,6 +956,8 @@ function notesSection() {
     h('div', { class: 'extra-head' },
       h('h3', {}, 'Peer feedback wall'),
       h('p', { class: 'muted small' }, 'During the gallery walk, tap Visitor mode and hand your laptop to each visitor. Their note sticks to your wall. You can’t delete notes, so your teacher sees everything.')),
+    h('p', { class: 'find-us' }, 'Visitors can find you on the Gallery walk as ', h('b', {}, `${state.student.class} · Team ${state.student.team}`),
+      '. They can leave notes from their own laptops at the same time. No laptop? Use Visitor mode on yours.'),
     h('div', { class: 'extra-actions' },
       h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openVisitorMode() }, icon('test', 18), ' Visitor mode'),
       h('span', { id: 'note-tally', class: 'tally' })),
@@ -924,8 +983,10 @@ function renderNotes() {
     h('footer', {}, h('span', {}, `— ${n.from}`), n.use ? h('span', { class: `use use-${n.use}` }, USE_LABEL[n.use]) : null))));
 }
 
-function openVisitorMode() {
-  const problem = findProblem(track(), state.teamEntries.get('empathise')?.answers?.problem);
+// target = null: a visitor uses this laptop (Visitor mode).
+// target = { key, label, title }: this student visits another team from their own journal.
+function openVisitorMode(target = null) {
+  const problem = target ? null : findProblem(track(), state.teamEntries.get('empathise')?.answers?.problem);
   const field = (id, label, placeholder) => h('label', { class: 'field' },
     h('span', {}, label), h('textarea', { id, maxLength: 300, rows: 2, placeholder }));
   let use = '';
@@ -935,7 +996,9 @@ function openVisitorMode() {
   }, { yes: 'Yes', maybe: 'Maybe', no: 'No' }[u]));
   const msg = h('p', { class: 'msg err', hidden: true });
   const form = h('form', { class: 'visitor-form', novalidate: true },
-    h('label', { class: 'field' }, h('span', {}, 'Your name and team'), h('input', { id: 'v-from', type: 'text', maxLength: 60, placeholder: 'e.g. Ben, 2B team 4', autocomplete: 'off' })),
+    target
+      ? h('p', { class: 'small muted' }, `Posting as ${state.student.name} (${state.student.class}). One note per team.`)
+      : h('label', { class: 'field' }, h('span', {}, 'Your name and team'), h('input', { id: 'v-from', type: 'text', maxLength: 60, placeholder: 'e.g. Ben, 2B team 4', autocomplete: 'off' })),
     field('v-like', 'I like…', 'Something that works well'),
     field('v-wish', 'I wish…', 'Something to improve, and why'),
     field('v-whatif', 'What if…', 'A new idea to try'),
@@ -943,26 +1006,46 @@ function openVisitorMode() {
     msg,
     h('button', { class: 'btn big', type: 'submit' }, 'Stick my note on the wall'));
   const thanks = h('div', { class: 'visitor-thanks', hidden: true },
-    icon('check', 48), h('h2', {}, 'Thanks for your feedback!'), h('p', {}, 'Pass the laptop to the next visitor.'),
-    h('div', { class: 'extra-actions' },
-      h('button', { class: 'btn big', type: 'button', onclick: () => { form.reset(); use = ''; useBtns.forEach((b) => b.setAttribute('aria-pressed', 'false')); thanks.hidden = true; form.hidden = false; form.querySelector('#v-from').focus(); } }, 'Next visitor'),
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => overlay.remove() }, 'Back to my journal')));
+    icon('check', 48), h('h2', {}, 'Thanks for your feedback!'),
+    h('p', {}, target ? 'Your note is on their wall.' : 'Pass the laptop to the next visitor.'),
+    target
+      ? h('div', { class: 'extra-actions' }, h('button', { class: 'btn big', type: 'button', onclick: () => { overlay.remove(); renderGallery(); } }, 'Back to the gallery'))
+      : h('div', { class: 'extra-actions' },
+        h('button', { class: 'btn big', type: 'button', onclick: () => { form.reset(); use = ''; useBtns.forEach((b) => b.setAttribute('aria-pressed', 'false')); thanks.hidden = true; form.hidden = false; form.querySelector('#v-from').focus(); } }, 'Next visitor'),
+        h('button', { class: 'btn ghost', type: 'button', onclick: () => overlay.remove() }, 'Back to my journal')));
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const val = (id) => form.querySelector(`#${id}`).value.trim();
-    const note = { from: val('v-from'), like: val('v-like'), wish: val('v-wish'), whatif: val('v-whatif'), use, createdAt: serverTimestamp() };
+    const note = { from: target ? state.student.name : val('v-from'), like: val('v-like'), wish: val('v-wish'), whatif: val('v-whatif'), use, createdAt: serverTimestamp() };
+    if (target) Object.assign(note, { fromSid: state.sid, fromTg: state.student.class });
     msg.hidden = true;
     if (!note.from) { msg.textContent = 'Add your name and team.'; msg.hidden = false; return; }
     if (!note.like && !note.wish && !note.whatif) { msg.textContent = 'Write at least one of I like, I wish or What if.'; msg.hidden = false; return; }
     const btn = form.querySelector('button[type=submit]');
     btn.disabled = true;
     try {
-      await saving(addDoc(collection(db, teamPath('/feedback')), note));
+      // saving() only shows status; await the write itself so a refusal reaches the catch below.
+      if (target) {
+        // Stored under the visitor's own id: the rules allow one note per visitor per team.
+        const w = setDoc(doc(db, `workshops/${state.code}/teams/${target.key}/feedback/${state.sid}`), note);
+        saving(w);
+        await w;
+        markReviewed(target.key);
+      } else {
+        const w = addDoc(collection(db, teamPath('/feedback')), note);
+        saving(w);
+        await w;
+      }
       form.hidden = true;
       thanks.hidden = false;
-    } catch {
-      msg.textContent = 'Could not save your note. Check the Wi-Fi and try again.';
+    } catch (err) {
+      if (target && err?.code === 'permission-denied') {
+        markReviewed(target.key);
+        msg.textContent = "You've already left feedback for this team. One note per team.";
+      } else {
+        msg.textContent = 'Could not save your note. Check the Wi-Fi and try again.';
+      }
       msg.hidden = false;
     } finally {
       btn.disabled = false;
@@ -972,11 +1055,68 @@ function openVisitorMode() {
   const overlay = h('div', { class: 'visitor-overlay', role: 'dialog', 'aria-label': 'Leave feedback' },
     h('div', { class: 'visitor-box' },
       h('div', { class: 'visitor-head' },
-        h('span', { class: 'label' }, `Gallery walk · Team ${state.student.team}${state.student.class ? ` · ${state.student.class}` : ''}`),
-        h('h2', {}, problem ? problem.title : 'Leave feedback for this project'),
+        h('span', { class: 'label' }, target ? `Gallery walk · ${target.label}` : `Gallery walk · ${state.student.class ?? ''} · Team ${state.student.team}`),
+        h('h2', {}, target ? (target.title || 'Leave feedback for this project') : (problem ? problem.title : 'Leave feedback for this project')),
         h('p', { class: 'muted' }, 'Try the prototype first, then write your note. Be specific: say what and why.')),
       form, thanks,
-      h('button', { class: 'btn quiet visitor-exit', type: 'button', onclick: () => overlay.remove() }, 'Exit visitor mode')));
+      h('button', { class: 'btn quiet visitor-exit', type: 'button', onclick: () => overlay.remove() }, target ? 'Cancel' : 'Exit visitor mode')));
   document.body.append(overlay);
-  form.querySelector('#v-from').focus();
+  form.querySelector(target ? '#v-like' : '#v-from').focus();
+}
+
+// ---------- gallery walk: give other teams feedback from your own laptop ----------
+
+const reviewedKey = () => `journal.reviewed.${state.code}.${state.sid}`;
+function reviewedTeams() {
+  try { return new Set(JSON.parse(localStorage.getItem(reviewedKey()) ?? '[]')); } catch { return new Set(); }
+}
+function markReviewed(key) {
+  const set = reviewedTeams();
+  set.add(key);
+  try { localStorage.setItem(reviewedKey(), JSON.stringify([...set])); } catch { /* private mode */ }
+}
+
+// Team keys look like "<teaching group>-t<team>", e.g. "1-TG3-t2".
+function teamLabel(key) {
+  const i = key.lastIndexOf('-t');
+  return i > 0 ? `${key.slice(0, i)} · Team ${key.slice(i + 2)}` : key;
+}
+
+async function renderGallery() {
+  $('panel').style.setProperty('--stage', GALLERY_STYLE.color);
+  const filter = h('input', { type: 'search', id: 'gal-filter', placeholder: 'Search teaching group or project…', 'aria-label': 'Search teams' });
+  const grid = h('div', { class: 'gallery-grid' }, h('p', { class: 'muted small' }, 'Loading teams…'));
+  $('panel').replaceChildren(
+    stageHeader(GALLERY_STYLE.icon, 'Anytime · Gallery walk', 'Gallery walk', 'Visit other teams, try their prototype, then leave a note from your own laptop. Lots of people can post at once. One note per team.'),
+    h('div', { class: 'extra-actions' }, filter, h('button', { class: 'btn ghost', type: 'button', onclick: () => renderGallery() }, 'Refresh')),
+    grid);
+  let teams;
+  try {
+    const snap = await getDocs(collection(db, `workshops/${state.code}/teams`));
+    teams = snap.docs.map((d) => ({ key: d.id, ...d.data() })).filter((t) => t.key !== state.teamKey);
+  } catch (err) {
+    console.error(err);
+    grid.replaceChildren(h('p', { class: 'msg err' }, 'Could not load the teams. Check the Wi-Fi and tap Refresh.'));
+    return;
+  }
+  if (state.current !== GALLERY_ID) return;
+  teams.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+  const done = reviewedTeams();
+  const cards = teams.map((t) => {
+    const label = teamLabel(t.key);
+    const title = t.title ? t.title.replace(/^#\S+\s/, '') : '';
+    const reviewed = done.has(t.key);
+    const card = h('article', { class: `gal-card${reviewed ? ' done' : ''}`, 'data-search': `${label} ${title}`.toLowerCase() },
+      h('span', { class: 'label' }, label),
+      h('h3', {}, title || 'Project not chosen yet'),
+      reviewed
+        ? h('p', { class: 'gal-done' }, icon('check', 16), ' You left feedback')
+        : h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openVisitorMode({ key: t.key, label, title }) }, 'Give feedback'));
+    return card;
+  });
+  grid.replaceChildren(...(cards.length ? cards : [h('p', { class: 'muted small' }, 'No other teams yet. Check back once teams have started their journals.')]));
+  filter.addEventListener('input', () => {
+    const q = filter.value.trim().toLowerCase();
+    for (const c of grid.querySelectorAll('.gal-card')) c.hidden = q && !c.dataset.search.includes(q);
+  });
 }

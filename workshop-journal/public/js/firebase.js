@@ -21,7 +21,14 @@ if (local) {
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
 }
 
-// Student ids are readable and stable so the same name + team finds the same journal.
+const slug = (v) => String(v).trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// Student id from the class list: teaching group + name, e.g. "1-tg3--aisha-tan".
+export function rosterSid(tg, name) {
+  return `${slug(tg)}--${slug(name)}`;
+}
+
+// Older journals used team + name.
 export function studentId(team, name) {
   const slug = name.trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return `t${team}-${slug}`;

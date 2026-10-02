@@ -5,15 +5,27 @@ import {
   doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, onSnapshot, serverTimestamp, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, pinHash } from './firebase.js';
-import { LEVELS, DEFAULT_TEACHERS, trackForLevel } from './school.js';
+import { trackForLevel } from './school.js';
+import { parseRosterFiles, groupRows, TEMPLATE_CSV } from './roster.js';
 import { STAGES, TRACK_LABEL, promptFor, isPersonal } from './prompts.js';
 
 const $ = (id) => document.getElementById(id);
 const state = {
-  email: null, role: null, myName: '', teacherNames: DEFAULT_TEACHERS,
+  email: null, role: null, myName: '', settingsTeachers: [], activeWorkshop: null,
+  // Class lists: roster = teaching group -> { level, students }; details = group -> { classes, teachers }.
+  roster: new Map(), details: new Map(),
   workshops: [], ws: null, students: [], unsub: null,
-  scope: readPref('scope', 'mine'), cls: '',
+  scope: readPref('scope', 'mine'), tg: '', cls: '',
 };
+
+// Form class and teacher come from the class list (teacher-only), keyed by teaching group + name.
+const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
+const teacherOf = (st) => state.details.get(st.class)?.teachers?.[st.name] ?? st.teacher ?? '';
+function teacherNames() {
+  const names = new Set(state.settingsTeachers);
+  for (const d of state.details.values()) for (const t of Object.values(d.teachers ?? {})) if (t) names.add(t);
+  return [...names].sort();
+}
 
 function readPref(key, fallback) {
   try { return localStorage.getItem(`dash.${key}`) ?? fallback; } catch { return fallback; }
@@ -101,32 +113,66 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     $('t-email').textContent = `${user.email}${state.role === 'admin' ? ' · admin' : ''}`;
     $('t-manage').hidden = state.role !== 'admin';
     screen('t-app');
+    view('t-list');
     await loadSettings();
-    await loadWorkshops();
+    // Don't pull the teacher back to the list if they've already opened another page.
+    await loadWorkshops({ show: !$('t-list').hidden });
   });
 }
 
 async function loadSettings() {
   try {
     const snap = await getDoc(doc(db, 'settings/school'));
-    if (snap.exists() && snap.data().teachers?.length) state.teacherNames = snap.data().teachers;
-  } catch (err) { console.warn('Using default teacher list', err); }
+    state.settingsTeachers = snap.data()?.teachers ?? [];
+    state.activeWorkshop = snap.data()?.activeWorkshop ?? null;
+  } catch (err) { console.warn('Could not read settings', err); }
+  await loadRoster();
+}
+
+async function loadRoster() {
+  try {
+    const [r, d] = await Promise.all([getDocs(collection(db, 'roster')), getDocs(collection(db, 'rosterDetails'))]);
+    state.roster = new Map(r.docs.map((x) => [x.id, x.data()]));
+    state.details = new Map(d.docs.map((x) => [x.id, x.data()]));
+  } catch (err) { console.warn('Could not read class lists', err); }
+}
+
+async function makeActive(code) {
+  try {
+    await setDoc(doc(db, 'settings/school'), { activeWorkshop: code, updatedBy: state.email, updatedAt: serverTimestamp() }, { merge: true });
+    state.activeWorkshop = code;
+    await loadWorkshops();
+  } catch (err) {
+    console.error(err);
+    msg('t-create-msg', 'Could not change the active workshop. Only admins can.');
+  }
 }
 
 // ---------- workshop list ----------
 
-async function loadWorkshops() {
+async function loadWorkshops({ show = true } = {}) {
   const snap = await getDocs(collection(db, 'workshops'));
   state.workshops = snap.docs.map((d) => ({ code: d.id, ...d.data() }))
     .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
-  $('t-cards').replaceChildren(...(state.workshops.length ? state.workshops.map((w) => h('button', {
-    class: 'ws-card', type: 'button', onclick: () => openWorkshop(w.code),
-  },
-  h('span', { class: 'label' }, TRACK_LABEL[w.track] ?? w.track),
-  h('h3', {}, w.name),
-  h('span', { class: 'code' }, w.code),
-  h('span', { class: 'small muted' }, w.open ? 'Open for writing' : 'Closed (read-only)'))) : [h('p', { class: 'muted' }, 'No workshops yet. Create one above, then show its code to the class.')]));
-  view('t-list');
+  const card = (w) => {
+    const active = w.code === state.activeWorkshop;
+    return h('article', {
+      class: `ws-card${active ? ' active' : ''}`, tabindex: '0', role: 'button',
+      onclick: () => openWorkshop(w.code), onkeydown: (e) => { if (e.key === 'Enter') openWorkshop(w.code); },
+    },
+    active ? h('span', { class: 'active-badge' }, 'Active · students land here') : null,
+    h('h3', {}, w.name),
+    h('span', { class: 'code' }, w.code),
+    h('span', { class: 'small muted' }, w.open ? 'Open for writing' : 'Closed (read-only)'),
+    !active && state.role === 'admin'
+      ? h('button', { class: 'btn ghost small-btn', type: 'button', onclick: (e) => { e.stopPropagation(); makeActive(w.code); } }, 'Make active')
+      : null);
+  };
+  $('t-cards').replaceChildren(...(state.workshops.length ? state.workshops.map(card) : [h('p', { class: 'muted' }, 'No workshops yet. Create one above, then make it active.')]));
+  if (!state.activeWorkshop && state.workshops.length) {
+    $('t-cards').prepend(h('p', { class: 'msg warn', style: 'grid-column:1/-1' }, 'No workshop is active, so students see "No workshop is open". An admin can press Make active on one.'));
+  }
+  if (show) view('t-list');
 }
 
 function view(id) {
@@ -153,6 +199,7 @@ $('t-create').addEventListener('submit', async (e) => {
     }
     await setDoc(doc(db, `workshops/${code}`), { name, track: trackId, open: true, createdAt: serverTimestamp(), createdBy: state.email });
     $('t-create').reset();
+    if (!state.activeWorkshop && state.role === 'admin') await makeActive(code);
     await loadWorkshops();
     openWorkshop(code);
   } catch (err) {
@@ -174,9 +221,10 @@ function openWorkshop(code) {
   renderToggle();
   $('ws-head').replaceChildren(h('tr', {},
     h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
-    h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'Teacher'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
+    h('th', {}, 'Teaching group'), h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'Teacher'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
     ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Last active')));
   state.cls = '';
+  state.tg = '';
   state.selected = new Set();
   renderFilters();
   view('t-ws');
@@ -220,12 +268,22 @@ function renderFilters() {
     type: 'button', class: 'seg-btn', 'aria-pressed': String(state.scope === scope),
     onclick: () => { state.scope = scope; writePref('scope', scope); renderFilters(); renderRows(); },
   }, label);
-  const allClasses = [...LEVELS[1], ...LEVELS[2]];
-  const cls = h('select', { 'aria-label': 'Filter by class', onchange: (e) => { state.cls = e.target.value; renderRows(); } },
-    h('option', { value: '' }, 'All classes'), ...allClasses.map((c) => h('option', { value: c }, c)));
-  cls.value = state.cls;
-  const parts = [h('div', { class: 'seg' }, seg('mine', state.myName ? `My students (${state.myName})` : 'My students'), seg('all', 'Whole school')), cls];
-  if (state.scope === 'mine' && !state.teacherNames.includes(state.myName)) {
+  const sortNum = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+  const tgs = [...new Set([...state.roster.keys(), ...state.students.map((x) => x.class).filter(Boolean)])].sort(sortNum);
+  const classes = [...new Set([...state.details.values()].flatMap((d) => Object.values(d.classes ?? {})).filter(Boolean))].sort(sortNum);
+  const select = (label, key, values, all) => {
+    const el = h('select', { 'aria-label': label, onchange: (e) => { state[key] = e.target.value; renderRows(); } },
+      h('option', { value: '' }, all), ...values.map((v) => h('option', { value: v }, v)));
+    el.value = state[key];
+    return el;
+  };
+  const parts = [
+    h('div', { class: 'seg' }, seg('mine', state.myName ? `My students (${state.myName})` : 'My students'), seg('all', 'Whole school')),
+    select('Filter by teaching group', 'tg', tgs, 'All teaching groups'),
+    select('Filter by class', 'cls', classes, 'All classes'),
+  ];
+  const names = teacherNames();
+  if (state.scope === 'mine' && !names.includes(state.myName)) {
     const pick = h('select', {
       'aria-label': 'Which teacher are you?',
       onchange: async (e) => {
@@ -238,14 +296,34 @@ function renderFilters() {
           renderRows();
         } catch (err) { console.error(err); $('ws-status').textContent = 'Could not save your name. Try again.'; }
       },
-    }, h('option', { value: '' }, 'Which teacher are you?'), ...state.teacherNames.map((n) => h('option', { value: n }, n)));
+    }, h('option', { value: '' }, names.length ? 'Which teacher are you?' : 'No teachers in the class lists yet'), ...names.map((n) => h('option', { value: n }, n)));
     parts.push(h('span', { class: 'small muted' }, 'To see your students, pick your name:'), pick);
   }
   $('ws-filters').replaceChildren(...parts);
 }
 
 function visibleStudents() {
-  return state.students.filter((st) => (state.scope === 'all' || st.teacher === state.myName) && (!state.cls || st.class === state.cls));
+  return state.students.filter((st) => (state.scope === 'all' || teacherOf(st) === state.myName)
+    && (!state.tg || st.class === state.tg)
+    && (!state.cls || classOf(st) === state.cls));
+}
+
+// How many students on the class lists (within the current filters) have started a journal.
+function joinedSummary() {
+  const joined = new Set(state.students.map((x) => `${x.class}|${x.name}`));
+  let total = 0;
+  let inn = 0;
+  for (const [tg, g] of state.roster) {
+    if (state.tg && tg !== state.tg) continue;
+    const d = state.details.get(tg) ?? {};
+    for (const name of g.students ?? []) {
+      if (state.scope === 'mine' && (d.teachers?.[name] ?? '') !== state.myName) continue;
+      if (state.cls && (d.classes?.[name] ?? '') !== state.cls) continue;
+      total++;
+      if (joined.has(`${tg}|${name}`)) inn++;
+    }
+  }
+  return total ? `${inn} of ${total} students on the class lists have joined` : '';
 }
 
 function pinCell(st) {
@@ -269,13 +347,14 @@ function renderRows() {
   renderBulk();
   const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
   const list = visibleStudents();
-  const teams = new Set(list.map((s) => s.team)).size;
-  $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · click a row to read a journal`;
+  const teams = new Set(list.map((s) => teamKeyOf(s))).size;
+  const joinedText = joinedSummary();
+  $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · click a row to read a journal`;
   if (!list.length) {
     const why = state.students.length
       ? (state.scope === 'mine' ? 'None of your students have joined yet. Switch to Whole school to see everyone.' : 'No students in this class yet.')
       : `No one has joined yet. Students go to this site and enter ${state.ws.code}.`;
-    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 8), class: 'muted' }, why)));
+    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 9), class: 'muted' }, why)));
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
@@ -287,9 +366,10 @@ function renderRows() {
           onchange: (e) => { if (e.target.checked) state.selected.add(st.sid); else state.selected.delete(st.sid); renderBulk(); },
         })),
       h('td', {}, st.class ?? '–'),
+      h('td', {}, classOf(st) || '–'),
       h('td', { class: 'num' }, String(st.team)),
       h('td', {}, st.name),
-      h('td', { class: 'small' }, st.teacher ?? '–'),
+      h('td', { class: 'small' }, teacherOf(st) || '–'),
       pinCell(st),
       h('td', { class: 'num' }, `${Math.round((answered / total) * 100)}%`),
       ...STAGES.map((s) => {
@@ -340,31 +420,27 @@ function accountSection(st) {
     },
   }, 'Set new PIN');
 
-  const level = h('select', {}, ...Object.keys(LEVELS).map((l) => h('option', { value: l }, `Sec ${l}`)));
-  const cls = h('select', {});
-  const fillCls = () => { cls.replaceChildren(...LEVELS[level.value].map((c) => h('option', { value: c }, c))); };
-  level.value = String(st.level ?? 1);
-  fillCls();
-  cls.value = st.class ?? LEVELS[level.value][0];
-  level.addEventListener('change', fillCls);
-  const names = [...new Set([...state.teacherNames, ...(st.teacher ? [st.teacher] : [])])];
-  const teacher = h('select', {}, ...names.map((n) => h('option', { value: n }, n)));
-  teacher.value = st.teacher ?? names[0];
+  const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const tgSel = h('select', { 'aria-label': 'Teaching group' }, ...tgs.map((t) => h('option', { value: t }, t)));
+  tgSel.value = st.class ?? '';
   const save = h('button', {
     class: 'btn ghost', type: 'button',
     onclick: async () => {
+      const tg = tgSel.value;
+      const g = state.roster.get(tg);
+      if (!g) { note.textContent = 'Pick a teaching group from the class lists.'; return; }
       try {
-        await updateDoc(doc(db, `workshops/${state.ws.code}/students/${st.sid}`), { level: Number(level.value), class: cls.value, teacher: teacher.value });
-        note.textContent = 'Class and teacher updated.';
+        await updateDoc(doc(db, `workshops/${state.ws.code}/students/${st.sid}`), { class: tg, level: g.level });
+        note.textContent = `Moved to ${tg}. They join that group's team journals next time they open the journal.`;
       } catch (err) { console.error(err); note.textContent = 'Could not update. Try again.'; }
     },
-  }, 'Save class');
+  }, 'Move');
 
   return h('section', {},
     h('h3', {}, 'Login help'),
     h('div', { class: 'inline-row' }, h('span', {}, 'PIN:'), pinShown, reveal),
     h('div', { class: 'inline-row' }, newPin, reset),
-    h('div', { class: 'inline-row' }, level, cls, teacher, save),
+    tgs.length ? h('div', { class: 'inline-row' }, h('span', {}, 'Teaching group:'), tgSel, save) : null,
     note);
 }
 
@@ -428,7 +504,7 @@ async function openStudent(st) {
       },
     }, 'Delete');
     const card = h('div', { class: 'qa note-mini' },
-      h('b', {}, `${n.from}${n.use ? ` · ${USE[n.use]}` : ''}`),
+      h('b', {}, `${n.from}${n.fromTg ? ` (${n.fromTg})` : ''}${n.fromSid ? ' · own laptop' : ''}${n.use ? ` · ${USE[n.use]}` : ''}`),
       n.like ? h('p', {}, `I like ${n.like}`) : null,
       n.wish ? h('p', {}, `I wish ${n.wish}`) : null,
       n.whatif ? h('p', {}, `What if ${n.whatif}`) : null,
@@ -439,7 +515,7 @@ async function openStudent(st) {
   drawer.replaceChildren(
     h('div', { style: 'display:flex;justify-content:space-between;gap:1rem;align-items:start' },
       h('div', {},
-        h('span', { class: 'label' }, [st.class, `Team ${st.team}`, st.teacher, TRACK_LABEL[trk]].filter(Boolean).join(' · ')),
+        h('span', { class: 'label' }, [st.class, classOf(st), `Team ${st.team}`, teacherOf(st), TRACK_LABEL[trk]].filter(Boolean).join(' · ')),
         h('h2', {}, st.name),
         h('p', { class: 'small muted' }, mates.length ? `Shares a team journal with ${mates.join(', ')}.` : 'No teammates have joined yet.')),
       h('button', { class: 'btn ghost', type: 'button', onclick: closeDrawer }, 'Close')),
@@ -574,14 +650,14 @@ $('ws-export').addEventListener('click', async () => {
   btn.textContent = 'Preparing…';
   try {
     const cols = STAGES.flatMap((st) => st.prompts.map((p) => ({ stage: st, p })));
-    const header = ['Level', 'Class', 'Teacher', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', 'Sketches / photos', 'Peer feedback'];
+    const header = ['Level', 'Teaching group', 'Class', 'Teacher', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', 'Sketches / photos', 'Peer feedback'];
     const rows = [header];
     const teamCache = new Map();
     for (const st of visibleStudents()) {
       const { answer, log, images, notes } = await loadJournal(st, teamCache);
       const join = (type) => log.filter((e) => (e.type ?? 'learnt') === type).map((e) => `[${e.tag}] ${e.text}`).join('\n');
-      const fb = notes.map((n) => [`${n.from}${n.use ? ` (${n.use})` : ''}:`, n.like && `I like ${n.like}`, n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' ')).join('\n');
-      rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', st.teacher ?? '', st.team, st.name, TRACK_LABEL[studentTrack(st)],
+      const fb = notes.map((n) => [`${n.from}${n.fromTg ? ` [${n.fromTg}]` : ''}${n.use ? ` (${n.use})` : ''}:`, n.like && `I like ${n.like}`, n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' ')).join('\n');
+      rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', classOf(st), teacherOf(st), st.team, st.name, TRACK_LABEL[studentTrack(st)],
         ...cols.map((c) => answer(c.stage.id, c.p)), join('learnt'), join('gathered'), images.length, fb]);
     }
     // BOM so Excel opens the file as UTF-8 (°C, names with accents).
@@ -623,11 +699,10 @@ async function loadTeachers() {
     addMsg('Could not load the teacher list. Only admins can see it.');
     return;
   }
-  $('s-teachers').value = state.teacherNames.join('\n');
-  $('s-msg').textContent = '';
   let dl = document.getElementById('teacher-names');
   if (!dl) { dl = h('datalist', { id: 'teacher-names' }); document.body.append(dl); }
-  dl.replaceChildren(...state.teacherNames.map((n) => h('option', { value: n })));
+  dl.replaceChildren(...teacherNames().map((n) => h('option', { value: n })));
+  renderCurrentRoster();
   const rows = snap.docs.map((d) => ({ email: d.id, ...d.data() }))
     .sort((a, b) => (a.role === b.role ? a.email.localeCompare(b.email) : a.role === 'admin' ? -1 : 1));
   $('t-team-rows').replaceChildren(...rows.map((t) => {
@@ -706,18 +781,112 @@ async function removeTeacher(email) {
   }
 }
 
-$('s-save').addEventListener('click', async () => {
-  const names = [...new Set($('s-teachers').value.split('\n').map((n) => n.trim()).filter(Boolean))].slice(0, 50);
-  if (!names.length) { $('s-msg').textContent = 'Add at least one name.'; return; }
+// ---------- class lists (admins) ----------
+
+function rosterMsg(text, kind = 'err') {
+  $('r-msg').textContent = text;
+  $('r-msg').className = `msg ${kind}`;
+  $('r-msg').hidden = !text;
+}
+
+function renderCurrentRoster() {
+  const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (!tgs.length) {
+    $('r-current').replaceChildren(h('p', { class: 'muted small' }, 'No class lists yet. Students can’t join until you upload one.'));
+    return;
+  }
+  const total = tgs.reduce((n, t) => n + (state.roster.get(t).students?.length ?? 0), 0);
+  $('r-current').replaceChildren(
+    h('h4', {}, `Current class lists: ${tgs.length} teaching groups, ${total} students`),
+    h('div', { class: 'tablewrap' }, h('table', {},
+      h('thead', {}, h('tr', {}, h('th', {}, 'Teaching group'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'))),
+      h('tbody', {}, ...tgs.map((t) => {
+        const g = state.roster.get(t);
+        const cls = [...new Set(Object.values(state.details.get(t)?.classes ?? {}))].sort().join(', ');
+        return h('tr', { style: 'cursor:default' }, h('td', {}, t), h('td', {}, `Sec ${g.level}`), h('td', { class: 'num' }, String(g.students?.length ?? 0)), h('td', { class: 'small' }, cls || '–'));
+      })))));
+}
+
+$('r-template').addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8' }));
+  const a = h('a', { href: url, download: 'class-list-template.csv' });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+});
+
+$('r-file').addEventListener('change', async (e) => {
+  const files = [...(e.target.files ?? [])];
+  e.target.value = '';
+  if (!files.length) return;
+  rosterMsg('Reading files…', 'info');
+  $('r-preview').replaceChildren();
+  let parsed;
   try {
-    await setDoc(doc(db, 'settings/school'), { teachers: names, updatedBy: state.email, updatedAt: serverTimestamp() });
-    state.teacherNames = names;
-    $('s-msg').textContent = `Saved. Students now see ${names.length} ${names.length === 1 ? 'teacher' : 'teachers'} in the sign-up list.`;
+    parsed = await parseRosterFiles(files);
   } catch (err) {
     console.error(err);
-    $('s-msg').textContent = 'Could not save the list. Only admins can change it.';
+    rosterMsg(err.message || 'Could not read those files. Try saving them as CSV or .xlsx.');
+    return;
   }
+  const groups = groupRows(parsed.rows);
+  const bad = parsed.rows.filter((r) => r.error);
+  rosterMsg(groups.size
+    ? `Found ${parsed.rows.length - bad.length} students in ${groups.size} teaching groups${bad.length ? `, plus ${bad.length} rows with problems (listed below, they won't be saved)` : ''}. Check, then press Replace.`
+    : 'No students found. Check the files have a Name column.', groups.size ? 'info' : 'err');
+  const sortNum = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+  const summary = h('div', { class: 'tablewrap' }, h('table', {},
+    h('thead', {}, h('tr', {}, h('th', {}, 'Teaching group'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'), h('th', {}, 'Teachers'), h('th', {}, 'Example names'))),
+    h('tbody', {}, ...[...groups.keys()].sort(sortNum).map((tg) => {
+      const g = groups.get(tg);
+      return h('tr', { style: 'cursor:default' }, h('td', {}, tg), h('td', {}, `Sec ${g.level}`), h('td', { class: 'num' }, String(g.students.length)),
+        h('td', { class: 'small' }, [...new Set(Object.values(g.classes))].sort().join(', ') || '–'),
+        h('td', { class: 'small' }, [...new Set(Object.values(g.teachers))].sort().join(', ') || '–'),
+        h('td', { class: 'small muted' }, g.students.slice(0, 3).join(', ') + (g.students.length > 3 ? '…' : '')));
+    }))));
+  const problems = [...parsed.problems.map((p) => h('li', {}, p)), ...bad.slice(0, 50).map((r) => h('li', {}, `${r.source}: ${r.name || '(no name)'} — ${r.error}`))];
+  const replace = h('button', {
+    class: 'btn', type: 'button', disabled: !groups.size,
+    onclick: async () => {
+      replace.disabled = true;
+      rosterMsg('Saving class lists…', 'info');
+      try {
+        await saveRoster(groups);
+        await loadRoster();
+        $('r-preview').replaceChildren();
+        renderCurrentRoster();
+        rosterMsg(`Saved ${groups.size} teaching groups. Students can now pick their group and name.`, 'info');
+      } catch (err) {
+        console.error(err);
+        rosterMsg('Could not save the class lists. Only admins can upload them.');
+        replace.disabled = false;
+      }
+    },
+  }, `Replace class lists with these ${groups.size} groups`);
+  $('r-preview').replaceChildren(
+    h('h4', {}, 'Preview'), summary,
+    problems.length ? h('details', { open: true }, h('summary', {}, `${problems.length} problems`), h('ul', { class: 'small' }, ...problems)) : null,
+    h('div', { class: 'extra-actions' }, replace,
+      h('span', { class: 'small muted' }, 'Groups not in these files are removed. Journals already started are kept.')));
 });
+
+// Replace every teaching group: names (readable by students) and classes / teachers (teachers only).
+async function saveRoster(groups) {
+  const writes = [];
+  for (const old of state.roster.keys()) {
+    if (!groups.has(old)) writes.push((b) => b.delete(doc(db, `roster/${old}`)), (b) => b.delete(doc(db, `rosterDetails/${old}`)));
+  }
+  for (const [tg, g] of groups) {
+    writes.push((b) => b.set(doc(db, `roster/${tg}`), { level: g.level, students: g.students, updatedAt: serverTimestamp(), updatedBy: state.email }));
+    writes.push((b) => b.set(doc(db, `rosterDetails/${tg}`), { classes: g.classes, teachers: g.teachers, updatedAt: serverTimestamp() }));
+  }
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = writeBatch(db);
+    writes.slice(i, i + 400).forEach((w) => w(batch));
+    await batch.commit();
+  }
+}
 
 // ---------- select and delete several journals ----------
 

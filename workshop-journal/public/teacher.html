@@ -24,7 +24,7 @@
       <div class="topbar-inner">
         <div class="who"><b>Journal Dashboard</b><span class="label" id="t-email"></span></div>
         <span class="spacer"></span>
-        <button id="t-manage" class="btn quiet" type="button" hidden>Teachers</button>
+        <button id="t-manage" class="btn quiet" type="button" hidden>Teachers &amp; class lists</button>
         <button id="t-signout" class="btn ghost" type="button">Sign out</button>
       </div>
     </div>
@@ -32,12 +32,12 @@
     <main id="t-list" class="t-wrap">
       <h2>Workshops</h2>
       <form id="t-create" class="create" novalidate>
-        <label class="field"><span>Class / group name</span><input id="c-name" type="text" maxlength="80" placeholder="1E1 Code for Fun" required></label>
-        <label class="field" style="flex:0 1 170px"><span>Code (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. ESSS26" autocomplete="off" style="text-transform:uppercase"></label>
-        <label class="field" style="flex:0 1 220px"><span>Default track</span>
+        <label class="field"><span>Workshop name</span><input id="c-name" type="text" maxlength="80" placeholder="Sec 1 &amp; 2 workshop, Term 4" required></label>
+        <label class="field" style="flex:0 1 170px"><span>Short ID (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. ESSS26" autocomplete="off" style="text-transform:uppercase"></label>
+        <label class="field" style="flex:0 1 220px"><span>Track if level unknown</span>
           <select id="c-track"><option value="code">Code for Fun · Sec 1</option><option value="ai">AI for Fun · Sec 2</option></select>
         </label>
-        <button class="btn" type="submit">Create workshop code</button>
+        <button class="btn" type="submit">Create workshop</button>
       </form>
       <p id="t-create-msg" class="msg err" hidden></p>
       <div id="t-cards" class="cards"></div>
@@ -71,8 +71,8 @@
     <main id="t-team" class="t-wrap" hidden>
       <div><button id="t-team-back" class="btn quiet" type="button">← All workshops</button></div>
       <div>
-        <h2>Teachers</h2>
-        <p class="muted">People on this list can sign in to the dashboard and read every journal. Admins can also add and remove teachers.</p>
+        <h2>Teachers &amp; class lists</h2>
+        <p class="muted">People on this list can sign in to the dashboard and read every journal. Admins can also add and remove teachers, and upload class lists.</p>
       </div>
       <form id="t-add" class="create" novalidate>
         <label class="field"><span>Google email</span><input id="a-email" type="text" inputmode="email" autocomplete="off" maxlength="120" placeholder="ms.tan@school.edu.sg" required></label>
@@ -84,12 +84,20 @@
       </form>
       <p class="small muted">Use the address exactly as the teacher's Google account shows it. For Gmail, check whether it has dots, e.g. lloydgoh@gmail.com vs lloyd.goh@gmail.com.</p>
       <p id="t-add-msg" class="msg" hidden></p>
-      <section class="create" style="flex-direction:column;align-items:stretch">
-        <label class="field"><span>Teacher names in the student sign-up list</span>
-          <textarea id="s-teachers" rows="4" placeholder="One name per line, e.g. Mr Lloyd Goh"></textarea>
-          <small>Students pick one of these when they join. A teacher sees "My students" when the Name on their row below matches one of these exactly.</small>
-        </label>
-        <div><button id="s-save" class="btn" type="button">Save list</button> <span id="s-msg" class="small muted"></span></div>
+      <section class="roster-box" id="roster-box">
+        <div>
+          <h3>Class lists</h3>
+          <p class="small muted">Students pick their <b>teaching group</b>, then their <b>name</b> from this list. Form class and teacher are only shown to teachers.</p>
+        </div>
+        <div class="extra-actions">
+          <label class="btn" for="r-file">Choose files…</label>
+          <input id="r-file" type="file" accept=".csv,.xlsx,.xls" multiple hidden>
+          <button id="r-template" class="btn quiet" type="button">Download a template</button>
+        </div>
+        <p class="small muted">CSV or Excel. Columns: <b>Teaching group</b>, <b>Name</b>, <b>Class</b>, and optionally <b>Level</b> (1 or 2) and <b>Teacher</b>. You can pick several files at once. If a file has no teaching group column, its sheet or file name is used.</p>
+        <p id="r-msg" class="msg" hidden></p>
+        <div id="r-preview"></div>
+        <div id="r-current"></div>
       </section>
       <div class="tablewrap">
         <table>

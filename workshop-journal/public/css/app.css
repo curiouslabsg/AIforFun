@@ -291,3 +291,27 @@ th.sel, td.sel { width: 2.4rem; text-align: center; cursor: default; }
 th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; accent-color: var(--accent); }
 .bulk-bar { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; background: #fff7ed; border: 1.5px solid #fdba74; border-radius: 10px; padding: 0.6rem 0.9rem; }
 .bulk-bar .spacer { flex: 1; }
+
+/* ---------- Join without a code ---------- */
+.workshop-pill { align-self: flex-start; margin: 0; font: 700 0.85rem/1 var(--f-mono); letter-spacing: 0.04em; padding: 0.5rem 0.8rem; border-radius: 99px; background: #ede9fe; color: #5b21b6; }
+.workshop-pill::before { content: "● "; color: #16a34a; }
+
+/* ---------- Gallery walk ---------- */
+.find-us { background: #fef9c3; border: 1.5px dashed #ca8a04; border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.92rem; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 0.9rem; }
+.gal-card { background: #fff; border: 1.5px solid var(--rule); border-top: 6px solid #ca8a04; border-radius: 10px; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.gal-card h3 { font-size: 1.02rem; min-height: 2.4em; }
+.gal-card .btn { align-self: flex-start; background: #ca8a04; }
+.gal-card.done { border-top-color: #16a34a; background: #f0fdf4; }
+.gal-done { color: #15803d; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
+#gal-filter { flex: 1 1 240px; width: auto; }
+
+/* ---------- Active workshop + class lists ---------- */
+.ws-card.active { border: 2px solid #16a34a; background: #f0fdf4; }
+.active-badge { align-self: flex-start; font: 700 0.7rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.35rem 0.55rem; border-radius: 99px; background: #16a34a; color: #fff; }
+.small-btn { align-self: flex-start; padding: 0.35rem 0.7rem; font-size: 0.85rem; }
+.roster-box { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; }
+.roster-box h3 { font-size: 1.15rem; }
+.roster-box h4 { font-family: var(--f-display); font-size: 1rem; margin: 0.4rem 0; }
+.roster-box label.btn { cursor: pointer; }
+.roster-box details ul { margin: 0.4rem 0 0; padding-left: 1.2rem; color: var(--bad); }

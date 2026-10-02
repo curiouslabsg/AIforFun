@@ -35,6 +35,10 @@ beforeEach(async () => {
     await setDoc(doc(db, 'teachers/teacher@school.test'), { name: 'T', role: 'teacher' });
     await setDoc(doc(db, 'teachers/admin@school.test'), { name: 'A', role: 'admin' });
     await setDoc(doc(db, `workshops/${CODE}`), { name: '1E1', track: 'code', open: true, createdAt: 1, createdBy: 'teacher@school.test' });
+    // Class lists: teaching group -> level + names students can pick.
+    await setDoc(doc(db, 'roster/1A'), { level: 1, students: ['Aisha', 'Ben', 'X'] });
+    await setDoc(doc(db, 'roster/1B'), { level: 1, students: ['Cara'] });
+    await setDoc(doc(db, 'roster/2C'), { level: 2, students: ['Dee'] });
   });
 });
 
@@ -269,7 +273,7 @@ async function joinStudent(uid, sid, name, klass, team, pin = '1111') {
   const db = device(uid);
   const batch = writeBatch(db);
   batch.set(doc(db, `workshops/${CODE}/students/${sid}`), {
-    name, team, level: 1, class: klass, teacher: 'Mr Lloyd Goh', pin, pinHash: hash(sid, pin), createdAt: 1, progress: {}, lastActive: 1,
+    name, team, level: klass.startsWith('2') ? 2 : 1, class: klass, teacher: 'Mr Lloyd Goh', pin, pinHash: hash(sid, pin), createdAt: 1, progress: {}, lastActive: 1,
   });
   batch.set(doc(db, `workshops/${CODE}/students/${sid}/claims/${uid}`), { pinHash: hash(sid, pin), at: 1 });
   await batch.commit();
@@ -344,4 +348,72 @@ test('teachers can list and clear answer locks when deleting', async () => {
   await assertSucceeds(getDocs(collection(teacher(), tpath('1A-t1', '/locks'))));
   await assertSucceeds(deleteDoc(doc(teacher(), tpath('1A-t1', '/locks/define__hmw'))));
   await assertFails(getDocs(collection(device('z'), tpath('1A-t1', '/locks'))));
+});
+
+
+// ---------- class list, active workshop, gallery-walk feedback ----------
+
+test('joining checks the teaching group, the name on its list, and its level', async () => {
+  const db = device('a');
+  const base = { team: 9, teacher: 'T', pin: '1234', createdAt: 1, progress: {} };
+  const mk = (sid, f) => setDoc(doc(db, `workshops/${CODE}/students/${sid}`), { ...base, pinHash: hash(sid, '1234'), ...f });
+  await assertFails(mk('s1', { name: 'Zed', level: 1, class: '1A' }));     // not on 1A's list
+  await assertFails(mk('s2', { name: 'Cara', level: 1, class: '1A' }));    // on another group's list
+  await assertFails(mk('s3', { name: 'Dee', level: 1, class: '2C' }));     // wrong level for 2C
+  await assertFails(mk('s4', { name: 'Aisha', level: 1, class: '9Z' }));   // no such group
+  await assertSucceeds(mk('s5', { name: 'Dee', level: 2, class: '2C' }));
+  const noTeacher = { ...base };
+  delete noTeacher.teacher;
+  await assertSucceeds(setDoc(doc(db, `workshops/${CODE}/students/s6`), { ...noTeacher, pinHash: hash('s6', '1234'), name: 'Ben', level: 1, class: '1A' }));
+});
+
+test('class lists: students read names; only admins write; classes stay teacher-only', async () => {
+  await assertSucceeds(getDocs(collection(device('a'), 'roster')));
+  await assertFails(setDoc(doc(device('a'), 'roster/1A'), { level: 1, students: ['Me'] }));
+  await assertFails(setDoc(doc(teacher(), 'roster/1A'), { level: 1, students: ['Me'] }));
+  await assertSucceeds(setDoc(doc(admin(), 'roster/1-TG3'), { level: 1, students: ['Aisha Tan'], updatedAt: 1, updatedBy: 'admin@school.test' }));
+  await assertFails(setDoc(doc(admin(), 'roster/bad%2Fid'), { level: 1, students: [] }));
+  await assertFails(setDoc(doc(admin(), 'roster/1A'), { level: 3, students: [] }));
+  await assertSucceeds(setDoc(doc(admin(), 'rosterDetails/1A'), { classes: { Aisha: '1E1' }, teachers: { Aisha: 'Mr Lloyd Goh' }, updatedAt: 1 }));
+  await assertSucceeds(getDoc(doc(teacher(), 'rosterDetails/1A')));
+  await assertFails(getDoc(doc(device('a'), 'rosterDetails/1A')));
+  await assertFails(setDoc(doc(teacher(), 'rosterDetails/1A'), { classes: {}, teachers: {} }));
+});
+
+test('only admins choose the active workshop', async () => {
+  await assertSucceeds(setDoc(doc(admin(), 'settings/school'), { activeWorkshop: CODE, updatedBy: 'admin@school.test', updatedAt: 1 }));
+  await assertSucceeds(getDoc(doc(device('a'), 'settings/school')));
+  await assertFails(setDoc(doc(teacher(), 'settings/school'), { activeWorkshop: CODE }));
+  await assertFails(setDoc(doc(admin(), 'settings/school'), { activeWorkshop: 'not a code' }));
+});
+
+test('any student can browse team titles, but not team answers', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');
+  await assertSucceeds(setDoc(doc(a, tpath('1A-t1')), { progress: {}, title: '#6 Hunching over homework', updatedAt: 1 }, { merge: true }));
+  const c = await joinStudent('c', 't1-cara', 'Cara', '1B', 1);
+  await assertSucceeds(getDocs(collection(c, `workshops/${CODE}/teams`)));
+  await assertFails(setDoc(doc(c, tpath('1A-t1')), { title: 'hacked' }, { merge: true }));
+  await assertFails(getDocs(collection(c, tpath('1A-t1', '/entries'))));
+});
+
+test('gallery walk: a visitor leaves one note per team from their own journal', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');
+  const c = await joinStudent('c', 't1-cara', 'Cara', '1B', 1);
+  const b = await joinStudent('b', 't1-ben', 'Ben', '1A', 1);
+  const note = (from, fromSid, extra = {}) => ({ from, fromSid, fromTg: '1B', like: 'Nice idea', wish: '', whatif: '', use: 'yes', createdAt: 1, ...extra });
+  await assertSucceeds(setDoc(doc(c, tpath('1A-t1', '/feedback/t1-cara')), note('Cara', 't1-cara')));
+  await assertFails(setDoc(doc(c, tpath('1A-t1', '/feedback/t1-cara')), note('Cara', 't1-cara', { like: 'again' })));  // one note only
+  await assertFails(setDoc(doc(c, tpath('1A-t1', '/feedback/t1-ben')), note('Ben', 't1-ben', { fromTg: '1A' })));  // Ben exists, but it's not Cara's journal
+  await assertFails(setDoc(doc(c, tpath('1A-t1', '/feedback/x1')), note('Cara', 't1-cara')));                     // id must be her sid
+  await assertFails(setDoc(doc(c, tpath('1A-t1', '/feedback/t1-cara2')), note('Someone else', 't1-cara2')));
+  await assertFails(getDocs(collection(c, tpath('1A-t1', '/feedback'))));                                          // can't read the wall
+  await assertSucceeds(getDocs(collection(a, tpath('1A-t1', '/feedback'))));                                       // owners can
+  // Three visitors at once all land.
+  const d = await joinStudent('d', 't1-dee', 'Dee', '2C', 1);
+  await assertSucceeds(Promise.all([
+    setDoc(doc(d, tpath('1A-t1', '/feedback/t1-dee')), note('Dee', 't1-dee', { fromTg: '2C' })),
+    setDoc(doc(b, tpath('1A-t1', '/feedback/t1-ben')), note('Ben', 't1-ben', { fromTg: '1A' })),
+  ]));
 });

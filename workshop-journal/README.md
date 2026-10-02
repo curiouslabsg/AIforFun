@@ -36,12 +36,17 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 ## What's in it
 
-**Students** join with the workshop code, level (Sec 1/2), class, teacher, team, name and a 4-digit PIN. Sec 1 gets the Code for Fun prompts and problem statements; Sec 2 gets AI for Fun.
-- Problem statement picker with a detail card, coloured stages, progress bar and a confetti burst when a stage is done.
+**Students** open the site and land in the **active workshop** (no code). They pick their **teaching group**, then **their name** from the class list, then their team number and a 4-digit PIN. Returning students only type their PIN. Sec 1 groups get Code for Fun; Sec 2 groups get AI for Fun (laptop-only, digital solutions).
 - **Prototype**: upload a photo of a paper sketch, or draw on the built-in sketch pad. Images are shrunk to under 900 KB and stored in Firestore.
 - **Test & feedback**: *Visitor mode* turns the laptop into a feedback form (I like / I wish / What if / would the user use it). Each visitor's note sticks to the team's wall. Students can't delete notes; teachers can.
 
 **Team journals.** Students with the same workshop code, class and team number share one journal and see each other's answers live. Questions tagged *Team* are shared; *Just me* questions (what I built, the coding idea I used, the team that impressed me, and the Reflect 3-2-1) and the learning log stay personal. Sketches and the feedback wall are shared too. When someone clicks into a shared answer, it locks for teammates, who see "Name is typing…"; it unlocks when they click away, or after 45 seconds if their laptop closes.
+
+**Gallery walk.** Every journal has a *Gallery walk* tab listing the other teams and their projects. Visitors leave I like / I wish / What if notes from their own laptops, so a whole class can give feedback at once; each visitor can leave one note per team, signed with their name and teaching group. Visitor mode on the owner's laptop still works for anyone without a device.
+
+**Class lists.** On *Teachers & class lists*, an admin uploads CSV or Excel files with columns *Teaching group*, *Name*, *Class* (optional *Level*, *Teacher*). Students only ever see teaching groups and names; form class and teacher are stored separately and only teachers can read them. Uploading replaces all groups.
+
+**Active workshop.** An admin presses *Make active* on a workshop card; that's where students land. Other workshops stay readable on the dashboard.
 
 **Teachers** sign in with Google at `/teacher.html`.
 - *My students* shows students who chose your name when joining; *Whole school* shows everyone. Filter by class.
