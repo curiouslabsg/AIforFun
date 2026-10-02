@@ -319,13 +319,22 @@ function pickWorkshop(code) {
   const w = joinState.open.find((x) => x.code === code) ?? null;
   joinState.code = w?.code ?? null;
   joinState.workshop = w;
-  $('j-workshop').textContent = w?.name ?? '';
-  $('j-workshop').hidden = !w || joinState.open.length > 1;
+  showJoinTrack();
   onNamePicked();
+}
+
+// The label above the form follows the teaching group: Sec 1 groups do Code for Fun, Sec 2 do AI for Fun.
+function showJoinTrack() {
+  const level = joinState.roster.get($('j-tg').value)?.level;
+  $('j-workshop').textContent = level ? TRACK_LABEL[trackForLevel(level)] : 'Code for Fun · AI for Fun';
+  $('j-workshop').hidden = !joinState.code && !level;
+  if (level) document.body.dataset.track = trackForLevel(level);
+  else delete document.body.dataset.track;
 }
 
 function fillNames() {
   const tg = $('j-tg').value;
+  showJoinTrack();
   const names = [...(joinState.roster.get(tg)?.students ?? [])].sort((a, b) => a.localeCompare(b));
   $('j-name').replaceChildren(h('option', { value: '' }, tg ? 'Choose your name…' : 'Pick your teaching group first'),
     ...names.map((n) => h('option', { value: n }, n)));
@@ -499,7 +508,7 @@ function renderTeamMeta() {
   const mates = [...state.members.values()].map((m) => m.name).filter((n) => n && n !== state.student.name);
   $('me-meta').textContent = [
     state.student.class, `Team ${state.student.team}${mates.length ? ` with ${mates.join(', ')}` : ''}`,
-    state.workshop.name, TRACK_LABEL[track()],
+    TRACK_LABEL[track()],
   ].filter(Boolean).join(' · ');
 }
 
