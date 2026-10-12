@@ -434,3 +434,53 @@ test('gallery walk: a visitor leaves one note per team from their own journal', 
     setDoc(doc(b, tpath('1A-t1', '/feedback/t1-ben')), note('Ben', 't1-ben', { fromTg: '1A' })),
   ]));
 });
+
+// ---------- team change requests ----------
+const reqRef = (db, sid = SID) => doc(db, `workshops/${CODE}/teamRequests/${sid}`);
+const req = (extra = {}) => ({ name: 'Aisha', tg: '1A', from: 3, to: 5, reason: 'Our team split', status: 'pending', at: 1, ...extra });
+
+test('a student can ask to move team; only a teacher can move them', async () => {
+  const a = device('a');
+  await join(a, 'a');
+  await assertSucceeds(setDoc(reqRef(a), req()));
+  await assertSucceeds(getDoc(reqRef(a)));
+  await assertSucceeds(setDoc(reqRef(a), req({ to: 6 })));
+  // Must be the student's real team and name, a real team number, and a different team.
+  await assertFails(setDoc(reqRef(a), req({ from: 2 })));
+  await assertFails(setDoc(reqRef(a), req({ to: 3 })));
+  await assertFails(setDoc(reqRef(a), req({ to: 41 })));
+  await assertFails(setDoc(reqRef(a), req({ name: 'Ben' })));
+  await assertFails(setDoc(reqRef(a), req({ status: 'approved' })));
+  await assertFails(setDoc(reqRef(a), req({ reason: 'x'.repeat(201) })));
+  // The student can't move themselves, and other devices can't ask for them.
+  await assertFails(updateDoc(doc(a, `workshops/${CODE}/students/${SID}`), { team: 5 }));
+  await assertFails(setDoc(reqRef(device('b')), req()));
+  await assertFails(getDoc(reqRef(device('b'))));
+  await assertFails(getDocs(collection(a, `workshops/${CODE}/teamRequests`)));
+  // Teachers see every request, can decline, and move the student themselves.
+  await assertSucceeds(getDocs(collection(teacher(), `workshops/${CODE}/teamRequests`)));
+  await assertFails(updateDoc(reqRef(teacher()), { status: 'approved' }));
+  await assertSucceeds(updateDoc(reqRef(teacher()), { status: 'declined', decidedBy: 'teacher@school.test', decidedAt: 1 }));
+  await assertFails(updateDoc(doc(teacher(), `workshops/${CODE}/students/${SID}`), { team: 41 }));
+  await assertSucceeds(updateDoc(doc(teacher(), `workshops/${CODE}/students/${SID}`), { team: 6 }));
+  await assertSucceeds(deleteDoc(reqRef(a)));
+});
+
+test('a teacher approves by moving the student and clearing their old team membership', async () => {
+  const a = device('a');
+  await join(a, 'a');
+  await member(a, '1A-t3', 'a', SID, 'Aisha');
+  await setDoc(reqRef(a), req());
+  const t = teacher();
+  const batch = writeBatch(t);
+  batch.update(doc(t, `workshops/${CODE}/students/${SID}`), { team: 5 });
+  batch.delete(doc(t, tpath('1A-t3', '/members/a')));
+  batch.delete(reqRef(t));
+  await assertSucceeds(batch.commit());
+  // Now in team 5: can join it, and can no longer read team 3's answers.
+  await assertSucceeds(member(a, '1A-t5', 'a', SID, 'Aisha'));
+  await assertFails(getDocs(collection(a, tpath('1A-t3', '/entries'))));
+  // Requests need an open workshop.
+  await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), `workshops/${CODE}`), { open: false }));
+  await assertFails(setDoc(reqRef(a), req({ from: 5, to: 2 })));
+});

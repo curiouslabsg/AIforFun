@@ -64,6 +64,7 @@
         </div>
         <span class="spacer"></span>
         <span id="save" class="save" aria-live="polite"></span>
+        <button id="team-btn" class="btn quiet" type="button" hidden>Change team</button>
         <button id="switch" class="btn ghost" type="button">Switch student</button>
       </div>
       <div class="progress" aria-label="Journal progress">
@@ -74,6 +75,7 @@
     <div class="shell">
       <nav id="stages" class="stages" aria-label="Journal sections"></nav>
       <div class="stack" style="display:flex;flex-direction:column;gap:1rem;min-width:0">
+        <div id="team-req" class="team-req" hidden aria-live="polite"></div>
         <p id="closed" class="msg warn" hidden>This workshop is closed. You can still read your journal, but you can't change it.</p>
         <section id="panel" class="panel"></section>
       </div>

@@ -21,6 +21,7 @@ const state = {
   // teamEntries / images / feedback / locks / members: shared by everyone in the same class + team.
   entries: new Map(), teamEntries: new Map(), images: new Map(), feedback: new Map(), locks: new Map(), members: new Map(),
   teamKey: null, current: LOG_ID, unsubs: [], logType: 'learnt',
+  request: null, reqForm: false, flash: '',
 };
 
 const teamPath = (sub = '') => `workshops/${state.code}/teams/${state.teamKey}${sub}`;
@@ -497,11 +498,90 @@ async function openJournal(code, sid) {
     watch(teamPath('/feedback'), state.feedback, renderNotes),
     watch(teamPath('/locks'), state.locks, applyLockState),
     watch(teamPath('/members'), state.members, renderTeamMeta),
+    // A team change request this student sent, and whether a teacher has moved them.
+    onSnapshot(doc(db, `workshops/${code}/teamRequests/${sid}`), (snap) => {
+      state.request = snap.exists() ? snap.data() : null;
+      renderTeamRequest();
+    }, (err) => console.warn('team request', err)),
+    onSnapshot(doc(db, mine), (snap) => {
+      const st = snap.data();
+      if (!st || (st.team === state.student.team && st.class === state.student.class)) return;
+      moved(st);
+    }, () => {}),
   ];
+  state.reqForm = false;
+  state.flash = '';
+  renderTeamRequest();
 
   show('journal');
   renderNav();
   renderPanel();
+}
+
+// ---------- changing team (student asks, teacher approves) ----------
+
+// A teacher approved the move (or moved them): reopen the journal in the new team.
+async function moved(st) {
+  const from = `Team ${state.student.team}`;
+  flushSaves();
+  releaseAllLocks();
+  try {
+    await openJournal(state.code, state.sid);
+    state.flash = `Your teacher moved you from ${from} to ${st.class === state.student.class ? '' : `${st.class} `}Team ${st.team}. You're now working in your new team's journal.`;
+    renderTeamRequest();
+  } catch (err) {
+    console.error(err);
+    setSave('Your team changed. Reload the page.', true);
+  }
+}
+
+function renderTeamRequest() {
+  const box = $('team-req');
+  const r = state.request;
+  $('team-btn').hidden = !isOpen() || !!r;
+  const parts = [];
+  if (state.flash) {
+    parts.push(h('p', { class: 'msg info' }, state.flash, ' ',
+      h('button', { class: 'btn quiet', type: 'button', onclick: () => { state.flash = ''; renderTeamRequest(); } }, 'OK')));
+  }
+  if (r?.status === 'pending') {
+    parts.push(h('p', { class: 'msg warn' },
+      `Waiting for your teacher to approve your move from Team ${r.from} to Team ${r.to}. Keep working in Team ${r.from} until then. `,
+      h('button', { class: 'btn quiet', type: 'button', onclick: () => deleteDoc(doc(db, `workshops/${state.code}/teamRequests/${state.sid}`)).catch(console.warn) }, 'Cancel request')));
+  } else if (r?.status === 'declined') {
+    parts.push(h('p', { class: 'msg err' },
+      `Your teacher didn't approve the move to Team ${r.to}, so you're still in Team ${state.student.team}. Talk to them if you think that's a mistake. `,
+      h('button', { class: 'btn quiet', type: 'button', onclick: () => deleteDoc(doc(db, `workshops/${state.code}/teamRequests/${state.sid}`)).catch(console.warn) }, 'OK')));
+  } else if (state.reqForm && isOpen()) {
+    const to = h('input', { type: 'number', min: '1', max: '40', inputmode: 'numeric', id: 'req-to', style: 'width:6rem' });
+    const reason = h('input', { type: 'text', maxlength: '200', id: 'req-reason', placeholder: 'e.g. My old team split up' });
+    const err = h('span', { class: 'small', style: 'color:var(--err, #b91c1c)' });
+    const send = async (e) => {
+      e.preventDefault();
+      const n = Number.parseInt(to.value, 10);
+      if (!(n >= 1 && n <= 40)) { err.textContent = 'Type a team number from 1 to 40.'; return; }
+      if (n === state.student.team) { err.textContent = `You're already in Team ${n}.`; return; }
+      const data = { name: state.student.name, tg: state.student.class, from: state.student.team, to: n, status: 'pending', at: serverTimestamp() };
+      if (reason.value.trim()) data.reason = reason.value.trim().slice(0, 200);
+      try {
+        await setDoc(doc(db, `workshops/${state.code}/teamRequests/${state.sid}`), data);
+        state.reqForm = false;
+      } catch (ex) { console.error(ex); err.textContent = friendlyError(ex); }
+    };
+    parts.push(h('form', { class: 'req-form', onsubmit: send },
+      h('b', {}, `Move from Team ${state.student.team} to another team`),
+      h('p', { class: 'small muted' }, 'Your teacher has to approve it. Your own answers and learning log come with you; your old team keeps its shared pages.'),
+      h('div', { class: 'inline-row' },
+        h('label', { class: 'field', for: 'req-to' }, h('span', {}, 'New team number'), to),
+        h('label', { class: 'field', for: 'req-reason', style: 'flex:1;min-width:12rem' }, h('span', {}, 'Why? (optional)'), reason)),
+      h('div', { class: 'inline-row' },
+        h('button', { class: 'btn', type: 'submit' }, 'Ask my teacher'),
+        h('button', { class: 'btn quiet', type: 'button', onclick: () => { state.reqForm = false; renderTeamRequest(); } }, 'Cancel'),
+        err)));
+  }
+  box.replaceChildren(...parts);
+  box.hidden = !parts.length;
+  if (state.reqForm && !r) box.querySelector('#req-to')?.focus();
 }
 
 function renderTeamMeta() {
@@ -766,6 +846,7 @@ $('j-tg').addEventListener('change', fillNames);
 $('j-name').addEventListener('change', onNamePicked);
 $('join-form').addEventListener('submit', onJoin);
 $('switch').addEventListener('click', switchStudent);
+$('team-btn').addEventListener('click', () => { state.reqForm = !state.reqForm; renderTeamRequest(); });
 
 if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
   show('setup');

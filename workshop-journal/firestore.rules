@@ -136,6 +136,29 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'open']);
       allow delete: if isAdmin();
 
+      // A student asks to move to another team; a teacher approves (by moving them) or declines.
+      // The doc id is the student's journal id, so each student has at most one request.
+      match /teamRequests/{sid} {
+        allow get: if ownsJournal(code, sid) || isTeacher();
+        allow list: if isTeacher();
+        allow create, update: if ownsJournal(code, sid)
+          && workshopOpen(code)
+          && request.resource.data.keys().hasOnly(['name', 'tg', 'from', 'to', 'reason', 'status', 'at'])
+          && request.resource.data.status == 'pending'
+          && request.resource.data.to is int
+          && request.resource.data.to >= 1 && request.resource.data.to <= 40
+          && request.resource.data.from == get(studentPath(code, sid)).data.team
+          && request.resource.data.to != request.resource.data.from
+          && request.resource.data.name == get(studentPath(code, sid)).data.name
+          && request.resource.data.tg == get(studentPath(code, sid)).data['class']
+          && (!('reason' in request.resource.data)
+              || (request.resource.data.reason is string && request.resource.data.reason.size() <= 200));
+        allow update: if isTeacher()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedBy', 'decidedAt'])
+          && request.resource.data.status == 'declined';
+        allow delete: if ownsJournal(code, sid) || isTeacher();
+      }
+
       match /students/{sid} {
         // resource == null lets a student check whether a name is free before joining.
         allow get: if signedIn()
@@ -161,11 +184,13 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive'])
             && request.resource.data.progress is map
             && request.resource.data.progress.size() <= 20)
-          // Teachers can reset a forgotten PIN or fix a wrong class / teacher choice.
+          // Teachers can reset a forgotten PIN, move a student to another group or team, or fix the teacher.
           || (isTeacher()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'level', 'class', 'teacher'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'level', 'class', 'teacher', 'team'])
             && request.resource.data.pin.matches('^[0-9]{4}$')
-            && request.resource.data.pinHash.size() == 64);
+            && request.resource.data.pinHash.size() == 64
+            && request.resource.data.team is int
+            && request.resource.data.team >= 1 && request.resource.data.team <= 40);
         allow delete: if isTeacher();
 
         match /claims/{uid} {

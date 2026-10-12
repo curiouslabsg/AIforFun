@@ -2,7 +2,7 @@ import {
   GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, onSnapshot, serverTimestamp, writeBatch,
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, query, where, onSnapshot, serverTimestamp, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, pinHash } from './firebase.js';
 import { trackForLevel } from './school.js';
@@ -274,7 +274,13 @@ function openWorkshop(code) {
     state.teams = new Map(snap.docs.map((d) => [d.id, d.data()]));
     renderRows();
   }, lost);
-  state.unsub = () => { u1(); u2(); };
+  state.requests = [];
+  const u3 = onSnapshot(collection(db, `workshops/${code}/teamRequests`), (snap) => {
+    state.requests = snap.docs.map((d) => ({ sid: d.id, ...d.data() })).filter((r) => r.status === 'pending')
+      .sort((a, b) => (a.at?.toMillis?.() ?? 0) - (b.at?.toMillis?.() ?? 0));
+    renderRequests();
+  }, lost);
+  state.unsub = () => { u1(); u2(); u3(); };
   $('ws-delete').hidden = state.role !== 'admin';
   $('ws-toggle').hidden = state.role !== 'admin';
 }
@@ -336,6 +342,69 @@ function renderFilters() {
   $('ws-filters').replaceChildren(...parts);
 }
 
+// ---------- team change requests ----------
+
+// Move a student to another team (and/or teaching group). Their personal answers come with them;
+// they're taken off the old team's member list so they don't show up in both teams.
+async function moveStudent(st, { team = st.team, tg = st.class } = {}) {
+  const code = state.ws.code;
+  const oldKey = `${st.class}-t${st.team}`;
+  const old = await getDocs(query(collection(db, `workshops/${code}/teams/${oldKey}/members`), where('sid', '==', st.sid)));
+  const batch = writeBatch(db);
+  const data = { team };
+  if (tg !== st.class) Object.assign(data, { class: tg, level: state.roster.get(tg)?.level ?? st.level });
+  batch.update(doc(db, `workshops/${code}/students/${st.sid}`), data);
+  for (const m of old.docs) batch.delete(m.ref);
+  batch.delete(doc(db, `workshops/${code}/teamRequests/${st.sid}`));
+  await batch.commit();
+}
+
+async function decide(r, approve) {
+  const st = state.students.find((x) => x.sid === r.sid);
+  try {
+    if (!approve) {
+      await updateDoc(doc(db, `workshops/${state.ws.code}/teamRequests/${r.sid}`), { status: 'declined', decidedBy: state.email, decidedAt: serverTimestamp() });
+    } else if (!st) {
+      await deleteDoc(doc(db, `workshops/${state.ws.code}/teamRequests/${r.sid}`));
+    } else if (st.team !== r.from || st.class !== r.tg) {
+      // Already moved some other way; the request is out of date.
+      await deleteDoc(doc(db, `workshops/${state.ws.code}/teamRequests/${r.sid}`));
+    } else {
+      await moveStudent(st, { team: r.to });
+    }
+  } catch (err) {
+    console.error(err);
+    $('ws-status').textContent = `Could not update ${r.name}'s request. Try again.`;
+  }
+}
+
+function renderRequests() {
+  const box = $('ws-requests');
+  const shown = new Set(visibleStudents().map((x) => x.sid));
+  const list = (state.requests ?? []).filter((r) => shown.has(r.sid));
+  const hiddenCount = (state.requests ?? []).length - list.length;
+  const teamNames = (tg, team) => state.students.filter((x) => x.class === tg && x.team === team).map((x) => x.name.split(' ')[0]);
+  const row = (r) => {
+    const now = teamNames(r.tg, r.to);
+    return h('div', { class: 'req-row' },
+      h('div', { class: 'req-who' },
+        h('b', {}, r.name), ` · ${r.tg} · Team ${r.from} → `, h('b', {}, `Team ${r.to}`),
+        h('div', { class: 'small muted' }, now.length ? `Team ${r.to} now: ${now.join(', ')}` : `Team ${r.to} is empty right now`),
+        r.reason ? h('div', { class: 'small' }, `“${r.reason}”`) : null),
+      h('button', { class: 'btn', type: 'button', onclick: (e) => { e.target.disabled = true; decide(r, true); } }, 'Approve'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: (e) => { e.target.disabled = true; decide(r, false); } }, 'Decline'));
+  };
+  const head = h('div', { class: 'inline-row' },
+    h('b', {}, `${list.length} team change ${list.length === 1 ? 'request' : 'requests'}`),
+    list.length > 1 ? h('button', {
+      class: 'btn quiet', type: 'button',
+      onclick: async (e) => { e.target.disabled = true; for (const r of list) await decide(r, true); },
+    }, 'Approve all') : null,
+    hiddenCount ? h('span', { class: 'small muted' }, `+${hiddenCount} more outside this view (switch to Whole school or clear the filters)`) : null);
+  box.replaceChildren(head, ...list.map(row));
+  box.hidden = !list.length && !hiddenCount;
+}
+
 function visibleStudents() {
   return state.students.filter((st) => (state.scope === 'all' || isMe(teacherOf(st)))
     && (!state.tg || st.class === state.tg)
@@ -379,6 +448,7 @@ function renderRows() {
   const shownIds = new Set(visibleStudents().map((x) => x.sid));
   for (const sid of [...(state.selected ?? [])]) if (!shownIds.has(sid)) state.selected.delete(sid);
   renderBulk();
+  renderRequests();
   const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
   const list = visibleStudents();
   const teams = new Set(list.map((s) => teamKeyOf(s))).size;
@@ -457,24 +527,27 @@ function accountSection(st) {
   const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const tgSel = h('select', { 'aria-label': 'Teaching group' }, ...tgs.map((t) => h('option', { value: t }, t)));
   tgSel.value = st.class ?? '';
+  const teamIn = h('input', { type: 'number', min: '1', max: '40', inputmode: 'numeric', value: String(st.team ?? ''), 'aria-label': 'Team number', style: 'width:5rem' });
   const save = h('button', {
     class: 'btn ghost', type: 'button',
     onclick: async () => {
       const tg = tgSel.value;
-      const g = state.roster.get(tg);
-      if (!g) { note.textContent = 'Pick a teaching group from the class lists.'; return; }
+      const team = Number.parseInt(teamIn.value, 10);
+      if (!state.roster.get(tg)) { note.textContent = 'Pick a teaching group from the class lists.'; return; }
+      if (!(team >= 1 && team <= 40)) { note.textContent = 'Team numbers go from 1 to 40.'; return; }
+      if (tg === st.class && team === st.team) { note.textContent = `${st.name} is already in ${tg} Team ${team}.`; return; }
       try {
-        await updateDoc(doc(db, `workshops/${state.ws.code}/students/${st.sid}`), { class: tg, level: g.level });
-        note.textContent = `Moved to ${tg}. They join that group's team journals next time they open the journal.`;
-      } catch (err) { console.error(err); note.textContent = 'Could not update. Try again.'; }
+        await moveStudent(st, { tg, team });
+        note.textContent = `Moved to ${tg} Team ${team}. If ${st.name.split(' ')[0]} has the journal open, it switches to the new team straight away.`;
+      } catch (err) { console.error(err); note.textContent = 'Could not move the student. Try again.'; }
     },
   }, 'Move');
 
   return h('section', {},
-    h('h3', {}, 'Login help'),
+    h('h3', {}, 'Login & team'),
     h('div', { class: 'inline-row' }, h('span', {}, 'PIN:'), pinShown, reveal),
     h('div', { class: 'inline-row' }, newPin, reset),
-    tgs.length ? h('div', { class: 'inline-row' }, h('span', {}, 'Teaching group:'), tgSel, save) : null,
+    tgs.length ? h('div', { class: 'inline-row' }, h('span', {}, 'Move to:'), tgSel, h('span', {}, 'Team'), teamIn, save) : null,
     note);
 }
 
