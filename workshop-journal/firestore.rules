@@ -27,10 +27,13 @@ service cloud.firestore {
 
     function isTeacher() {
       // Anonymous student accounts have no email, so read it with a default.
+      // Guest logins carry an expiresAt and stop working after it.
       return signedIn()
         && request.auth.token.get('email', '') != ''
         && request.auth.token.get('email_verified', false) == true
-        && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email));
+        && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email))
+        && (!('expiresAt' in get(/databases/$(database)/documents/teachers/$(request.auth.token.email)).data)
+            || get(/databases/$(database)/documents/teachers/$(request.auth.token.email)).data.expiresAt > request.time);
     }
 
     function isAdmin() {

@@ -263,6 +263,7 @@ body:has(#journal:not([hidden])), body:has(#join:not([hidden])) {
 .pin-btn { border: 1px dashed var(--rule); background: transparent; border-radius: 6px; padding: 0.2rem 0.5rem; font: 600 0.85rem/1 var(--f-mono); cursor: pointer; min-width: 4.2rem; }
 .inline-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .inline-row select, .inline-row input { width: auto; }
+.signin-form { display: flex; flex-direction: column; gap: 0.7rem; width: min(100%, 22rem); }
 .team-req { display: flex; flex-direction: column; gap: 0.5rem; }
 .team-req .msg { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0; }
 .req-form { background: var(--paper); border: 2px solid var(--accent); border-radius: var(--radius); padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }

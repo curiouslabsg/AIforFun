@@ -54,7 +54,9 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 - **Teacher rights:** view every workshop and journal, see and reset PINs, download CSVs, delete student journals. Teachers don't open or close workshops.
 - **Admin rights:** everything above, plus create, close, activate and delete workshops, add teachers and upload class lists.
 
-- *My students* shows the students the class list's *Teacher* column puts under your name (students never choose a teacher); *Whole school* shows everyone. Filter by teaching group or class.
+- Every teacher sees the whole workshop. Filter by teaching group (or form class) to see just your class; the dashboard remembers the filter.
+- **Signing in:** email + password (for school Microsoft emails and guests), or *Sign in with Google*. Password users can press *Change password* after signing in, or *Forgot password?* on the sign-in page (the reset email may land in junk mail). Admins create password accounts with the Firebase CLI or console (Authentication → Add user), then add the email on the Teachers page.
+- **Guests** are teacher accounts with an expiry date (`expiresAt` on their `teachers` doc); the security rules stop them working after it.
 - PINs are hidden until clicked. Open a student to set a new PIN or fix their class and teacher.
 - Delete journals: tick students in the table (or the header box to tick everyone shown) and press **Delete selected**, or delete one from a student's panel. Teammates who stay keep the shared team pages. Admins can also delete a whole workshop.
 - Admins create workshops with their own code (e.g. `ESSS26`) or a random one. Anyone can download a CSV of everything.
@@ -62,7 +64,7 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 ## Managing teachers
 
-Admins see a **Teachers** button on the dashboard. From there they can add a teacher by Google email, make someone an admin, remove access, and edit the list of teacher names students choose from when they join. A teacher's *Name* should match the *Teacher* column in the class list for *My students* to work (titles like Mr/Ms and capitals are ignored; the Name box suggests names from the class list). Teachers can also pick their name themselves on the dashboard. An admin can't remove or demote themselves, so there is always at least one admin.
+Admins see a **Teachers** button on the dashboard. From there they can add a teacher by Google email, make someone an admin, remove access, and edit the list of teacher names students choose from when they join. An admin can't remove or demote themselves, so there is always at least one admin.
 
 Add the address exactly as the teacher's Google account reports it. Gmail ignores dots, but Firebase doesn't, so `lloydgoh@gmail.com` and `lloyd.goh@gmail.com` count as different teachers. If a teacher can't get in, the sign-in screen shows the exact address to add.
 

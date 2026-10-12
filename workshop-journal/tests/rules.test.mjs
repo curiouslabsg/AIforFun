@@ -484,3 +484,20 @@ test('a teacher approves by moving the student and clearing their old team membe
   await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), `workshops/${CODE}`), { open: false }));
   await assertFails(setDoc(reqRef(a), req({ from: 5, to: 2 })));
 });
+
+test('guest logins work like teachers until they expire', async () => {
+  const guest = (n) => env.authenticatedContext(`g${n}`, { email: `guest${n}@guest.test`, email_verified: true }).firestore();
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'teachers/guest1@guest.test'), { name: 'Guest 01', role: 'teacher', expiresAt: Timestamp.fromMillis(Date.now() + 86400000) });
+    await setDoc(doc(db, 'teachers/guest2@guest.test'), { name: 'Guest 02', role: 'teacher', expiresAt: Timestamp.fromMillis(Date.now() - 1000) });
+  });
+  await join(device('a'), 'a');
+  await assertSucceeds(getDocs(collection(guest(1), `workshops/${CODE}/students`)));
+  await assertSucceeds(getDocs(collection(guest(1), 'workshops')));
+  await assertFails(getDocs(collection(guest(2), `workshops/${CODE}/students`)));
+  await assertFails(getDoc(doc(guest(2), `workshops/${CODE}/students/${SID}`)));
+  // Unverified emails never count as teachers.
+  const unverified = env.authenticatedContext('u', { email: 'teacher@school.test', email_verified: false }).firestore();
+  await assertFails(getDocs(collection(unverified, `workshops/${CODE}/students`)));
+});

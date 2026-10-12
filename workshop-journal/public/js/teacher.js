@@ -1,5 +1,6 @@
 import {
   GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, query, where, onSnapshot, serverTimestamp, writeBatch,
@@ -15,16 +16,12 @@ const state = {
   // Class lists: roster = teaching group -> { level, students }; details = group -> { classes, teachers }.
   roster: new Map(), details: new Map(),
   workshops: [], ws: null, students: [], unsub: null,
-  scope: readPref('scope', 'mine'), tg: '', cls: '',
+  tg: readPref('tg', ''), cls: readPref('cls', ''),
 };
 
 // Form class and teacher come from the class list (teacher-only), keyed by teaching group + name.
 const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
 const teacherOf = (st) => state.details.get(st.class)?.teachers?.[st.name] ?? st.teacher ?? '';
-// Teacher names in the class list are matched loosely: "Mr Lloyd Goh", "lloyd goh" and "LLOYD GOH" are the same person.
-const nameKey = (n) => String(n ?? '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ')
-  .replace(/^\s*(mr|mrs|ms|mdm|miss|dr)\s+/, '').replace(/\s+/g, ' ').trim();
-const isMe = (teacherName) => !!state.myName && nameKey(teacherName) === nameKey(state.myName);
 
 function teacherNames() {
   const names = new Set(state.settingsTeachers);
@@ -93,6 +90,44 @@ $('t-google').addEventListener('click', async () => {
 });
 $('t-signout').addEventListener('click', () => signOut(auth));
 
+// Email + password accounts (school Microsoft emails and guests can't use Google sign-in).
+$('t-pw').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg('t-signin-msg', '');
+  const email = $('pw-email').value.trim().toLowerCase();
+  const pass = $('pw-pass').value;
+  if (!email || !pass) { msg('t-signin-msg', 'Type your email and password.'); return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    $('pw-pass').value = '';
+  } catch (err) {
+    console.error(err);
+    msg('t-signin-msg', err.code === 'auth/too-many-requests'
+      ? 'Too many tries. Wait a few minutes, or ask your admin for help.'
+      : 'That email and password don\'t match. Check for typos, or ask your admin.');
+  }
+});
+$('pw-forgot').addEventListener('click', async () => {
+  const email = $('pw-email').value.trim().toLowerCase();
+  if (!email) { msg('t-signin-msg', 'Type your email above first, then press Forgot password.'); return; }
+  try { await sendPasswordResetEmail(auth, email); } catch (err) { console.warn(err); }
+  msg('t-signin-msg', `If ${email} has an account, a reset link is on its way. Check your junk mail too, or ask your admin to reset it.`);
+});
+$('t-password').addEventListener('click', async () => {
+  const next = window.prompt('New password (at least 8 characters):');
+  if (next === null) return;
+  if (next.length < 8) { window.alert('Use at least 8 characters.'); return; }
+  try {
+    await updatePassword(auth.currentUser, next);
+    window.alert('Password changed. Use it next time you sign in.');
+  } catch (err) {
+    console.error(err);
+    window.alert(err.code === 'auth/requires-recent-login'
+      ? 'For safety, sign out and sign in again, then change your password straight away.'
+      : 'Could not change the password. Try again.');
+  }
+});
+
 if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
   screen('t-signin');
   msg('t-signin-msg', 'Firebase is not set up yet. Paste your project settings into js/firebase-config.js (see README).');
@@ -109,7 +144,7 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     } catch (err) {
       screen('t-signin');
       msg('t-signin-msg', err.code === 'permission-denied'
-        ? `${user.email} isn't on the teacher list yet. Ask an admin to add this exact address on the dashboard's Teachers page.`
+        ? `${user.email} doesn't have access: it isn't on the teacher list, or it's a guest login that has expired. Ask your admin.`
         : "Can't reach the database. Check your connection.");
       await signOut(auth);
       return;
@@ -117,6 +152,7 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     state.email = user.email;
     $('t-email').textContent = `${user.email} · ${state.role === 'admin' ? 'Admin rights' : 'Teacher rights'}`;
     $('t-manage').hidden = state.role !== 'admin';
+    $('t-password').hidden = !user.providerData.some((p) => p.providerId === 'password');
     // Teachers only view; admins open, close and activate workshops.
     $('t-create').hidden = state.role !== 'admin';
     $('t-viewer-note').hidden = state.role === 'admin';
@@ -256,8 +292,6 @@ function openWorkshop(code) {
     h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
     h('th', {}, 'Teaching group'), h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'Teacher'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
     ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Last active')));
-  state.cls = '';
-  state.tg = '';
   state.selected = new Set();
   renderFilters();
   view('t-ws');
@@ -302,43 +336,22 @@ $('ws-toggle').addEventListener('click', async () => {
   }
 });
 
-// "My students" = students the class list puts under this teacher's name.
+// Every teacher sees the whole workshop; filter by teaching group or form class to narrow it down.
 function renderFilters() {
-  const seg = (scope, label) => h('button', {
-    type: 'button', class: 'seg-btn', 'aria-pressed': String(state.scope === scope),
-    onclick: () => { state.scope = scope; writePref('scope', scope); renderFilters(); renderRows(); },
-  }, label);
   const sortNum = (a, b) => a.localeCompare(b, undefined, { numeric: true });
   const tgs = [...new Set([...state.roster.keys(), ...state.students.map((x) => x.class).filter(Boolean)])].sort(sortNum);
   const classes = [...new Set([...state.details.values()].flatMap((d) => Object.values(d.classes ?? {})).filter(Boolean))].sort(sortNum);
   const select = (label, key, values, all) => {
-    const el = h('select', { 'aria-label': label, onchange: (e) => { state[key] = e.target.value; renderRows(); } },
+    const el = h('select', { 'aria-label': label, onchange: (e) => { state[key] = e.target.value; writePref(key, e.target.value); renderRows(); } },
       h('option', { value: '' }, all), ...values.map((v) => h('option', { value: v }, v)));
+    if (state[key] && !values.includes(state[key])) state[key] = '';
     el.value = state[key];
     return el;
   };
   const parts = [
-    h('div', { class: 'seg' }, seg('mine', state.myName ? `My students (${state.myName})` : 'My students'), seg('all', 'Whole school')),
     select('Filter by teaching group', 'tg', tgs, 'All teaching groups'),
     select('Filter by class', 'cls', classes, 'All classes'),
   ];
-  const names = teacherNames();
-  if (state.scope === 'mine' && !names.some(isMe)) {
-    const pick = h('select', {
-      'aria-label': 'Which teacher are you?',
-      onchange: async (e) => {
-        const name = e.target.value;
-        if (!name) return;
-        try {
-          await updateDoc(doc(db, `teachers/${state.email}`), { name });
-          state.myName = name;
-          renderFilters();
-          renderRows();
-        } catch (err) { console.error(err); $('ws-status').textContent = 'Could not save your name. Try again.'; }
-      },
-    }, h('option', { value: '' }, names.length ? 'Which teacher are you?' : 'No teachers in the class lists yet'), ...names.map((n) => h('option', { value: n }, n)));
-    parts.push(h('span', { class: 'small muted' }, 'To see your students, pick your name:'), pick);
-  }
   $('ws-filters').replaceChildren(...parts);
 }
 
@@ -400,14 +413,13 @@ function renderRequests() {
       class: 'btn quiet', type: 'button',
       onclick: async (e) => { e.target.disabled = true; for (const r of list) await decide(r, true); },
     }, 'Approve all') : null,
-    hiddenCount ? h('span', { class: 'small muted' }, `+${hiddenCount} more outside this view (switch to Whole school or clear the filters)`) : null);
+    hiddenCount ? h('span', { class: 'small muted' }, `+${hiddenCount} more in other teaching groups (clear the filter to see them)`) : null);
   box.replaceChildren(head, ...list.map(row));
   box.hidden = !list.length && !hiddenCount;
 }
 
 function visibleStudents() {
-  return state.students.filter((st) => (state.scope === 'all' || isMe(teacherOf(st)))
-    && (!state.tg || st.class === state.tg)
+  return state.students.filter((st) => (!state.tg || st.class === state.tg)
     && (!state.cls || classOf(st) === state.cls));
 }
 
@@ -420,7 +432,6 @@ function joinedSummary() {
     if (state.tg && tg !== state.tg) continue;
     const d = state.details.get(tg) ?? {};
     for (const name of g.students ?? []) {
-      if (state.scope === 'mine' && !isMe(d.teachers?.[name])) continue;
       if (state.cls && (d.classes?.[name] ?? '') !== state.cls) continue;
       total++;
       if (joined.has(`${tg}|${name}`)) inn++;
@@ -456,7 +467,7 @@ function renderRows() {
   $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · click a row to read a journal`;
   if (!list.length) {
     const why = state.students.length
-      ? (state.scope === 'mine' ? 'None of your students have joined yet. Switch to Whole school to see everyone.' : 'No students in this class yet.')
+      ? 'No students in this teaching group or class yet.'
       : `No one has joined yet. Students go to this site and enter ${state.ws.code}.`;
     $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 9), class: 'muted' }, why)));
     return;
@@ -841,7 +852,9 @@ async function loadTeachers() {
     });
     nameIn.value = t.name ?? '';
     return h('tr', { style: 'cursor:default' },
-      h('td', {}, t.email), h('td', {}, nameIn), h('td', {}, role),
+      h('td', {}, t.email), h('td', {}, nameIn),
+      h('td', {}, role, t.expiresAt ? h('div', { class: 'small muted' },
+        `Guest · ${t.expiresAt.toMillis() > Date.now() ? 'until' : 'expired'} ${t.expiresAt.toDate().toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}`) : null),
       h('td', { class: 'small muted' }, t.addedBy || 'set up in console'), h('td', {}, remove));
   }));
 }
