@@ -90,7 +90,7 @@
       </div>
       <form id="t-add" class="create" novalidate>
         <label class="field"><span>Google email</span><input id="a-email" type="text" inputmode="email" autocomplete="off" maxlength="120" placeholder="ms.tan@school.edu.sg" required></label>
-        <label class="field"><span>Name</span><input id="a-name" type="text" maxlength="60" placeholder="Ms Tan" list="a-names" autocomplete="off"><datalist id="a-names"></datalist></label>
+        <label class="field"><span>Name</span><input id="a-name" type="text" maxlength="60" placeholder="Ms Tan" autocomplete="off"></label>
         <label class="field" style="flex:0 1 180px"><span>Role</span>
           <select id="a-role"><option value="teacher">Teacher rights</option><option value="admin">Admin rights</option></select>
         </label>
@@ -108,7 +108,7 @@
           <input id="r-file" type="file" accept=".csv,.xlsx,.xls" multiple hidden>
           <button id="r-template" class="btn quiet" type="button">Download a template</button>
         </div>
-        <p class="small muted">CSV or Excel. Columns: <b>Teaching group</b>, <b>Name</b>, <b>Class</b>, and optionally <b>Level</b> (1 or 2) and <b>Teacher</b>. You can pick several files at once. If a file has no teaching group column, its sheet or file name is used.</p>
+        <p class="small muted">CSV or Excel. Columns: <b>Teaching group</b>, <b>Name</b>, <b>Class</b>, and optionally <b>Level</b> (1 or 2). You can pick several files at once. If a file has no teaching group column, its sheet or file name is used.</p>
         <p id="r-msg" class="msg" hidden></p>
         <div id="r-preview"></div>
         <div id="r-current"></div>

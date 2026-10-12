@@ -117,9 +117,8 @@ service cloud.firestore {
     match /rosterDetails/{tg} {
       allow read: if isTeacher();
       allow create, update: if isAdmin()
-        && request.resource.data.keys().hasOnly(['classes', 'teachers', 'updatedAt'])
-        && request.resource.data.classes is map
-        && request.resource.data.teachers is map;
+        && request.resource.data.keys().hasOnly(['classes', 'updatedAt'])
+        && request.resource.data.classes is map;
       allow delete: if isAdmin();
     }
 

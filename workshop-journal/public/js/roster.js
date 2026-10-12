@@ -1,5 +1,5 @@
 // Reads class lists (CSV or Excel) into teaching groups.
-// Columns are matched loosely: "Teaching group"/"TG", "Name", "Class", optional "Level", "Teacher".
+// Columns are matched loosely: "Teaching group"/"TG", "Name", "Class", optional "Level". Other columns are ignored.
 // If a file has no teaching group column, the sheet name (or file name) is used as the group.
 
 const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
@@ -20,7 +20,6 @@ const COLS = {
   name: /^(student\s*)?(full\s*)?name$|^name\s*of\s*student$/i,
   cls: /^(form\s*)?class$|^cls$|^form$/i,
   level: /^(level|sec|secondary|lvl)$/i,
-  teacher: /^(teacher|tg\s*teacher|subject\s*teacher|form\s*teacher)$/i,
 };
 
 // Group ids must be safe as Firestore doc ids and team keys: letters, digits, spaces, hyphens.
@@ -76,7 +75,7 @@ export async function parseRosterFiles(files) {
         const tg = cleanGroup(get('tg') || fallbackTg);
         const cls = get('cls');
         const level = levelFrom(get('level'), cls, tg);
-        const row = { tg, name, cls, level, teacher: get('teacher'), source: `${file.name}${wb.SheetNames.length > 1 ? ` › ${sheetName}` : ''}` };
+        const row = { tg, name, cls, level, source: `${file.name}${wb.SheetNames.length > 1 ? ` › ${sheetName}` : ''}` };
         if (!tg) row.error = 'No teaching group';
         else if (!level) row.error = 'Level unknown (add a Level column with 1 or 2)';
         else if (name.length > 60) row.error = 'Name longer than 60 characters';
@@ -94,18 +93,17 @@ export async function parseRosterFiles(files) {
   return { rows, problems };
 }
 
-// { tg: { level, students[], classes{}, teachers{} } } from the valid rows.
+// { tg: { level, students[], classes{} } } from the valid rows.
 export function groupRows(rows) {
   const groups = new Map();
   for (const r of rows) {
     if (r.error) continue;
-    if (!groups.has(r.tg)) groups.set(r.tg, { level: r.level, students: [], classes: {}, teachers: {} });
+    if (!groups.has(r.tg)) groups.set(r.tg, { level: r.level, students: [], classes: {} });
     const g = groups.get(r.tg);
     g.students.push(r.name);
     if (r.cls) g.classes[r.name] = r.cls;
-    if (r.teacher) g.teachers[r.name] = r.teacher;
   }
   return groups;
 }
 
-export const TEMPLATE_CSV = 'Teaching group,Name,Class,Level,Teacher\n1-TG1,Aisha Tan,1A,1,Mr Lloyd Goh\n1-TG1,Ben Lim,1B,1,Mr Lloyd Goh\n2-TG1,Cara Ng,2C,2,Ms Sabrina Tay\n';
+export const TEMPLATE_CSV = 'Teaching group,Name,Class,Level\n1-TG1,Aisha Tan,1A,1\n1-TG1,Ben Lim,1B,1\n2-TG1,Cara Ng,2C,2\n';

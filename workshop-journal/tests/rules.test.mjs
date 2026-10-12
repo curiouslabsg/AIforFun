@@ -378,10 +378,11 @@ test('class lists: students read names; only admins write; classes stay teacher-
   await assertSucceeds(setDoc(doc(admin(), 'roster/1-TG3'), { level: 1, students: ['Aisha Tan'], updatedAt: 1, updatedBy: 'admin@school.test' }));
   await assertFails(setDoc(doc(admin(), 'roster/bad%2Fid'), { level: 1, students: [] }));
   await assertFails(setDoc(doc(admin(), 'roster/1A'), { level: 3, students: [] }));
-  await assertSucceeds(setDoc(doc(admin(), 'rosterDetails/1A'), { classes: { Aisha: '1E1' }, teachers: { Aisha: 'Mr Lloyd Goh' }, updatedAt: 1 }));
+  await assertSucceeds(setDoc(doc(admin(), 'rosterDetails/1A'), { classes: { Aisha: '1E1' }, updatedAt: 1 }));
+  await assertFails(setDoc(doc(admin(), 'rosterDetails/1A'), { classes: {}, teachers: { Aisha: 'Mr X' }, updatedAt: 1 }));
   await assertSucceeds(getDoc(doc(teacher(), 'rosterDetails/1A')));
   await assertFails(getDoc(doc(device('a'), 'rosterDetails/1A')));
-  await assertFails(setDoc(doc(teacher(), 'rosterDetails/1A'), { classes: {}, teachers: {} }));
+  await assertFails(setDoc(doc(teacher(), 'rosterDetails/1A'), { classes: {}, updatedAt: 1 }));
 });
 
 test('only admins choose the active workshop', async () => {

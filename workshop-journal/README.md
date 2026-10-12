@@ -3,7 +3,7 @@
 A web journal for the **Code for Fun (Sec 1)** and **AI for Fun (Sec 2)** design thinking workshops. Students record what they find out, build and learn at each stage of the 2-day loop. Teachers watch progress live and export everything to CSV.
 
 - **Students** open the site, enter the workshop code, their team number, name + surname initial, and a 4-digit PIN. No accounts or emails are needed.
-- **Teachers** sign in with Google at `/teacher.html` and view every workshop. Only admins open, close and activate workshops.
+- **Teachers** sign in at `/teacher.html` (email + password, or Google) and view every workshop. Only admins open, close and activate workshops.
 
 ## What students fill in
 
@@ -46,11 +46,11 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 **Gallery walk.** Every journal has a *Gallery walk* tab listing the other teams and their projects. Visitors leave I like / I wish / What if notes from their own laptops, so a whole class can give feedback at once; each visitor can leave one note per team, signed with their name and teaching group. Visitor mode on the owner's laptop still works for anyone without a device.
 
-**Class lists.** On *Teachers & class lists*, an admin uploads CSV or Excel files with columns *Teaching group*, *Name*, *Class* (optional *Level*, *Teacher*). Students only ever see teaching groups and names; form class and teacher are stored separately and only teachers can read them. Uploading replaces all groups.
+**Class lists.** On *Teachers & class lists*, an admin uploads CSV or Excel files with columns *Teaching group*, *Name*, *Class* (optional *Level*; other columns are ignored). Students only ever see teaching groups and names; form class is stored separately and only teachers can read it. Uploading replaces all groups.
 
 **Active workshops.** An admin presses *Make active* on a workshop card; that's where students land. Up to 5 workshops can be active at the same time (e.g. one for Sec 1 and one for Sec 2): students then pick their workshop by name before their teaching group. *Deactivate* takes a workshop off the join screen; its journals stay readable on the dashboard.
 
-**Teachers** sign in with Google at `/teacher.html`. There are two kinds of access:
+**Teachers** sign in at `/teacher.html`. There are two kinds of access:
 - **Teacher rights:** view every workshop and journal, see and reset PINs, download CSVs, delete student journals. Teachers don't open or close workshops.
 - **Admin rights:** everything above, plus create, close, activate and delete workshops, add teachers and upload class lists.
 
@@ -64,7 +64,7 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 ## Managing teachers
 
-Admins see a **Teachers** button on the dashboard. From there they can add a teacher by Google email, make someone an admin, remove access, and edit the list of teacher names students choose from when they join. An admin can't remove or demote themselves, so there is always at least one admin.
+Admins see a **Teachers** button on the dashboard. From there they can add a teacher by email, give someone admin rights, and remove access. An admin can't remove or demote themselves, so there is always at least one admin.
 
 Add the address exactly as the teacher's Google account reports it. Gmail ignores dots, but Firebase doesn't, so `lloydgoh@gmail.com` and `lloyd.goh@gmail.com` count as different teachers. If a teacher can't get in, the sign-in screen shows the exact address to add.
 

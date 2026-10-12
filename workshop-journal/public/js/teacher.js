@@ -13,7 +13,7 @@ import { STAGES, TRACK_LABEL, promptFor, isPersonal } from './prompts.js';
 const $ = (id) => document.getElementById(id);
 const state = {
   email: null, role: null, myName: '', settingsTeachers: [], active: [],
-  // Class lists: roster = teaching group -> { level, students }; details = group -> { classes, teachers }.
+  // Class lists: roster = teaching group -> { level, students }; details = group -> { classes } (teachers only).
   roster: new Map(), details: new Map(),
   workshops: [], ws: null, students: [], unsub: null,
   tg: readPref('tg', ''), cls: readPref('cls', ''),
@@ -21,13 +21,6 @@ const state = {
 
 // Form class and teacher come from the class list (teacher-only), keyed by teaching group + name.
 const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
-const teacherOf = (st) => state.details.get(st.class)?.teachers?.[st.name] ?? st.teacher ?? '';
-
-function teacherNames() {
-  const names = new Set(state.settingsTeachers);
-  for (const d of state.details.values()) for (const t of Object.values(d.teachers ?? {})) if (t) names.add(t);
-  return [...names].sort();
-}
 
 function readPref(key, fallback) {
   try { return localStorage.getItem(`dash.${key}`) ?? fallback; } catch { return fallback; }
@@ -290,7 +283,7 @@ function openWorkshop(code) {
   renderToggle();
   $('ws-head').replaceChildren(h('tr', {},
     h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
-    h('th', {}, 'Teaching group'), h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'Teacher'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
+    h('th', {}, 'Teaching group'), h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
     ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Last active')));
   state.selected = new Set();
   renderFilters();
@@ -469,7 +462,7 @@ function renderRows() {
     const why = state.students.length
       ? 'No students in this teaching group or class yet.'
       : `No one has joined yet. Students go to this site and enter ${state.ws.code}.`;
-    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 9), class: 'muted' }, why)));
+    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 8), class: 'muted' }, why)));
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
@@ -484,7 +477,6 @@ function renderRows() {
       h('td', {}, classOf(st) || '–'),
       h('td', { class: 'num' }, String(st.team)),
       h('td', {}, st.name),
-      h('td', { class: 'small' }, teacherOf(st) || '–'),
       pinCell(st),
       h('td', { class: 'num' }, `${Math.round((answered / total) * 100)}%`),
       ...STAGES.map((s) => {
@@ -633,7 +625,7 @@ async function openStudent(st) {
   drawer.replaceChildren(
     h('div', { style: 'display:flex;justify-content:space-between;gap:1rem;align-items:start' },
       h('div', {},
-        h('span', { class: 'label' }, [st.class, classOf(st), `Team ${st.team}`, teacherOf(st), TRACK_LABEL[trk]].filter(Boolean).join(' · ')),
+        h('span', { class: 'label' }, [st.class, classOf(st), `Team ${st.team}`, TRACK_LABEL[trk]].filter(Boolean).join(' · ')),
         h('h2', {}, st.name),
         h('p', { class: 'small muted' }, mates.length ? `Shares a team journal with ${mates.join(', ')}.` : 'No teammates have joined yet.')),
       h('button', { class: 'btn ghost', type: 'button', onclick: closeDrawer }, 'Close')),
@@ -769,14 +761,14 @@ $('ws-export').addEventListener('click', async () => {
   btn.textContent = 'Preparing…';
   try {
     const cols = STAGES.flatMap((st) => st.prompts.map((p) => ({ stage: st, p })));
-    const header = ['Level', 'Teaching group', 'Class', 'Teacher', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', 'Sketches / photos', 'Peer feedback'];
+    const header = ['Level', 'Teaching group', 'Class', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', 'Sketches / photos', 'Peer feedback'];
     const rows = [header];
     const teamCache = new Map();
     for (const st of visibleStudents()) {
       const { answer, log, images, notes } = await loadJournal(st, teamCache);
       const join = (type) => log.filter((e) => (e.type ?? 'learnt') === type).map((e) => `[${e.tag}] ${e.text}`).join('\n');
       const fb = notes.map((n) => [`${n.from}${n.fromTg ? ` [${n.fromTg}]` : ''}${n.use ? ` (${n.use})` : ''}:`, n.like && `I like ${n.like}`, n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' ')).join('\n');
-      rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', classOf(st), teacherOf(st), st.team, st.name, TRACK_LABEL[studentTrack(st)],
+      rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', classOf(st), st.team, st.name, TRACK_LABEL[studentTrack(st)],
         ...cols.map((c) => answer(c.stage.id, c.p)), join('learnt'), join('gathered'), images.length, fb]);
     }
     // BOM so Excel opens the file as UTF-8 (°C, names with accents).
@@ -818,9 +810,6 @@ async function loadTeachers() {
     addMsg('Could not load the teacher list. Only admins can see it.');
     return;
   }
-  let dl = document.getElementById('teacher-names');
-  if (!dl) { dl = h('datalist', { id: 'teacher-names' }); document.body.append(dl); }
-  dl.replaceChildren(...teacherNames().map((n) => h('option', { value: n })));
   renderCurrentRoster();
   const rows = snap.docs.map((d) => ({ email: d.id, ...d.data() }))
     .sort((a, b) => (a.role === b.role ? a.email.localeCompare(b.email) : a.role === 'admin' ? -1 : 1));
@@ -911,8 +900,6 @@ function rosterMsg(text, kind = 'err') {
 }
 
 function renderCurrentRoster() {
-  // Suggest the teacher names from the class lists when adding someone.
-  $('a-names').replaceChildren(...teacherNames().map((n) => h('option', { value: n })));
   const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (!tgs.length) {
     $('r-current').replaceChildren(h('p', { class: 'muted small' }, 'No class lists yet. Students can’t join until you upload one.'));
@@ -960,12 +947,11 @@ $('r-file').addEventListener('change', async (e) => {
     : 'No students found. Check the files have a Name column.', groups.size ? 'info' : 'err');
   const sortNum = (a, b) => a.localeCompare(b, undefined, { numeric: true });
   const summary = h('div', { class: 'tablewrap' }, h('table', {},
-    h('thead', {}, h('tr', {}, h('th', {}, 'Teaching group'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'), h('th', {}, 'Teachers'), h('th', {}, 'Example names'))),
+    h('thead', {}, h('tr', {}, h('th', {}, 'Teaching group'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'), h('th', {}, 'Example names'))),
     h('tbody', {}, ...[...groups.keys()].sort(sortNum).map((tg) => {
       const g = groups.get(tg);
       return h('tr', { style: 'cursor:default' }, h('td', {}, tg), h('td', {}, `Sec ${g.level}`), h('td', { class: 'num' }, String(g.students.length)),
         h('td', { class: 'small' }, [...new Set(Object.values(g.classes))].sort().join(', ') || '–'),
-        h('td', { class: 'small' }, [...new Set(Object.values(g.teachers))].sort().join(', ') || '–'),
         h('td', { class: 'small muted' }, g.students.slice(0, 3).join(', ') + (g.students.length > 3 ? '…' : '')));
     }))));
   const problems = [...parsed.problems.map((p) => h('li', {}, p)), ...bad.slice(0, 50).map((r) => h('li', {}, `${r.source}: ${r.name || '(no name)'} — ${r.error}`))];
@@ -994,7 +980,7 @@ $('r-file').addEventListener('change', async (e) => {
       h('span', { class: 'small muted' }, 'Groups not in these files are removed. Journals already started are kept.')));
 });
 
-// Replace every teaching group: names (readable by students) and classes / teachers (teachers only).
+// Replace every teaching group: names (readable by students) and form classes (teachers only).
 async function saveRoster(groups) {
   const writes = [];
   for (const old of state.roster.keys()) {
@@ -1002,7 +988,7 @@ async function saveRoster(groups) {
   }
   for (const [tg, g] of groups) {
     writes.push((b) => b.set(doc(db, `roster/${tg}`), { level: g.level, students: g.students, updatedAt: serverTimestamp(), updatedBy: state.email }));
-    writes.push((b) => b.set(doc(db, `rosterDetails/${tg}`), { classes: g.classes, teachers: g.teachers, updatedAt: serverTimestamp() }));
+    writes.push((b) => b.set(doc(db, `rosterDetails/${tg}`), { classes: g.classes, updatedAt: serverTimestamp() }));
   }
   for (let i = 0; i < writes.length; i += 400) {
     const batch = writeBatch(db);
