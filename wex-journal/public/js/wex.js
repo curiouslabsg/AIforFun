@@ -33,9 +33,15 @@ export const PLACEMENT = {
   ],
 };
 
+// A theme and picture for each day of a 5-day run; longer runs repeat "Keep going".
+const DAY_THEMES = [
+  ['Getting started', 'clipboard'], ['Observe', 'eyes'], ['Try', 'bolt'], ['Reflect', 'thought'], ['Look ahead', 'summit'],
+];
+
 export function dayStage(n) {
+  const [theme, art] = DAY_THEMES[n - 1] ?? ['Keep going', 'bolt'];
   return {
-    id: `day${n}`, title: `Day ${n}`, icon: 'sun', color: ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a'][(n - 1) % 5],
+    id: `day${n}`, title: `Day ${n}`, theme, art, icon: 'sun', color: ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a'][(n - 1) % 5],
     blurb: 'A few photos of your work (no faces, nothing confidential), then a few lines.',
     photos: true,
     prompts: [
@@ -58,6 +64,9 @@ export const STAR_PROMPTS = [
   { id: 'shows', type: 'chips', q: 'What does this story show about me?', options: SKILLS },
 ];
 
+// Short titles for the home page; they match EAE questions 3–5 in INTERVIEW below.
+const STAR_TITLES = [['A challenge I faced', 'climb'], ['Working in a team', 'team'], ['Taking initiative', 'trophy']];
+
 const STAR_FOCUS = [
   'A problem I solved or a challenge I handled',
   'A time I worked well with others',
@@ -66,7 +75,7 @@ const STAR_FOCUS = [
 
 export function starStage(n) {
   return {
-    id: `star${n}`, title: `Story ${n}`, icon: 'star', color: '#ca8a04',
+    id: `star${n}`, title: `Story ${n}`, theme: STAR_TITLES[n - 1][0], art: STAR_TITLES[n - 1][1], icon: 'star', color: '#ca8a04',
     blurb: `${STAR_FOCUS[n - 1]}. A small, real moment is fine.`,
     prompts: STAR_PROMPTS,
   };

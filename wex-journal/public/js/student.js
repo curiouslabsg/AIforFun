@@ -6,6 +6,7 @@ import { auth, db, configured, rosterSid, pinHash, h } from './firebase.js';
 import { sectionsFor, MOODS, isAnswered, countable } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
 import { icon } from './icons.js';
+import { art } from './art.js';
 import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
@@ -352,6 +353,7 @@ function go(view) {
 }
 
 function render() {
+  $('journal').classList.toggle('home-view', state.view === 'home');
   renderMeta();
   if (state.view === 'home') return renderHome();
   if (state.view === 'portfolio') return renderPortfolioView();
@@ -374,35 +376,88 @@ function statusOf(s) {
   return { c, done: c.n >= c.of, started: c.n > 0 };
 }
 
+function overall() {
+  const all = state.sections.map(sectionCount);
+  const done = all.reduce((n, c) => n + c.n, 0);
+  const total = all.reduce((n, c) => n + c.of, 0);
+  return { done, total, pct: Math.round((done / total) * 100) };
+}
+
 function renderHome() {
-  // One row each for placement and wrap-up; days and stories as small tiles.
-  const row = (s) => {
-    const { c, done } = statusOf(s);
-    return h('button', { type: 'button', class: `sec-row${done ? ' done' : ''}`, onclick: () => go(s.id) },
-      h('span', { class: 'sec-row-main' }, h('b', {}, s.title), h('small', {}, done ? 'Done' : `${c.n} of ${c.of}`)),
-      done ? icon('check', 20) : icon('next', 18),
-      miniBar(c));
-  };
-  const tile = (s, label) => {
-    const { c, done, started } = statusOf(s);
-    return h('button', {
-      type: 'button', class: `sec-tile${done ? ' done' : started ? ' part' : ''}`, onclick: () => go(s.id),
-      'aria-label': `${s.title}: ${done ? 'done' : `${c.n} of ${c.of}`}`,
-    }, h('b', {}, done ? icon('check', 20) : label), miniBar(c));
-  };
   const days = state.sections.filter((s) => s.id.startsWith('day'));
   const stars = state.sections.filter((s) => s.id.startsWith('star'));
+  const { done, pct } = overall();
+  // "Day 2 of 5": the first day that isn't finished yet.
+  const today = Math.max(1, days.findIndex((s) => !statusOf(s).done) + 1 || days.length);
+  const first = (state.student.name ?? '').split(' ')[0];
+
+  const head = (label, note) => h('div', { class: 'h-head' }, h('span', { class: 'group-label' }, label), note ? h('span', { class: 'h-note' }, note) : null);
+
+  const placement = sectionById('placement');
+  const pl = statusOf(placement);
+  const wrap = sectionById('wrapup');
+  const wr = statusOf(wrap);
+
   $('panel').replaceChildren(
-    h('p', { class: 'home-intro' }, 'Write a little each day. Next year this becomes your EAE portfolio.'),
-    row(sectionById('placement')),
-    h('p', { class: 'group-label' }, 'Days'),
-    h('div', { class: 'tiles', style: `--n:${Math.min(days.length, 5)}` }, ...days.map((s, i) => tile(s, String(i + 1)))),
-    h('p', { class: 'group-label' }, 'Interview stories'),
-    h('div', { class: 'tiles', style: '--n:3' }, ...stars.map((s, i) => tile(s, `Story ${i + 1}`))),
-    h('p', { class: 'group-label' }, 'Last day'),
-    row(sectionById('wrapup')),
-    h('button', { type: 'button', class: 'portfolio-card', onclick: () => go('portfolio') },
-      icon('portfolio', 24), h('b', {}, 'My EAE portfolio'), icon('next', 18)),
+    h('header', { class: 'h-hero' },
+      h('div', { class: 'h-hero-text' },
+        h('h1', {}, `Hi, ${first || 'there'}! 👋`),
+        h('p', {}, 'Write a little each day. Next year this becomes your EAE portfolio.'),
+        h('div', { class: 'h-journey' },
+          h('p', {}, h('b', {}, `Day ${today}`), ` of ${days.length} · `, h('span', {}, `${pct}% complete`)),
+          h('span', { class: 'mini-bar' }, h('i', { style: `width:${pct}%` }))),
+        h('button', { type: 'button', class: 'h-switch', onclick: () => $('switch').click() }, 'Not you? Switch student')),
+      art('hero', 'h-hero-art')),
+
+    h('button', { type: 'button', class: `h-card h-place${pl.done ? ' done' : ''}`, onclick: () => go('placement') },
+      h('div', { class: 'h-place-text' },
+        h('b', { class: 'h-title' }, 'My placement'),
+        h('small', {}, 'Get to know your workplace. Fill in on Day 1.'),
+        h('span', { class: 'h-dots' }, ...Array.from({ length: pl.c.of }, (_, i) => h('i', { class: i < pl.c.n ? 'on' : '' })),
+          h('small', {}, `${pl.c.n} / ${pl.c.of} completed`))),
+      art('building', 'h-place-art'),
+      h('span', { class: 'btn h-go' }, pl.done ? 'Review' : pl.started ? 'Continue' : 'Start', icon('next', 16))),
+
+    head('Days', 'One short reflection each day'),
+    h('div', { class: 'h-days', style: `--n:${Math.min(days.length, 5)}` }, ...days.map((s) => {
+      const { c, done: d, started } = statusOf(s);
+      return h('button', {
+        type: 'button', class: `h-card h-day${d ? ' done' : started ? ' part' : ''}`, onclick: () => go(s.id),
+        'aria-label': `${s.title}, ${s.theme}: ${d ? 'done' : `${c.n} of ${c.of}`}`,
+      },
+      h('span', { class: 'h-day-top' }, h('span', { class: 'h-kicker' }, s.title), d ? icon('check', 16) : null),
+      h('b', { class: 'h-day-theme' }, s.theme),
+      art(s.art, 'h-day-art'),
+      miniBar(c));
+    })),
+
+    head('Interview stories', 'Real moments to talk about'),
+    h('div', { class: 'h-stories' }, ...stars.map((s, i) => {
+      const { c, done: d } = statusOf(s);
+      return h('button', { type: 'button', class: `h-card h-story s${i + 1}${d ? ' done' : ''}`, onclick: () => go(s.id) },
+        h('span', { class: 'h-kicker' }, s.title),
+        h('b', { class: 'h-story-title' }, s.theme),
+        art(s.art, 'h-story-art'),
+        h('span', { class: 'h-story-go' }, d ? icon('check', 16) : icon('next', 16)),
+        miniBar(c));
+    })),
+
+    head('Last day', 'Bring it all together'),
+    h('button', { type: 'button', class: `h-card h-wrap${wr.done ? ' done' : ''}`, onclick: () => go('wrapup') },
+      art('finish', 'h-wrap-art'),
+      h('div', { class: 'h-wrap-text' },
+        h('b', { class: 'h-title' }, 'Wrap-up'),
+        h('small', {}, 'What you learnt, and how this week helps you next.'),
+        h('span', { class: 'h-wrap-bar' }, miniBar(wr.c), h('small', {}, `${wr.c.n} / ${wr.c.of}`))),
+      h('span', { class: 'h-round' }, wr.done ? icon('check', 18) : icon('next', 18))),
+
+    h('button', { type: 'button', class: 'h-portfolio', onclick: () => go('portfolio') },
+      h('div', { class: 'h-pf-text' },
+        h('b', {}, icon('portfolio', 24), ' My EAE portfolio'),
+        h('small', {}, 'Your reflections, stories and photos in one place.'),
+        h('small', { class: 'h-pf-count' }, `${done} answer${done === 1 ? '' : 's'} collected`)),
+      art('folder', 'h-pf-art'),
+      h('span', { class: 'h-pf-btn' }, 'View portfolio', icon('next', 16))),
   );
 }
 
@@ -411,7 +466,10 @@ function renderHome() {
 function stageHead(s) {
   const c = sectionCount(s);
   return h('header', { class: 'stage-head' },
-    h('div', { class: 'stage-title' }, h('h2', {}, s.title), h('span', { class: 'stage-count' }, c.n >= c.of ? 'Done' : `${c.n} of ${c.of}`)),
+    h('div', { class: 'stage-title' },
+      s.art ? art(s.art, 'stage-art') : null,
+      h('div', { class: 'stage-name' }, s.theme ? h('span', { class: 'h-kicker' }, s.title) : null, h('h2', {}, s.theme ?? s.title)),
+      h('span', { class: 'stage-count' }, c.n >= c.of ? 'Done' : `${c.n} of ${c.of}`)),
     miniBar(c),
     h('p', {}, s.blurb));
 }
