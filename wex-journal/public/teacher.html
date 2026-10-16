@@ -47,23 +47,23 @@
         <img class="t-hero-art" src="img/hero.webp?v=1" alt="">
       </header>
       <div class="list-head">
-        <h2>WEX groups</h2>
-        <button id="t-new" class="btn small-btn" type="button" hidden>+ New WEX group</button>
+        <h2>Work experience groups</h2>
+        <button id="t-new" class="btn small-btn" type="button" hidden>+ New work experience group</button>
       </div>
       <form id="t-create" class="create" novalidate hidden>
-        <label class="field"><span>Name</span><input id="c-name" type="text" maxlength="80" placeholder="Sec 3 WEX, Nov 2026" required></label>
+        <label class="field"><span>Name</span><input id="c-name" type="text" maxlength="80" placeholder="Sec 3 work experience, Nov 2026" required></label>
         <label class="field" style="flex:0 1 170px"><span>Short ID (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. WEX26" autocomplete="off" style="text-transform:uppercase"></label>
         <label class="field" style="flex:0 1 140px"><span>Days</span><input id="c-days" type="number" min="1" max="10" value="5"></label>
         <button class="btn" type="submit">Create</button>
         <button id="c-cancel" class="btn quiet" type="button">Cancel</button>
       </form>
-      <p id="t-viewer-note" class="small muted" hidden>Your admin opens and closes WEX groups. Click one to see its students.</p>
+      <p id="t-viewer-note" class="small muted" hidden>Your admin opens and closes work experience groups. Click one to see its students.</p>
       <p id="t-create-msg" class="msg err" hidden></p>
       <div id="t-cards" class="cards"></div>
     </main>
 
     <main id="t-ws" class="t-wrap" hidden>
-      <div><button id="t-back" class="btn quiet" type="button">← All WEX groups</button></div>
+      <div><button id="t-back" class="btn quiet" type="button">← All work experience groups</button></div>
       <div style="display:flex;flex-wrap:wrap;gap:1rem 2rem;align-items:end;justify-content:space-between">
         <div style="display:flex;flex-direction:column;gap:0.3rem">
           <span class="label" id="ws-code"></span>
@@ -84,17 +84,17 @@
           <tbody id="ws-rows"></tbody>
         </table>
       </div>
-      <div><button id="ws-delete" class="btn quiet danger-text" type="button" hidden>Delete this WEX group…</button></div>
+      <div><button id="ws-delete" class="btn quiet danger-text" type="button" hidden>Delete this work experience group…</button></div>
     </main>
 
     <main id="t-team" class="t-wrap" hidden>
-      <div><button id="t-team-back" class="btn quiet" type="button">← All WEX groups</button></div>
+      <div><button id="t-team-back" class="btn quiet" type="button">← All work experience groups</button></div>
       <div>
         <h2>Teachers &amp; class lists</h2>
         <p class="muted">People on this list can sign in to the dashboard.</p>
         <ul class="small muted rights">
           <li><b>Teacher rights:</b> read every journal and photo, see and reset PINs, leave a note on a student’s portfolio, download CSVs, delete journals.</li>
-          <li><b>Admin rights:</b> everything teachers can do, plus create, open, close and delete WEX groups, add teachers and upload class lists.</li>
+          <li><b>Admin rights:</b> everything teachers can do, plus create, open, close and delete work experience groups, add teachers and upload class lists.</li>
         </ul>
       </div>
       <form id="t-add" class="create" novalidate>

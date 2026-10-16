@@ -237,7 +237,7 @@ async function onJoin(e) {
   const name = $('j-name').value;
   const pin = $('j-pin').value.trim();
   const group = joinState.roster.get(tg);
-  if (!code) return joinMessage(joinState.open.length > 1 ? 'Choose your WEX group first.' : 'Journals aren’t open right now.', 'warn');
+  if (!code) return joinMessage(joinState.open.length > 1 ? 'Choose your work experience group first.' : 'Journals aren’t open right now.', 'warn');
   if (!group || !name) return joinMessage('Choose your teaching group and your name.');
   if (!/^\d{4}$/.test(pin)) return joinMessage('Your PIN must be exactly 4 digits.');
 

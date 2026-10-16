@@ -159,7 +159,7 @@ async function loadRoster() {
   } catch (err) { console.warn('Could not read class lists', err); }
 }
 
-// ---------- WEX groups (cohorts) ----------
+// ---------- work experience groups (cohorts) ----------
 
 async function setActive(codes) {
   try {
@@ -206,7 +206,7 @@ async function loadCohorts({ show = true } = {}) {
       : null);
   };
   $('t-cards').replaceChildren(...(state.cohorts.length ? state.cohorts.map(card)
-    : [h('p', { class: 'muted' }, state.role === 'admin' ? 'No WEX groups yet. Create one above.' : 'No WEX groups yet. Your admin will set them up.')]));
+    : [h('p', { class: 'muted' }, state.role === 'admin' ? 'No work experience groups yet. Create one above.' : 'No work experience groups yet. Your admin will set them up.')]));
   if (state.cohorts.length && !state.cohorts.some((w) => state.active.includes(w.code))) {
     $('t-cards').prepend(h('p', { class: 'msg warn', style: 'grid-column:1/-1' }, 'No group is active, so students can’t open their journals. An admin can press Make active.'));
   }
@@ -222,7 +222,7 @@ $('t-create').addEventListener('submit', async (e) => {
   const name = $('c-name').value.trim();
   const custom = $('c-code').value.trim().toUpperCase();
   const days = Number.parseInt($('c-days').value, 10);
-  if (!name) { msg('t-create-msg', 'Give the group a name, for example "Sec 3 WEX, Nov 2026".'); return; }
+  if (!name) { msg('t-create-msg', 'Give the group a name, for example "Sec 3 work experience, Nov 2026".'); return; }
   if (custom && !/^[A-Z0-9]{4,12}$/.test(custom)) { msg('t-create-msg', 'IDs use 4–12 letters or numbers only, for example WEX26.'); return; }
   if (!(days >= 1 && days <= 10)) { msg('t-create-msg', 'Days must be between 1 and 10.'); return; }
   try {
@@ -246,7 +246,7 @@ $('t-create').addEventListener('submit', async (e) => {
   }
 });
 
-// ---------- one WEX group ----------
+// ---------- one work experience group ----------
 
 $('t-back').addEventListener('click', () => { state.unsub?.(); closeDrawer(); loadCohorts(); });
 
