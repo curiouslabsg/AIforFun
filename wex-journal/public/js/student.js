@@ -7,7 +7,7 @@ import { sectionsFor, MOODS, isAnswered, countable } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
 import { icon } from './icons.js';
 import { art } from './art.js';
-import { companyLogo } from './logo.js';
+import { companyLogo, siteDomain } from './logo.js';
 import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
@@ -46,7 +46,7 @@ const answer = (section, id) => state.answers[section]?.[id] ?? '';
 const sectionById = (id) => state.sections.find((s) => s.id === id);
 // The student's own photo of the company logo, if they added one (kept with the photos).
 const logoPhoto = () => photosOf('logo').at(-1)?.data;
-const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), industry: answer('placement', 'industry'), photo: logoPhoto() }, cls);
+const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), industry: answer('placement', 'industry'), site: answer('placement', 'website'), photo: logoPhoto() }, cls);
 
 const photosOf = (section) => [...state.photos.values()].filter((p) => p.section === section)
   .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
@@ -126,6 +126,7 @@ function saveProgress() {
     progress,
     company: String(answer('placement', 'company')).slice(0, 100),
     industry: String(answer('placement', 'industry')).slice(0, 60),
+    website: String(answer('placement', 'website')).slice(0, 100),
     photoCount: [...state.photos.values()].filter((p) => p.section !== 'logo').length,
   };
   const sig = JSON.stringify(data);
@@ -561,8 +562,9 @@ function logoSection() {
     h('div', { class: 'logo-text' },
       h('b', {}, 'Company logo'),
       h('small', { class: 'muted' }, photo ? 'Your photo of the real logo.'
-        : hasName ? 'Made from your company name. Got the real logo? Snap a photo of it.'
-          : 'Type your company name below and we’ll make one.'),
+        : siteDomain(answer('placement', 'website')) ? 'Using the logo from the company website, if it has one. Wrong or missing? Snap a photo of the real logo.'
+          : hasName ? 'Made from your company name. Add the website below to use the real logo, or snap a photo of it.'
+            : 'Type your company name below and we’ll make one.'),
       isOpen() ? h('div', { class: 'logo-actions' },
         h('button', { type: 'button', class: 'btn ghost small-btn', onclick: () => picker.click() }, photo ? 'Change photo' : 'Use the real logo'),
         photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: removeLogo }, 'Use the made-up one') : null,

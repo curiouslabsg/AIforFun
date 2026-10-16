@@ -342,7 +342,7 @@ function renderRows() {
         })),
       h('td', {}, h('div', { class: 'who-cell' }, h('b', {}, st.name),
         h('span', { class: 'small muted' }, [st.class, classOf(st)].filter(Boolean).join(' · ') || '–'))),
-      h('td', { class: 'small' }, h('div', { class: 'co-cell' }, companyLogo({ name: st.company, industry: st.industry }, 'sm'), st.company || '–')),
+      h('td', { class: 'small' }, h('div', { class: 'co-cell' }, companyLogo({ name: st.company, industry: st.industry, site: st.website }, 'sm'), st.company || '–')),
       h('td', {}, h('div', { class: 'prog-cell' },
         // One small block per section: hover for its name and count.
         h('div', { class: 'bar' }, ...secs.map((s) => {
