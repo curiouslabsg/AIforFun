@@ -550,7 +550,7 @@ function photoSection(s) {
       h('b', {}, s.id === 'placement' ? 'Photo of your workplace' : 'Photos'),
       h('small', { class: 'muted' }, `Up to ${max} · star the best for your portfolio`)),
     isOpen() ? h('div', { class: 'photo-actions' },
-      h('button', { type: 'button', class: 'btn ghost cam', onclick: () => picker.click() }, icon('camera', 20), ' Add photo'),
+      h('button', { type: 'button', class: 'btn ghost cam', onclick: () => picker.click() }, art('camera', 'cam-art'), ' Add photo'),
       picker) : null,
     h('p', { class: 'msg err photo-msg', hidden: true }),
     h('div', { class: 'photo-grid' }));

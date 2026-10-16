@@ -35,7 +35,7 @@ export const PLACEMENT = {
 
 // A theme and picture for each day of a 5-day run; longer runs repeat "Keep going".
 const DAY_THEMES = [
-  ['Getting started', 'clipboard'], ['Observe', 'eyes'], ['Try', 'bolt'], ['Reflect', 'thought'], ['Look ahead', 'summit'],
+  ['Getting started', 'clipboard'], ['Observe', 'observe'], ['Try', 'bolt'], ['Reflect', 'thought'], ['Look ahead', 'summit'],
 ];
 
 export function dayStage(n) {

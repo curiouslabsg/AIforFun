@@ -96,7 +96,7 @@ body.student { background: var(--bg); }
 .mini-bar { display: block; height: 6px; border-radius: 99px; background: rgba(15, 40, 35, 0.09); overflow: hidden; }
 .mini-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.4s ease; }
 .art { display: block; line-height: 0; }
-.art svg { width: 100%; height: 100%; }
+.art img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .h-hero { display: grid; grid-template-columns: minmax(0, 1fr) 40%; align-items: end; gap: 0.6rem; margin: -1rem -16px 0; padding: 1.4rem 16px 0; background: linear-gradient(180deg, #e0f2fe, #f0fdf4 70%, var(--bg)); border-bottom: 1px solid var(--rule); }
 .h-hero-text { display: flex; flex-direction: column; gap: 0.45rem; padding-bottom: 1rem; }
@@ -106,7 +106,8 @@ body.student { background: var(--bg); }
 .h-journey p { font-size: 0.88rem; }
 .h-journey b { color: var(--accent); }
 .h-switch { align-self: flex-start; border: 0; background: none; padding: 0.2rem 0; color: var(--muted); font-size: 0.82rem; text-decoration: underline; cursor: pointer; }
-.h-hero-art { aspect-ratio: 2 / 1; align-self: end; }
+.h-hero-art { aspect-ratio: 640 / 279; align-self: center; margin-bottom: 1rem; }
+.h-hero-art img { object-fit: cover; border-radius: 14px; box-shadow: 0 8px 20px -14px rgba(15, 40, 35, 0.6); }
 
 .h-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; margin: 0.4rem 0 -0.7rem; }
 .h-note { font-size: 0.78rem; color: var(--muted); text-align: right; }
@@ -131,7 +132,7 @@ body.student { background: var(--bg); }
 .h-day-top { display: flex; justify-content: space-between; align-items: center; min-height: 1.1rem; }
 .h-day-top .ico { color: #fff; background: var(--accent); border-radius: 50%; padding: 2px; }
 .h-day-theme { font-family: var(--f-display); font-size: 0.98rem; line-height: 1.15; }
-.h-day-art { width: 2.8rem; height: 2.8rem; margin: auto auto 0.2rem; }
+.h-day-art { width: 3.4rem; height: 3.4rem; margin: auto auto 0.2rem; }
 .h-day.done { background: #ecfdf5; border-color: #5eead4; }
 .h-day.part { background: #fffbeb; border-color: #fcd34d; }
 .h-day.part .mini-bar i { background: #f59e0b; }
@@ -317,3 +318,4 @@ th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; acc
   body.teacher .drawer { position: static; width: auto; box-shadow: none; border: 0; padding: 0; overflow: visible; }
   body.teacher .drawer > :not(.portfolio) { display: none !important; }
 }
+.cam-art { width: 1.9rem; height: 1.9rem; }
