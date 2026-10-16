@@ -217,7 +217,7 @@ async function onNamePicked() {
   if ($('j-name').value !== name || $('j-tg').value !== tg || joinState.code !== code) return;
   joinState.existing = existing;
   if (!existing && joinState.cohort?.open !== true) {
-    joinMessage('This WEX journal is closed, and you don’t have a journal in it. Ask your teacher.', 'warn');
+    joinMessage('This work experience journal is closed, and you don’t have a journal in it. Ask your teacher.', 'warn');
     return;
   }
   $('j-pin-field').hidden = false;

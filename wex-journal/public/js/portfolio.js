@@ -90,7 +90,7 @@ export function renderPortfolio(data, opts = {}) {
       })),
 
     text(student.teacherNote) ? h('section', { class: 'pf-sec pf-note' }, h('h2', {}, 'Teacher’s note'), para(student.teacherNote)) : null,
-    h('footer', { class: 'small muted pf-foot' }, `WEX Journal · ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`),
+    h('footer', { class: 'small muted pf-foot' }, `Work Experience Journal · ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`),
   );
 }
 
