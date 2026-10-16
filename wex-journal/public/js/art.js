@@ -7,7 +7,7 @@ export function art(name, cls = '') {
   span.setAttribute('aria-hidden', 'true');
   if (FILES.has(name)) {
     const img = document.createElement('img');
-    img.src = `img/${name}.webp`;
+    img.src = `img/${name}.webp?v=2`; // bump when pictures change, so phones fetch the new ones
     img.alt = '';
     img.decoding = 'async';
     span.append(img);
