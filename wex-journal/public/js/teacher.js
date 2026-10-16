@@ -128,7 +128,8 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     $('t-email').textContent = `${user.email} · ${state.role === 'admin' ? 'Admin rights' : 'Teacher rights'}`;
     $('t-manage').hidden = state.role !== 'admin';
     $('t-password').hidden = !user.providerData.some((p) => p.providerId === 'password');
-    $('t-create').hidden = state.role !== 'admin';
+    $('t-new').hidden = state.role !== 'admin';
+    $('t-create').hidden = true;
     $('t-viewer-note').hidden = state.role === 'admin';
     screen('t-app');
     view('t-list');
@@ -202,6 +203,9 @@ async function loadCohorts({ show = true } = {}) {
   if (show && seq === navSeq) view('t-list');
 }
 
+$('t-new').addEventListener('click', () => { $('t-create').hidden = false; $('t-new').hidden = true; $('c-name').focus(); });
+$('c-cancel').addEventListener('click', () => { $('t-create').reset(); $('t-create').hidden = true; $('t-new').hidden = false; msg('t-create-msg', ''); });
+
 $('t-create').addEventListener('submit', async (e) => {
   e.preventDefault();
   msg('t-create-msg', '');
@@ -221,6 +225,8 @@ $('t-create').addEventListener('submit', async (e) => {
     await setDoc(doc(db, `cohorts/${code}`), { name, days, open: true, createdAt: serverTimestamp(), createdBy: state.email });
     $('t-create').reset();
     $('c-days').value = '5';
+    $('t-create').hidden = true;
+    $('t-new').hidden = false;
     await loadCohorts({ show: false });
     if (!state.cohorts.some((w) => state.active.includes(w.code))) await makeActive(code);
     openCohort(code);
@@ -241,8 +247,7 @@ function openCohort(code) {
   renderToggle();
   $('ws-head').replaceChildren(h('tr', {},
     h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
-    h('th', {}, 'Teaching group'), h('th', {}, 'Class'), h('th', {}, 'Name'), h('th', {}, 'PIN'), h('th', {}, 'Placement'),
-    h('th', {}, 'Progress'), ...sections().map((s) => h('th', {}, s.title)), h('th', {}, 'Photos'), h('th', {}, 'Last active')));
+    h('th', {}, 'Student'), h('th', {}, 'Company'), h('th', {}, 'Progress'), h('th', {}, 'Photos'), h('th', {}, 'Last active'), h('th', {}, 'PIN')));
   state.selected = new Set();
   view('t-ws');
   state.unsub?.();
@@ -318,7 +323,7 @@ function renderRows() {
   const joinedText = joinedSummary();
   $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} · updates live · click a row to read a journal`;
   if (!list.length) {
-    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(secs.length + 9), class: 'muted' },
+    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: '7', class: 'muted' },
       state.students.length ? 'No students in this teaching group or class yet.' : 'No one has started yet. Students open the journal link on their phones.')));
     return;
   }
@@ -334,19 +339,19 @@ function renderRows() {
           type: 'checkbox', 'aria-label': `Select ${st.name}`, ...(state.selected.has(st.sid) ? { checked: true } : {}),
           onchange: (e) => { if (e.target.checked) state.selected.add(st.sid); else state.selected.delete(st.sid); renderBulk(); },
         })),
-      h('td', {}, st.class ?? '–'),
-      h('td', {}, classOf(st) || '–'),
-      h('td', {}, st.name),
-      h('td', {}, pin),
+      h('td', {}, h('div', { class: 'who-cell' }, h('b', {}, st.name),
+        h('span', { class: 'small muted' }, [st.class, classOf(st)].filter(Boolean).join(' · ') || '–'))),
       h('td', { class: 'small' }, st.company || '–'),
-      h('td', { class: 'num' }, `${Math.round((answered / total) * 100)}%`),
-      ...secs.map((s) => {
-        const n = Math.min(sectionSize(s), st.progress?.[s.id] ?? 0);
-        const cls = n >= sectionSize(s) ? 'done' : n ? 'part' : '';
-        return h('td', {}, h('div', { class: 'bar', title: `${s.title}: ${n}/${sectionSize(s)}` }, h('i', { class: cls })));
-      }),
+      h('td', {}, h('div', { class: 'prog-cell' },
+        // One small block per section: hover for its name and count.
+        h('div', { class: 'bar' }, ...secs.map((s) => {
+          const n = Math.min(sectionSize(s), st.progress?.[s.id] ?? 0);
+          return h('i', { class: n >= sectionSize(s) ? 'done' : n ? 'part' : '', title: `${s.title}: ${n} of ${sectionSize(s)}` });
+        })),
+        h('span', { class: 'num small' }, `${Math.round((answered / total) * 100)}%`))),
       h('td', { class: 'num' }, String(st.photoCount ?? 0)),
-      h('td', { class: 'small muted' }, ago(st.lastActive)));
+      h('td', { class: 'small muted' }, ago(st.lastActive)),
+      h('td', {}, pin));
   }));
 }
 

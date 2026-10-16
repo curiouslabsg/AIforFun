@@ -22,7 +22,7 @@ export const MOODS = [
 // type: text (big box), short (one line), select, chips (pick several), mood.
 export const PLACEMENT = {
   id: 'placement', title: 'My placement', icon: 'building', color: '#0f766e',
-  blurb: 'Where you are and what you hope to get out of it. Fill this in on Day 1.',
+  blurb: 'Fill this in on Day 1.',
   prompts: [
     { id: 'company', type: 'short', q: 'Company or organisation', hint: 'e.g. Sunshine Family Clinic', max: 100 },
     { id: 'industry', type: 'select', q: 'Industry', options: INDUSTRIES },
@@ -36,7 +36,7 @@ export const PLACEMENT = {
 export function dayStage(n) {
   return {
     id: `day${n}`, title: `Day ${n}`, icon: 'sun', color: ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a'][(n - 1) % 5],
-    blurb: 'Take 1–3 photos that show what you did (no faces of customers or patients, nothing confidential). Then write while it’s fresh.',
+    blurb: 'A few photos of your work (no faces, nothing confidential), then a few lines.',
     photos: true,
     prompts: [
       { id: 'did', type: 'text', q: 'What did I do today?', hint: 'Tasks, people you worked with, tools you used' },
@@ -67,14 +67,14 @@ const STAR_FOCUS = [
 export function starStage(n) {
   return {
     id: `star${n}`, title: `Story ${n}`, icon: 'star', color: '#ca8a04',
-    blurb: `${STAR_FOCUS[n - 1]}. Use the STAR steps. Pick a real moment from your days; a small one is fine.`,
+    blurb: `${STAR_FOCUS[n - 1]}. A small, real moment is fine.`,
     prompts: STAR_PROMPTS,
   };
 }
 
 export const WRAPUP = {
   id: 'wrapup', title: 'Wrap-up', icon: 'flag', color: '#be123c',
-  blurb: 'Do this on the last day. These answers become your EAE interview answers.',
+  blurb: 'On the last day. These become your interview answers.',
   prompts: [
     { id: 'industry', type: 'text', q: 'Would I like to work in this industry? Why or why not?' },
     { id: 'strengths', type: 'text', q: 'My top 3 strengths, each with a moment from this week as proof' },

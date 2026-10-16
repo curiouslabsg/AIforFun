@@ -334,6 +334,14 @@ function renderMeta() {
   const total = all.reduce((n, c) => n + c.of, 0);
   $('progress-fill').style.width = `${Math.round((done / total) * 100)}%`;
   $('progress-text').textContent = `${Math.round((done / total) * 100)}%`;
+  // Keep the open section's own bar in step as the student types.
+  const head = $('panel').querySelector('.stage-head');
+  const s = head && sectionById(state.view);
+  if (s) {
+    const c = sectionCount(s);
+    head.querySelector('.stage-count').textContent = c.n >= c.of ? 'Done' : `${c.n} of ${c.of}`;
+    head.querySelector('.mini-bar i').style.width = `${Math.round((c.n / c.of) * 100)}%`;
+  }
 }
 
 function go(view) {
@@ -357,40 +365,55 @@ function refreshHome() {
 
 // ---------- home: the list of sections ----------
 
+function miniBar(c) {
+  return h('span', { class: 'mini-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.round((c.n / c.of) * 100)}%` }));
+}
+
+function statusOf(s) {
+  const c = sectionCount(s);
+  return { c, done: c.n >= c.of, started: c.n > 0 };
+}
+
 function renderHome() {
-  const card = (s) => {
-    const c = sectionCount(s);
-    const status = c.n >= c.of ? 'done' : c.n ? 'part' : '';
-    const pics = s.photos ? photosOf(s.id).length : 0;
-    return h('button', { type: 'button', class: `sec-card ${status}`, style: `--c:${s.color}`, onclick: () => go(s.id) },
-      h('span', { class: 'sec-icon' }, status === 'done' ? icon('check', 22) : icon(s.icon, 22)),
-      h('span', { class: 'sec-body' }, h('b', {}, s.title),
-        h('small', {}, status === 'done' ? 'Done' : `${c.n} of ${c.of}`, pics ? ` · ${pics} photo${pics === 1 ? '' : 's'}` : '')),
-      icon('next', 18));
+  // One row each for placement and wrap-up; days and stories as small tiles.
+  const row = (s) => {
+    const { c, done } = statusOf(s);
+    return h('button', { type: 'button', class: `sec-row${done ? ' done' : ''}`, onclick: () => go(s.id) },
+      h('span', { class: 'sec-row-main' }, h('b', {}, s.title), h('small', {}, done ? 'Done' : `${c.n} of ${c.of}`)),
+      done ? icon('check', 20) : icon('next', 18),
+      miniBar(c));
   };
-  const group = (label, list) => [h('p', { class: 'group-label' }, label), h('div', { class: 'sec-list' }, ...list.map(card))];
+  const tile = (s, label) => {
+    const { c, done, started } = statusOf(s);
+    return h('button', {
+      type: 'button', class: `sec-tile${done ? ' done' : started ? ' part' : ''}`, onclick: () => go(s.id),
+      'aria-label': `${s.title}: ${done ? 'done' : `${c.n} of ${c.of}`}`,
+    }, h('b', {}, done ? icon('check', 20) : label), miniBar(c));
+  };
   const days = state.sections.filter((s) => s.id.startsWith('day'));
   const stars = state.sections.filter((s) => s.id.startsWith('star'));
   $('panel').replaceChildren(
-    h('div', { class: 'home-intro' },
-      h('p', {}, 'Write a little every day while it’s fresh. Next year, this journal turns into your ', h('b', {}, 'EAE interview portfolio'), '.')),
-    ...group('Before you start', [sectionById('placement')]),
-    ...group('Each day', days),
-    ...group('Stories for your interview', stars),
-    ...group('Last day', [sectionById('wrapup')]),
+    h('p', { class: 'home-intro' }, 'Write a little each day. Next year this becomes your EAE portfolio.'),
+    row(sectionById('placement')),
+    h('p', { class: 'group-label' }, 'Days'),
+    h('div', { class: 'tiles', style: `--n:${Math.min(days.length, 5)}` }, ...days.map((s, i) => tile(s, String(i + 1)))),
+    h('p', { class: 'group-label' }, 'Interview stories'),
+    h('div', { class: 'tiles', style: '--n:3' }, ...stars.map((s, i) => tile(s, `Story ${i + 1}`))),
+    h('p', { class: 'group-label' }, 'Last day'),
+    row(sectionById('wrapup')),
     h('button', { type: 'button', class: 'portfolio-card', onclick: () => go('portfolio') },
-      icon('portfolio', 28),
-      h('span', {}, h('b', {}, 'My EAE portfolio'), h('small', {}, 'Your journal as interview answers. Print or save as PDF.')),
-      icon('next', 18)),
+      icon('portfolio', 24), h('b', {}, 'My EAE portfolio'), icon('next', 18)),
   );
 }
 
 // ---------- one section ----------
 
 function stageHead(s) {
+  const c = sectionCount(s);
   return h('header', { class: 'stage-head' },
-    h('span', { class: 'stage-badge' }, icon(s.icon, 26)),
-    h('div', {}, h('h2', {}, s.title), h('p', {}, s.blurb)));
+    h('div', { class: 'stage-title' }, h('h2', {}, s.title), h('span', { class: 'stage-count' }, c.n >= c.of ? 'Done' : `${c.n} of ${c.of}`)),
+    miniBar(c),
+    h('p', {}, s.blurb));
 }
 
 function field(s, p) {
@@ -398,7 +421,9 @@ function field(s, p) {
   const value = String(answer(s.id, p.id));
   const disabled = !isOpen();
   const label = h('label', { class: 'q-line', for: id }, p.q, p.optional ? h('em', { class: 'opt' }, 'optional') : null);
-  const hint = p.hint ? h('small', {}, p.hint) : null;
+  // Hints sit inside the box as grey example text, so the page has fewer lines to read.
+  const placeholder = p.hint ?? '';
+  const hint = p.hint && (p.type === 'chips' || p.type === 'mood' || p.type === 'select') ? h('small', {}, p.hint) : null;
   if (p.type === 'chips' || p.type === 'mood') {
     const picked = new Set(value.split(',').map((x) => x.trim()).filter(Boolean));
     const opts = p.type === 'mood' ? MOODS.map((m) => ({ v: m.v, label: `${m.face} ${m.label}` })) : p.options.map((o) => ({ v: o, label: o }));
@@ -425,9 +450,9 @@ function field(s, p) {
       h('option', { value: '' }, 'Choose…'), ...p.options.map((o) => h('option', { value: o }, o)));
     input.value = value;
   } else if (p.type === 'short') {
-    input = h('input', { id, type: 'text', maxlength: String(p.max ?? 100), value, disabled, oninput: (e) => queueSave(s.id, p.id, e.target.value) });
+    input = h('input', { id, type: 'text', maxlength: String(p.max ?? 100), value, placeholder, disabled, oninput: (e) => queueSave(s.id, p.id, e.target.value) });
   } else {
-    input = h('textarea', { id, maxlength: '2000', rows: '3', value, disabled, oninput: (e) => { queueSave(s.id, p.id, e.target.value); grow(e.target); } });
+    input = h('textarea', { id, maxlength: '2000', rows: '3', value, placeholder, disabled, oninput: (e) => { queueSave(s.id, p.id, e.target.value); grow(e.target); } });
     requestAnimationFrame(() => grow(input));
   }
   input.addEventListener('blur', () => flushField(`${s.id}__${p.id}`));
@@ -442,18 +467,16 @@ function grow(el) {
 function renderSection(s) {
   if (!s) return go('home');
   const i = state.sections.indexOf(s);
-  const prev = state.sections[i - 1];
   const next = state.sections[i + 1];
-  $('panel').style.setProperty('--stage', s.color);
+  $('panel').style.removeProperty('--stage');
   $('panel').replaceChildren(
     h('button', { type: 'button', class: 'btn quiet back', onclick: () => go('home') }, icon('back', 16), ' My journal'),
     stageHead(s),
     s.photos || s.id === 'placement' ? photoSection(s) : null,
     ...s.prompts.map((p) => field(s, p)),
     h('div', { class: 'nav' },
-      prev ? h('button', { type: 'button', class: 'btn ghost', onclick: () => go(prev.id) }, `← ${prev.title}`) : h('span'),
-      next ? h('button', { type: 'button', class: 'btn', onclick: () => go(next.id) }, `${next.title} →`)
-        : h('button', { type: 'button', class: 'btn', onclick: () => go('portfolio') }, 'My portfolio →')),
+      next ? h('button', { type: 'button', class: 'btn', onclick: () => go(next.id) }, `Next: ${next.title} →`)
+        : h('button', { type: 'button', class: 'btn', onclick: () => go('portfolio') }, 'See my portfolio →')),
   );
   renderPhotos();
 }
@@ -462,16 +485,15 @@ function renderSection(s) {
 
 function photoSection(s) {
   const max = s.id === 'placement' ? MAX_PHOTOS.placement : MAX_PHOTOS.day;
-  const camera = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: (e) => addPhotos(s, e) });
-  const library = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: (e) => addPhotos(s, e) });
+  // No `capture` attribute, so the phone itself offers "Camera" or "Photo library".
+  const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: (e) => addPhotos(s, e) });
   return h('section', { class: 'photos', 'data-section': s.id },
     h('div', { class: 'photo-head' },
-      h('b', {}, s.id === 'placement' ? 'Photo of your workplace (optional)' : 'Photos from today'),
-      h('small', { class: 'muted' }, `Up to ${max}. Star the best ones for your portfolio.`)),
+      h('b', {}, s.id === 'placement' ? 'Photo of your workplace' : 'Photos'),
+      h('small', { class: 'muted' }, `Up to ${max} · star the best for your portfolio`)),
     isOpen() ? h('div', { class: 'photo-actions' },
-      h('button', { type: 'button', class: 'btn big cam', onclick: () => camera.click() }, icon('camera', 22), ' Take photo'),
-      h('button', { type: 'button', class: 'btn ghost', onclick: () => library.click() }, icon('image', 20), ' From gallery'),
-      camera, library) : null,
+      h('button', { type: 'button', class: 'btn ghost cam', onclick: () => picker.click() }, icon('camera', 20), ' Add photo'),
+      picker) : null,
     h('p', { class: 'msg err photo-msg', hidden: true }),
     h('div', { class: 'photo-grid' }));
 }

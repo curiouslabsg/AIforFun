@@ -38,12 +38,16 @@
     </div>
 
     <main id="t-list" class="t-wrap">
-      <h2>WEX groups</h2>
-      <form id="t-create" class="create" novalidate>
+      <div class="list-head">
+        <h2>WEX groups</h2>
+        <button id="t-new" class="btn small-btn" type="button" hidden>+ New WEX group</button>
+      </div>
+      <form id="t-create" class="create" novalidate hidden>
         <label class="field"><span>Name</span><input id="c-name" type="text" maxlength="80" placeholder="Sec 3 WEX, Nov 2026" required></label>
         <label class="field" style="flex:0 1 170px"><span>Short ID (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. WEX26" autocomplete="off" style="text-transform:uppercase"></label>
         <label class="field" style="flex:0 1 140px"><span>Days</span><input id="c-days" type="number" min="1" max="10" value="5"></label>
         <button class="btn" type="submit">Create</button>
+        <button id="c-cancel" class="btn quiet" type="button">Cancel</button>
       </form>
       <p id="t-viewer-note" class="small muted" hidden>Your admin opens and closes WEX groups. Click one to see its students.</p>
       <p id="t-create-msg" class="msg err" hidden></p>
@@ -60,7 +64,6 @@
         <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
           <button id="ws-toggle" class="btn ghost" type="button"></button>
           <button id="ws-export" class="btn" type="button">Download CSV</button>
-          <button id="ws-delete" class="btn ghost danger-ghost" type="button" hidden>Delete group</button>
         </div>
       </div>
       <div id="ws-filters" class="filters"></div>
@@ -72,6 +75,7 @@
           <tbody id="ws-rows"></tbody>
         </table>
       </div>
+      <div><button id="ws-delete" class="btn quiet danger-text" type="button" hidden>Delete this WEX group…</button></div>
     </main>
 
     <main id="t-team" class="t-wrap" hidden>
