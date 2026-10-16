@@ -29,7 +29,8 @@
   <div id="t-app" hidden>
     <div class="t-top">
       <div class="topbar-inner">
-        <div class="who"><b>WEX Journal Dashboard</b><span class="label" id="t-email"></span></div>
+        <img class="t-crest" src="img/school.webp?v=1" alt="" width="34" height="40">
+        <div class="who"><b>WEX Journal · Teachers</b><span class="label" id="t-email"></span></div>
         <span class="spacer"></span>
         <button id="t-manage" class="btn quiet" type="button" hidden>Teachers &amp; class lists</button>
         <button id="t-password" class="btn quiet" type="button" hidden>Change password</button>
@@ -38,6 +39,13 @@
     </div>
 
     <main id="t-list" class="t-wrap">
+      <header class="t-hero">
+        <div class="t-hero-text">
+          <h1 id="t-hello">Hi! 👋</h1>
+          <p>Follow your students’ work experience journals, read their reflections and help them get ready for EAE.</p>
+        </div>
+        <img class="t-hero-art" src="img/hero.webp?v=1" alt="">
+      </header>
       <div class="list-head">
         <h2>WEX groups</h2>
         <button id="t-new" class="btn small-btn" type="button" hidden>+ New WEX group</button>
@@ -66,6 +74,7 @@
           <button id="ws-export" class="btn" type="button">Download CSV</button>
         </div>
       </div>
+      <div id="ws-stats" class="stats"></div>
       <div id="ws-filters" class="filters"></div>
       <p id="ws-status" class="small muted"></p>
       <div id="ws-bulk" class="bulk-bar" hidden></div>

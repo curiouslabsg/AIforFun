@@ -10,6 +10,7 @@ import { parseRosterFiles, groupRows, TEMPLATE_CSV } from './roster.js';
 import { sectionsFor, isAnswered, countable, MOODS } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
 import { companyLogo } from './logo.js';
+import { art } from './art.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVE = 5;
@@ -117,6 +118,7 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
       const me = await getDoc(doc(db, `teachers/${user.email}`));
       if (!me.exists()) throw Object.assign(new Error('not teacher'), { code: 'permission-denied' });
       state.role = me.data().role ?? 'teacher';
+      state.name = me.data().name ?? '';
     } catch (err) {
       screen('t-signin');
       msg('t-signin-msg', err.code === 'permission-denied'
@@ -126,6 +128,9 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
       return;
     }
     state.email = user.email;
+    // "Ms Tan" stays "Ms Tan"; "Lloyd Goh" becomes "Lloyd"; no name → the start of the email.
+    const shown = /^(mr|mrs|ms|mdm|miss|dr)\b/i.test(state.name) ? state.name : (state.name.split(' ')[0] || user.email.split('@')[0].split('.')[0]);
+    $('t-hello').textContent = `Hi, ${shown.charAt(0).toUpperCase()}${shown.slice(1)}! 👋`;
     $('t-email').textContent = `${user.email} · ${state.role === 'admin' ? 'Admin rights' : 'Teacher rights'}`;
     $('t-manage').hidden = state.role !== 'admin';
     $('t-password').hidden = !user.providerData.some((p) => p.providerId === 'password');
@@ -179,15 +184,19 @@ async function loadCohorts({ show = true } = {}) {
   const snap = await getDocs(collection(db, 'cohorts'));
   state.cohorts = snap.docs.map((d) => ({ code: d.id, ...d.data() }))
     .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
-  const card = (w) => {
+  const pics = ['clipboard', 'observe', 'bolt', 'thought', 'summit'];
+  const card = (w, i) => {
     const active = state.active.includes(w.code);
     return h('article', {
       class: `ws-card${active ? ' active' : ''}`, tabindex: '0', role: 'button',
       onclick: () => openCohort(w.code), onkeydown: (e) => { if (e.key === 'Enter') openCohort(w.code); },
     },
-    active ? h('span', { class: 'active-badge' }, 'Active · on the student page') : null,
-    h('h3', {}, w.name),
-    h('span', { class: 'code' }, w.code),
+    h('div', { class: 'ws-top' },
+      h('div', { class: 'ws-text' },
+        active ? h('span', { class: 'active-badge' }, '● On the student page') : h('span', { class: 'h-kicker' }, 'Hidden from students'),
+        h('h3', {}, w.name),
+        h('span', { class: 'code' }, w.code)),
+      art(pics[i % pics.length], 'ws-art')),
     h('span', { class: 'small muted' }, `${w.days ?? 5} days · ${w.open ? 'Open for writing' : 'Closed (students can read and print)'}`),
     state.role === 'admin'
       ? h('button', {
@@ -323,6 +332,7 @@ function renderRows() {
   const list = visibleStudents();
   const joinedText = joinedSummary();
   $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} · updates live · click a row to read a journal`;
+  renderStats(list, secs, total);
   if (!list.length) {
     $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: '7', class: 'muted' },
       state.students.length ? 'No students in this teaching group or class yet.' : 'No one has started yet. Students open the journal link on their phones.')));
@@ -354,6 +364,24 @@ function renderRows() {
       h('td', { class: 'small muted' }, ago(st.lastActive)),
       h('td', {}, pin));
   }));
+}
+
+// Four summary tiles above the table, for the students currently shown.
+function renderStats(list, secs, total) {
+  const pct = (st) => secs.reduce((n, s) => n + Math.min(sectionSize(s), st.progress?.[s.id] ?? 0), 0) / total;
+  const avg = list.length ? Math.round((list.reduce((n, st) => n + pct(st), 0) / list.length) * 100) : 0;
+  const wrap = secs.find((s) => s.id === 'wrapup');
+  const wrapped = list.filter((st) => (st.progress?.wrapup ?? 0) >= sectionSize(wrap)).length;
+  const photos = list.reduce((n, st) => n + (st.photoCount ?? 0), 0);
+  const tile = (pic, value, label, bar) => h('div', { class: 'stat' },
+    art(pic, 'stat-art'),
+    h('div', {}, h('b', {}, value), h('small', {}, label),
+      bar != null ? h('span', { class: 'mini-bar' }, h('i', { style: `width:${bar}%` })) : null));
+  $('ws-stats').replaceChildren(
+    tile('team', String(list.length), list.length === 1 ? 'student started' : 'students started'),
+    tile('summit', `${avg}%`, 'average progress', avg),
+    tile('camera', String(photos), photos === 1 ? 'photo taken' : 'photos taken'),
+    tile('finish', `${wrapped}`, `finished the wrap-up`));
 }
 
 // ---------- one student ----------
@@ -450,9 +478,11 @@ async function openStudent(row) {
   };
   drawer.replaceChildren(
     h('div', { style: 'display:flex;justify-content:space-between;gap:1rem;align-items:start' },
-      h('div', {},
-        h('span', { class: 'label' }, [st.class, classOf(st), st.company, st.industry].filter(Boolean).join(' · ')),
-        h('h2', {}, st.name)),
+      h('div', { class: 'drawer-who' },
+        companyLogo({ name: st.company, site: st.website, logoUrl: st.logoUrl, photo: photos.filter((p) => p.section === 'logo').at(-1)?.data }, 'drawer-logo'),
+        h('div', {},
+          h('span', { class: 'label' }, [st.class, classOf(st), st.company, st.industry].filter(Boolean).join(' · ')),
+          h('h2', {}, st.name))),
       h('div', { class: 'inline-row' },
         h('button', { class: 'btn small-btn', type: 'button', onclick: showPortfolio }, 'View portfolio'),
         h('button', { class: 'btn ghost small-btn', type: 'button', onclick: closeDrawer }, 'Close'))),
@@ -461,7 +491,7 @@ async function openStudent(row) {
     ...sections().map((s) => {
       // The student's photo of the company logo sits with their placement.
       const pics = photos.filter((p) => p.section === s.id || (s.id === 'placement' && p.section === 'logo'));
-      return h('section', {}, h('h3', {}, s.title),
+      return h('section', { class: 'drawer-sec' }, h('h3', {}, s.art ? art(s.art, 'drawer-art') : null, s.theme ? `${s.title} · ${s.theme}` : s.title),
         pics.length ? h('div', { class: 'thumbs' }, ...pics.map((p) => h('button', { type: 'button', class: 'thumb', onclick: () => lightbox(p.data, p.caption) },
           h('img', { src: p.data, alt: p.caption || 'Photo' }), h('span', {}, p.section === 'logo' ? 'Company logo' : `${p.star ? '★ ' : ''}${p.caption || ''}`)))) : null,
         ...s.prompts.map((p) => show(s, p)));

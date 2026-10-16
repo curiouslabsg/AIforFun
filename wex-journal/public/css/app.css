@@ -265,16 +265,22 @@ body.teacher { font-size: 16px; }
 .t-wrap { max-width: 1200px; margin: 0 auto; padding: 1.4rem 16px 4rem; display: flex; flex-direction: column; gap: 1.3rem; }
 .signin-form { display: flex; flex-direction: column; gap: 0.7rem; width: min(100%, 22rem); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 0.8rem; }
-.ws-card { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; cursor: pointer; text-align: left; }
+.ws-card { background: var(--paper); border: 1.5px solid var(--rule); border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; cursor: pointer; text-align: left; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.ws-card:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -14px rgba(15, 40, 35, 0.6); }
+.ws-top { display: grid; grid-template-columns: minmax(0, 1fr) 4rem; gap: 0.6rem; align-items: center; }
+.ws-text { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
+.ws-text h3 { font-size: 1.15rem; }
+.ws-art { height: 4rem; }
 .ws-card:hover { border-color: var(--accent); }
-.ws-card.active { border: 2px solid #16a34a; background: #f0fdf4; }
+.ws-card.active { border-color: #5eead4; background: #f0fdfa; }
 .ws-card .code { font: 600 1.2rem/1 var(--f-mono); letter-spacing: 0.1em; color: var(--accent); }
-.active-badge { align-self: flex-start; font: 700 0.7rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.35rem 0.55rem; border-radius: 99px; background: #16a34a; color: #fff; }
-.create { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: end; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem; }
+.active-badge { font: 700 0.68rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.35rem 0.6rem; border-radius: 99px; background: var(--accent); color: #fff; }
+.create { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: end; background: var(--paper); border: 1.5px solid var(--rule); border-radius: 16px; padding: 1rem; }
 .create .field { flex: 1 1 200px; }
 .filters { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 .filters select { width: auto; }
-.tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tablewrap { overflow-x: auto; background: var(--paper); border: 1.5px solid var(--rule); border-radius: 16px; }
+.tablewrap thead { background: #f0fdfa; }
 table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
 th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule); vertical-align: middle; }
 th { font: 500 0.68rem/1.2 var(--f-mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); white-space: nowrap; }
@@ -307,7 +313,7 @@ th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; acc
 .bulk-bar { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; background: #fff7ed; border: 1.5px solid #fdba74; border-radius: 10px; padding: 0.6rem 0.9rem; }
 .bulk-bar .spacer { flex: 1; }
 .rights { margin: 0.4rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.3rem; }
-.roster-box { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; }
+.roster-box { background: var(--paper); border: 1.5px solid var(--rule); border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; }
 .roster-box h4 { font-family: var(--f-display); font-size: 1rem; margin: 0.4rem 0; }
 .roster-box label.btn { cursor: pointer; }
 .roster-box details ul { margin: 0.4rem 0 0; padding-left: 1.2rem; color: var(--bad); }
@@ -350,3 +356,33 @@ th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; acc
 .pf-logo { position: absolute; top: 0; right: 0; width: 4rem; height: 4rem; }
 .pf-logo b { font-size: 1.4rem; }
 .pf-head:has(.pf-logo) { padding-right: 5rem; }
+
+/* Teacher dashboard: same look as the student journal */
+body.teacher { background: var(--bg); }
+.t-top { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(6px); }
+.t-top .topbar-inner { align-items: center; }
+.t-crest { width: 34px; height: 40px; object-fit: contain; }
+.t-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 1.2rem; align-items: center; padding: 1.5rem; border-radius: 20px; background: linear-gradient(135deg, #e0f2fe, #f0fdf4 70%); border: 1.5px solid #bae6fd; }
+.t-hero-text { display: flex; flex-direction: column; gap: 0.5rem; }
+.t-hero h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+.t-hero p { color: var(--muted); max-width: 34rem; }
+.t-hero-art { width: 100%; aspect-ratio: 640 / 279; object-fit: cover; border-radius: 16px; box-shadow: 0 10px 24px -16px rgba(15, 40, 35, 0.6); }
+@media (max-width: 640px) { .t-hero { grid-template-columns: 1fr; } .t-hero-art { max-width: 22rem; } }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 0.7rem; }
+.stat { display: flex; align-items: center; gap: 0.8rem; background: var(--paper); border: 1.5px solid var(--rule); border-radius: 16px; padding: 0.8rem 1rem; }
+.stat:nth-child(1) { background: #f5f3ff; border-color: #ddd6fe; }
+.stat:nth-child(2) { background: #f0fdfa; border-color: #99f6e4; }
+.stat:nth-child(3) { background: #eff6ff; border-color: #bfdbfe; }
+.stat:nth-child(4) { background: #fff1f2; border-color: #fecdd3; }
+.stat > div { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; min-width: 0; }
+.stat b { font: 800 1.6rem/1 var(--f-display); }
+.stat small { color: var(--muted); font-size: 0.82rem; }
+.stat-art { width: 3rem; height: 3rem; flex: none; }
+.bar i { border-radius: 4px; }
+.drawer { background: var(--bg); }
+.drawer-who { display: flex; align-items: center; gap: 0.9rem; }
+.drawer-logo { width: 3.6rem; height: 3.6rem; }
+.drawer section { background: var(--paper); border: 1.5px solid var(--rule); border-radius: 16px; padding: 0.9rem 1rem; border-top: 1.5px solid var(--rule); }
+.drawer .portfolio, .drawer .portfolio section { background: transparent; border: 0; padding: 0; }
+.drawer h3 { display: flex; align-items: center; gap: 0.5rem; }
+.drawer-art { width: 2rem; height: 2rem; }
