@@ -1,0 +1,77 @@
+# Tests the Work Experience Journal's security rules on every push and pull request,
+# and deploys to Firebase (wex-journal-sg: wex-journal-sg.web.app and
+# work-experience-journal.web.app) when main changes and the tests pass.
+#
+# No stored keys: GitHub proves its identity to Google with a short-lived OIDC token
+# (Workload Identity Federation). Google only accepts tokens from this repo's main branch.
+name: Work Experience Journal — test and deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wex-journal/**'
+      - '.github/workflows/deploy-wex.yml'
+  pull_request:
+    paths:
+      - 'wex-journal/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wex-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wex-journal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: wex-journal/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --no-audit --no-fund
+      - name: Security rules tests (Firestore emulator)
+        run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: wex-journal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: wex-journal/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/902697161492/locations/global/workloadIdentityPools/github/providers/aiforfun
+          service_account: github-deploy@wex-journal-sg.iam.gserviceaccount.com
+      # firebase-tools hides the reason when sign-in fails; this prints it.
+      - name: Check Google access
+        run: >
+          node -e "const {GoogleAuth}=require('google-auth-library');
+          new GoogleAuth({scopes:['https://www.googleapis.com/auth/cloud-platform']}).getAccessToken()
+          .then(()=>console.log('Google access OK'),e=>{console.error('Google access failed:',e.message);process.exit(1)})"
+      - name: Deploy site and security rules
+        run: npx firebase deploy --project wex-journal-sg --only hosting,firestore:rules --non-interactive
