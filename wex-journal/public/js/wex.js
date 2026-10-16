@@ -21,7 +21,7 @@ export const MOODS = [
 
 // type: text (big box), short (one line), select, chips (pick several), mood.
 export const PLACEMENT = {
-  id: 'placement', title: 'My placement', icon: 'building', color: '#0f766e',
+  id: 'placement', title: 'My placement', icon: 'building', color: '#1d4ed8',
   blurb: 'Fill this in on Day 1.',
   prompts: [
     { id: 'company', type: 'short', q: 'Company or organisation', hint: 'e.g. Sunshine Family Clinic', max: 100 },
@@ -42,7 +42,7 @@ const DAY_THEMES = [
 export function dayStage(n) {
   const [theme, art] = DAY_THEMES[n - 1] ?? ['Keep going', 'bolt'];
   return {
-    id: `day${n}`, title: `Day ${n}`, theme, art, icon: 'sun', color: ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a'][(n - 1) % 5],
+    id: `day${n}`, title: `Day ${n}`, theme, art, icon: 'sun', color: ['#1d4ed8', '#2563eb', '#0284c7', '#1e40af', '#0369a1'][(n - 1) % 5],
     blurb: 'A few photos of your work (no faces, nothing confidential), then a few lines.',
     photos: true,
     prompts: [
@@ -76,14 +76,14 @@ const STAR_FOCUS = [
 
 export function starStage(n) {
   return {
-    id: `star${n}`, title: `Story ${n}`, theme: STAR_TITLES[n - 1][0], art: STAR_TITLES[n - 1][1], icon: 'star', color: '#ca8a04',
+    id: `star${n}`, title: `Story ${n}`, theme: STAR_TITLES[n - 1][0], art: STAR_TITLES[n - 1][1], icon: 'star', color: '#2563eb',
     blurb: `${STAR_FOCUS[n - 1]}. A small, real moment is fine.`,
     prompts: STAR_PROMPTS,
   };
 }
 
 export const WRAPUP = {
-  id: 'wrapup', title: 'Wrap-up', icon: 'flag', color: '#be123c',
+  id: 'wrapup', title: 'Wrap-up', icon: 'flag', color: '#1e3a8a',
   blurb: 'On the last day. These become your interview answers.',
   prompts: [
     { id: 'industry', type: 'text', q: 'Would I like to work in this industry? Why or why not?' },

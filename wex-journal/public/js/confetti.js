@@ -1,7 +1,7 @@
 // A short confetti burst plus a toast when a stage is completed.
 // Skips the animation for people who turn on "reduce motion".
 
-const COLORS = ['#e11d48', '#f59e0b', '#7c3aed', '#2563eb', '#0d9488', '#db2777', '#16a34a'];
+const COLORS = ['#1e3a8a', '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#0ea5e9'];
 
 export function celebrate(color, message) {
   toast(message, color);

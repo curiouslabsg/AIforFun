@@ -14,8 +14,13 @@ export function siteDomain(v) {
 const siteIcon = (domain) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=256`;
 const found = new Map(); // domain -> true/false, so each site is only checked once per visit
 
+const SCHOOL = 'img/school.webp?v=1';
+
+// If a logo from the internet fails to load (bad link, no signal), show the school crest instead.
 function photoLogo(src, name, cls) {
-  return h('span', { class: `co-logo photo ${cls}`.trim() }, h('img', { src, alt: `${name || 'Company'} logo` }));
+  const img = h('img', { src, alt: `${name || 'Company'} logo` });
+  img.addEventListener('error', () => { if (!img.src.endsWith(SCHOOL)) { img.src = SCHOOL; img.alt = 'School crest'; img.parentElement?.classList.add('school'); } }, { once: true });
+  return h('span', { class: `co-logo photo ${cls}`.trim() }, img);
 }
 
 // Order: the student's photo, then the logo found online, then the website's icon,
@@ -26,7 +31,7 @@ export function companyLogo({ name, photo, site, logoUrl } = {}, cls = '', { sch
   const domain = siteDomain(site);
   if (domain && found.get(domain)) return photoLogo(siteIcon(domain), name, cls);
   const fallback = school
-    ? h('span', { class: `co-logo photo school ${cls}`.trim() }, h('img', { src: 'img/school.webp?v=1', alt: 'School crest' }))
+    ? h('span', { class: `co-logo photo school ${cls}`.trim() }, h('img', { src: SCHOOL, alt: 'School crest' }))
     : h('span', { class: `co-logo-slot ${cls}`.trim() });
   if (domain && !found.has(domain)) {
     const img = new Image();

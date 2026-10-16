@@ -542,8 +542,8 @@ function renderSection(s) {
   $('panel').replaceChildren(
     h('button', { type: 'button', class: 'btn quiet back', onclick: () => go('home') }, icon('back', 16), ' My journal'),
     stageHead(s),
-    s.id === 'placement' ? logoSection() : null,
-    s.photos || s.id === 'placement' ? photoSection(s) : null,
+    ...(s.id === 'placement' ? [logoSection()] : []),
+    ...(s.photos || s.id === 'placement' ? [photoSection(s)] : []),
     ...s.prompts.map((p) => field(s, p)),
     h('div', { class: 'nav' },
       next ? h('button', { type: 'button', class: 'btn', onclick: () => go(next.id) }, `Next: ${next.title} →`)
@@ -804,7 +804,7 @@ function renderPortfolioView() {
     pf);
   if (state.answers.wrapup?.pitch && !renderPortfolioView.cheered) {
     renderPortfolioView.cheered = true;
-    celebrate('#7c3aed', 'Your portfolio is ready!');
+    celebrate('#1d4ed8', 'Your portfolio is ready!');
   }
 }
 
