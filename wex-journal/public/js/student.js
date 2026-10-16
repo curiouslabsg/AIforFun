@@ -7,6 +7,7 @@ import { sectionsFor, MOODS, isAnswered, countable } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
 import { icon } from './icons.js';
 import { art } from './art.js';
+import { companyLogo } from './logo.js';
 import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
@@ -43,6 +44,10 @@ function joinMessage(text, kind = 'err') {
 const isOpen = () => state.cohort?.open === true;
 const answer = (section, id) => state.answers[section]?.[id] ?? '';
 const sectionById = (id) => state.sections.find((s) => s.id === id);
+// The student's own photo of the company logo, if they added one (kept with the photos).
+const logoPhoto = () => photosOf('logo').at(-1)?.data;
+const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), industry: answer('placement', 'industry'), photo: logoPhoto() }, cls);
+
 const photosOf = (section) => [...state.photos.values()].filter((p) => p.section === section)
   .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
 
@@ -121,7 +126,7 @@ function saveProgress() {
     progress,
     company: String(answer('placement', 'company')).slice(0, 100),
     industry: String(answer('placement', 'industry')).slice(0, 60),
-    photoCount: state.photos.size,
+    photoCount: [...state.photos.values()].filter((p) => p.section !== 'logo').length,
   };
   const sig = JSON.stringify(data);
   if (sig === lastProgress) return;
@@ -335,6 +340,9 @@ function renderMeta() {
   const total = all.reduce((n, c) => n + c.of, 0);
   $('progress-fill').style.width = `${Math.round((done / total) * 100)}%`;
   $('progress-text').textContent = `${Math.round((done / total) * 100)}%`;
+  // Redraw the logo as the company name or logo photo changes.
+  const lb = $('panel').querySelector('.logo-box');
+  if (lb && state.view === 'placement') lb.replaceWith(logoSection());
   // Keep the open section's own bar in step as the student types.
   const head = $('panel').querySelector('.stage-head');
   const s = head && sectionById(state.view);
@@ -395,6 +403,7 @@ function renderHome() {
 
   const placement = sectionById('placement');
   const pl = statusOf(placement);
+  const company = String(answer('placement', 'company')).trim();
   const wrap = sectionById('wrapup');
   const wr = statusOf(wrap);
 
@@ -411,11 +420,12 @@ function renderHome() {
 
     h('button', { type: 'button', class: `h-card h-place${pl.done ? ' done' : ''}`, onclick: () => go('placement') },
       h('div', { class: 'h-place-text' },
-        h('b', { class: 'h-title' }, 'My placement'),
-        h('small', {}, 'Get to know your workplace. Fill in on Day 1.'),
+        company ? h('span', { class: 'h-kicker' }, 'My placement') : null,
+        h('b', { class: 'h-title' }, company || 'My placement'),
+        h('small', {}, company ? (answer('placement', 'dept') || 'Where I’m attached this week') : 'Where are you attached? Fill this in on Day 1.'),
         h('span', { class: 'h-dots' }, ...Array.from({ length: pl.c.of }, (_, i) => h('i', { class: i < pl.c.n ? 'on' : '' })),
           h('small', {}, `${pl.c.n} / ${pl.c.of} completed`))),
-      art('building', 'h-place-art'),
+      myLogo('h-place-art') ?? art('building', 'h-place-art'),
       h('span', { class: 'btn h-go' }, pl.done ? 'Review' : pl.started ? 'Continue' : 'Start', icon('next', 16))),
 
     head('Days', 'One short reflection each day'),
@@ -530,6 +540,7 @@ function renderSection(s) {
   $('panel').replaceChildren(
     h('button', { type: 'button', class: 'btn quiet back', onclick: () => go('home') }, icon('back', 16), ' My journal'),
     stageHead(s),
+    s.id === 'placement' ? logoSection() : null,
     s.photos || s.id === 'placement' ? photoSection(s) : null,
     ...s.prompts.map((p) => field(s, p)),
     h('div', { class: 'nav' },
@@ -537,6 +548,49 @@ function renderSection(s) {
         : h('button', { type: 'button', class: 'btn', onclick: () => go('portfolio') }, 'See my portfolio →')),
   );
   renderPhotos();
+}
+
+// ---------- company logo ----------
+
+function logoSection() {
+  const hasName = String(answer('placement', 'company')).trim() !== '';
+  const photo = logoPhoto();
+  const picker = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: addLogo });
+  return h('section', { class: 'logo-box' },
+    myLogo('lg') ?? h('span', { class: 'co-logo lg empty' }, art('building')),
+    h('div', { class: 'logo-text' },
+      h('b', {}, 'Company logo'),
+      h('small', { class: 'muted' }, photo ? 'Your photo of the real logo.'
+        : hasName ? 'Made from your company name. Got the real logo? Snap a photo of it.'
+          : 'Type your company name below and we’ll make one.'),
+      isOpen() ? h('div', { class: 'logo-actions' },
+        h('button', { type: 'button', class: 'btn ghost small-btn', onclick: () => picker.click() }, photo ? 'Change photo' : 'Use the real logo'),
+        photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: removeLogo }, 'Use the made-up one') : null,
+        picker) : null,
+      h('p', { class: 'msg err logo-msg', hidden: true })));
+}
+
+async function addLogo(e) {
+  const f = e.target.files?.[0];
+  e.target.value = '';
+  if (!f) return;
+  const box = $('panel').querySelector('.logo-msg');
+  if (box) box.hidden = true;
+  try {
+    const data = await compressImage(f, [[480, 0.8], [360, 0.7]]);
+    const old = photosOf('logo');
+    await saving(addDoc(collection(db, `cohorts/${state.code}/students/${state.sid}/photos`), {
+      section: 'logo', caption: '', data, star: false, createdAt: serverTimestamp(),
+    }));
+    for (const p of old) saving(deleteDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`)));
+  } catch (err) {
+    console.error(err);
+    if (box) { box.textContent = err.message && !err.code ? err.message : 'That logo didn’t save. Try again.'; box.hidden = false; }
+  }
+}
+
+function removeLogo() {
+  for (const p of photosOf('logo')) saving(deleteDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`)));
 }
 
 // ---------- photos ----------
@@ -614,7 +668,7 @@ function renderPhotos() {
 }
 
 // Shrink camera photos (often 3–5 MB) to a few hundred KB, so they upload quickly on mobile data.
-async function compressImage(fileObj) {
+async function compressImage(fileObj, steps = [[1280, 0.72], [1100, 0.66], [960, 0.6], [800, 0.55]]) {
   if (fileObj.type && !fileObj.type.startsWith('image/')) throw new Error('That isn’t a photo. Choose a JPG or PNG picture.');
   const bitmap = await (window.createImageBitmap
     ? createImageBitmap(fileObj, { imageOrientation: 'from-image' }).catch(() => null)
@@ -629,7 +683,7 @@ async function compressImage(fileObj) {
     });
     const w = img.naturalWidth ?? img.width;
     const hgt = img.naturalHeight ?? img.height;
-    for (const [maxSide, quality] of [[1280, 0.72], [1100, 0.66], [960, 0.6], [800, 0.55]]) {
+    for (const [maxSide, quality] of steps) {
       const scale = Math.min(1, maxSide / Math.max(w, hgt));
       const c = document.createElement('canvas');
       c.width = Math.round(w * scale);

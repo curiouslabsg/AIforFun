@@ -9,6 +9,7 @@ import { auth, db, configured, pinHash, h } from './firebase.js';
 import { parseRosterFiles, groupRows, TEMPLATE_CSV } from './roster.js';
 import { sectionsFor, isAnswered, countable, MOODS } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
+import { companyLogo } from './logo.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVE = 5;
@@ -341,7 +342,7 @@ function renderRows() {
         })),
       h('td', {}, h('div', { class: 'who-cell' }, h('b', {}, st.name),
         h('span', { class: 'small muted' }, [st.class, classOf(st)].filter(Boolean).join(' · ') || '–'))),
-      h('td', { class: 'small' }, st.company || '–'),
+      h('td', { class: 'small' }, h('div', { class: 'co-cell' }, companyLogo({ name: st.company, industry: st.industry }, 'sm'), st.company || '–')),
       h('td', {}, h('div', { class: 'prog-cell' },
         // One small block per section: hover for its name and count.
         h('div', { class: 'bar' }, ...secs.map((s) => {
@@ -458,10 +459,11 @@ async function openStudent(row) {
     accountSection(st),
     teacherNoteSection(st),
     ...sections().map((s) => {
-      const pics = photos.filter((p) => p.section === s.id);
+      // The student's photo of the company logo sits with their placement.
+      const pics = photos.filter((p) => p.section === s.id || (s.id === 'placement' && p.section === 'logo'));
       return h('section', {}, h('h3', {}, s.title),
         pics.length ? h('div', { class: 'thumbs' }, ...pics.map((p) => h('button', { type: 'button', class: 'thumb', onclick: () => lightbox(p.data, p.caption) },
-          h('img', { src: p.data, alt: p.caption || 'Photo' }), h('span', {}, `${p.star ? '★ ' : ''}${p.caption || ''}`)))) : null,
+          h('img', { src: p.data, alt: p.caption || 'Photo' }), h('span', {}, p.section === 'logo' ? 'Company logo' : `${p.star ? '★ ' : ''}${p.caption || ''}`)))) : null,
         ...s.prompts.map((p) => show(s, p)));
     }),
     deleteStudentSection(st));

@@ -2,6 +2,7 @@
 // Used by the student journal and by the teacher dashboard.
 import { h } from './firebase.js';
 import { SKILLS, MOODS, INTERVIEW } from './wex.js';
+import { companyLogo } from './logo.js';
 
 const text = (v) => String(v ?? '').trim();
 const para = (v, cls = '') => h('p', { class: `pf-text ${cls}` }, text(v));
@@ -23,7 +24,8 @@ export function renderPortfolio(data, opts = {}) {
 
   // Photos: the ones marked for the portfolio, otherwise the first from each day.
   const dayOrder = (p) => (p.section === 'placement' ? 0 : Number(p.section.slice(3)));
-  let photos = data.photos.filter((p) => p.star);
+  const logo = data.photos.filter((p) => p.section === 'logo').at(-1)?.data;
+  let photos = data.photos.filter((p) => p.star && p.section !== 'logo');
   if (!photos.length) photos = days.map((d) => data.photos.find((p) => p.section === d)).filter(Boolean);
   photos = photos.sort((x, y) => dayOrder(x) - dayOrder(y)).slice(0, 6);
 
@@ -53,6 +55,7 @@ export function renderPortfolio(data, opts = {}) {
 
   return h('article', { class: 'portfolio' },
     h('header', { class: 'pf-head' },
+      companyLogo({ name: company, industry: a('placement', 'industry'), photo: logo }, 'pf-logo'),
       h('span', { class: 'label' }, `Work experience portfolio${cohort?.name ? ` · ${cohort.name}` : ''}`),
       h('h1', {}, student.name),
       h('p', { class: 'pf-where' }, where || 'Placement not filled in yet'),

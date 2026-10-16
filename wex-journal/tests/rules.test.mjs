@@ -75,6 +75,7 @@ test('the owner writes sections and photos; other devices cannot read them', asy
   await assertSucceeds(setDoc(doc(a, S('/entries/star2')), entry('star2', { s: 'x' })));
   await assertSucceeds(setDoc(doc(a, S('/entries/wrapup')), entry('wrapup', { pitch: 'x' })));
   await assertSucceeds(setDoc(doc(a, S('/photos/p1')), photo()));
+  await assertSucceeds(setDoc(doc(a, S('/photos/logo1')), photo({ section: 'logo' })));
   await assertSucceeds(updateDoc(doc(a, S('/photos/p1')), { caption: 'Front desk', star: true }));
   await assertSucceeds(updateDoc(doc(a, S()), { progress: { day1: 3 }, company: 'Clinic', industry: 'Healthcare', photoCount: 1 }));
   // Bad section names, mismatched section field, other file types, oversized photos.

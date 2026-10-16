@@ -196,7 +196,7 @@ service cloud.firestore {
           allow create: if ownsJournal(code, sid)
             && cohortOpen(code)
             && request.resource.data.keys().hasOnly(['section', 'caption', 'data', 'star', 'createdAt'])
-            && request.resource.data.section.matches('^(placement|day([1-9]|10))$')
+            && request.resource.data.section.matches('^(placement|logo|day([1-9]|10))$')
             && optString(request.resource.data, 'caption', 200)
             && request.resource.data.data is string
             && request.resource.data.data.matches('^data:image/jpeg;base64,.*')
