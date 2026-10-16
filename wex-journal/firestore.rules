@@ -1,0 +1,215 @@
+rules_version = '2';
+
+// Work Experience (WEX) reflection journal.
+//
+// Data layout
+//   teachers/{email}                                 dashboard access; role 'teacher' or 'admin'; guests carry expiresAt
+//   settings/school                                  activeCohorts: cohort codes students can join (up to 5)
+//   roster/{tg}                                      teaching group: level + student names (students pick from it)
+//   rosterDetails/{tg}                               teacher-only: each student's form class
+//   cohorts/{code}                                   one WEX run, e.g. "Sec 3 WEX 2026"; open = students can write
+//   cohorts/{code}/students/{sid}                    one journal per student (sid = teaching group + name slug)
+//   cohorts/{code}/students/{sid}/claims/{uid}       proves this device knew the student's PIN
+//   cohorts/{code}/students/{sid}/entries/{section}  answers for one section: placement, day1..day10, star1..star3, wrapup
+//   cohorts/{code}/students/{sid}/photos/{photoId}   camera photos (JPEG data URLs, shrunk on the phone)
+//
+// Students sign in anonymously. A device owns a journal once it has written a claim doc
+// whose pinHash matches the student's pinHash. Teachers sign in with email + password
+// (or Google) and must have a doc in /teachers named after their email.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function teacherDoc() {
+      return /databases/$(database)/documents/teachers/$(request.auth.token.email);
+    }
+
+    function isTeacher() {
+      // Anonymous student accounts have no email, so read it with a default.
+      return signedIn()
+        && request.auth.token.get('email', '') != ''
+        && request.auth.token.get('email_verified', false) == true
+        && exists(teacherDoc())
+        && (!('expiresAt' in get(teacherDoc()).data) || get(teacherDoc()).data.expiresAt > request.time);
+    }
+
+    function isAdmin() {
+      return isTeacher() && get(teacherDoc()).data.role == 'admin';
+    }
+
+    function cohortPath(code) {
+      return /databases/$(database)/documents/cohorts/$(code);
+    }
+
+    function cohortOpen(code) {
+      return get(cohortPath(code)).data.open == true;
+    }
+
+    function studentPath(code, sid) {
+      return /databases/$(database)/documents/cohorts/$(code)/students/$(sid);
+    }
+
+    function ownsJournal(code, sid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/cohorts/$(code)/students/$(sid)/claims/$(request.auth.uid));
+    }
+
+    function shortString(v, max) {
+      return v is string && v.size() > 0 && v.size() <= max;
+    }
+
+    function optString(data, key, max) {
+      return !(key in data) || (data[key] is string && data[key].size() <= max);
+    }
+
+    match /teachers/{email} {
+      allow read: if isTeacher();
+      allow create: if isAdmin()
+        && email == email.lower()
+        && email.matches('^[^@/ ]+@[^@/ ]+[.][^@/ ]+$')
+        && request.resource.data.keys().hasOnly(['name', 'role', 'addedBy', 'addedAt'])
+        && request.resource.data.role in ['teacher', 'admin']
+        && optString(request.resource.data, 'name', 60)
+        && request.resource.data.addedBy == request.auth.token.email;
+      // An admin can't remove or demote themselves, so there is always at least one admin.
+      allow update: if (isAdmin()
+          && email != request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'name'])
+          && request.resource.data.role in ['teacher', 'admin'])
+        || (isTeacher()
+          && email == request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && optString(request.resource.data, 'name', 60));
+      allow delete: if isAdmin() && email != request.auth.token.email;
+    }
+
+    match /settings/school {
+      allow get: if signedIn();
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['activeCohorts', 'updatedAt', 'updatedBy'])
+        && (!('activeCohorts' in request.resource.data)
+            || (request.resource.data.activeCohorts is list
+                && (request.resource.data.activeCohorts.size() == 0
+                    || request.resource.data.activeCohorts.join(',').matches('^[A-Z0-9]{4,12}(,[A-Z0-9]{4,12}){0,4}$'))));
+    }
+
+    // Class list. Students see teaching groups and names only, to pick themselves when joining.
+    match /roster/{tg} {
+      allow get, list: if signedIn();
+      allow create, update: if isAdmin()
+        && tg.matches('^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$')
+        && request.resource.data.keys().hasOnly(['level', 'students', 'updatedAt', 'updatedBy'])
+        && request.resource.data.level in [1, 2, 3, 4, 5]
+        && request.resource.data.students is list
+        && request.resource.data.students.size() <= 300;
+      allow delete: if isAdmin();
+    }
+
+    // Form class for each student: teachers only, never sent to student devices.
+    match /rosterDetails/{tg} {
+      allow read: if isTeacher();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['classes', 'updatedAt'])
+        && request.resource.data.classes is map;
+      allow delete: if isAdmin();
+    }
+
+    match /cohorts/{code} {
+      // Students read one cohort at a time; only teachers list them. Only admins change them.
+      allow get: if signedIn();
+      allow list: if isTeacher();
+      allow create: if isAdmin()
+        && code.matches('^[A-Z0-9]{4,12}$')
+        && request.resource.data.keys().hasOnly(['name', 'days', 'open', 'createdAt', 'createdBy'])
+        && shortString(request.resource.data.name, 80)
+        && request.resource.data.days is int
+        && request.resource.data.days >= 1 && request.resource.data.days <= 10
+        && request.resource.data.open is bool
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'open', 'days'])
+        && request.resource.data.days is int
+        && request.resource.data.days >= 1 && request.resource.data.days <= 10;
+      allow delete: if isAdmin();
+
+      match /students/{sid} {
+        // resource == null lets a student check whether their journal exists before joining.
+        allow get: if signedIn() && (resource == null || ownsJournal(code, sid) || isTeacher());
+        allow list: if isTeacher();
+        allow create: if signedIn()
+          && cohortOpen(code)
+          && request.resource.data.keys().hasOnly(['name', 'level', 'class', 'pin', 'pinHash', 'createdAt', 'progress', 'lastActive'])
+          && shortString(request.resource.data.name, 60)
+          // 'class' holds the teaching group; the name must be on that group's class list.
+          && exists(/databases/$(database)/documents/roster/$(request.resource.data['class']))
+          && request.resource.data.name in get(/databases/$(database)/documents/roster/$(request.resource.data['class'])).data.students
+          && request.resource.data.level == get(/databases/$(database)/documents/roster/$(request.resource.data['class'])).data.level
+          && request.resource.data.pin.matches('^[0-9]{4}$')
+          && request.resource.data.pinHash is string
+          && request.resource.data.pinHash.size() == 64
+          && request.resource.data.progress is map;
+        allow update: if (ownsJournal(code, sid)
+            && cohortOpen(code)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive', 'company', 'industry', 'photoCount'])
+            && request.resource.data.progress is map
+            && request.resource.data.progress.size() <= 20
+            && optString(request.resource.data, 'company', 100)
+            && optString(request.resource.data, 'industry', 60)
+            && (!('photoCount' in request.resource.data) || request.resource.data.photoCount is int))
+          // Teachers reset PINs, move a student to another teaching group and leave a note.
+          || (isTeacher()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'level', 'class', 'teacherNote', 'noteBy', 'noteAt'])
+            && request.resource.data.pin.matches('^[0-9]{4}$')
+            && request.resource.data.pinHash.size() == 64
+            && optString(request.resource.data, 'teacherNote', 1500));
+        allow delete: if isTeacher();
+
+        match /claims/{uid} {
+          // getAfter() also covers the first claim, written in the same batch as the student doc.
+          allow create: if signedIn()
+            && uid == request.auth.uid
+            && request.resource.data.keys().hasOnly(['pinHash', 'at'])
+            && request.resource.data.pinHash == getAfter(studentPath(code, sid)).data.pinHash;
+          allow read: if isTeacher();
+          allow update: if false;
+          allow delete: if isTeacher();
+        }
+
+        match /entries/{section} {
+          allow read: if ownsJournal(code, sid) || isTeacher();
+          allow create, update: if ownsJournal(code, sid)
+            && cohortOpen(code)
+            && section.matches('^(placement|day([1-9]|10)|star[1-3]|wrapup)$')
+            && request.resource.data.keys().hasOnly(['section', 'answers', 'createdAt', 'updatedAt'])
+            && request.resource.data.section == section
+            && request.resource.data.answers is map
+            && request.resource.data.answers.size() <= 20;
+          allow delete: if isTeacher();
+        }
+
+        match /photos/{photoId} {
+          allow read: if ownsJournal(code, sid) || isTeacher();
+          allow create: if ownsJournal(code, sid)
+            && cohortOpen(code)
+            && request.resource.data.keys().hasOnly(['section', 'caption', 'data', 'star', 'createdAt'])
+            && request.resource.data.section.matches('^(placement|day([1-9]|10))$')
+            && optString(request.resource.data, 'caption', 200)
+            && request.resource.data.data is string
+            && request.resource.data.data.matches('^data:image/jpeg;base64,.*')
+            && request.resource.data.data.size() <= 900000
+            && request.resource.data.star is bool;
+          allow update: if ownsJournal(code, sid)
+            && cohortOpen(code)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'star'])
+            && optString(request.resource.data, 'caption', 200)
+            && request.resource.data.star is bool;
+          allow delete: if (ownsJournal(code, sid) && cohortOpen(code)) || isTeacher();
+        }
+      }
+    }
+  }
+}
