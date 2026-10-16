@@ -8,6 +8,7 @@ import { renderPortfolio } from './portfolio.js';
 import { icon } from './icons.js';
 import { art } from './art.js';
 import { companyLogo, siteDomain } from './logo.js';
+import { findCompany, isOkLogoUrl } from './lookup.js';
 import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
@@ -46,7 +47,7 @@ const answer = (section, id) => state.answers[section]?.[id] ?? '';
 const sectionById = (id) => state.sections.find((s) => s.id === id);
 // The student's own photo of the company logo, if they added one (kept with the photos).
 const logoPhoto = () => photosOf('logo').at(-1)?.data;
-const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), industry: answer('placement', 'industry'), site: answer('placement', 'website'), photo: logoPhoto() }, cls);
+const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), site: answer('placement', 'website'), logoUrl: answer('placement', 'logoUrl'), photo: logoPhoto() }, cls);
 
 const photosOf = (section) => [...state.photos.values()].filter((p) => p.section === section)
   .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
@@ -127,6 +128,7 @@ function saveProgress() {
     company: String(answer('placement', 'company')).slice(0, 100),
     industry: String(answer('placement', 'industry')).slice(0, 60),
     website: String(answer('placement', 'website')).slice(0, 100),
+    logoUrl: isOkLogoUrl(answer('placement', 'logoUrl')) ? answer('placement', 'logoUrl') : '',
     photoCount: [...state.photos.values()].filter((p) => p.section !== 'logo').length,
   };
   const sig = JSON.stringify(data);
@@ -342,8 +344,7 @@ function renderMeta() {
   $('progress-fill').style.width = `${Math.round((done / total) * 100)}%`;
   $('progress-text').textContent = `${Math.round((done / total) * 100)}%`;
   // Redraw the logo as the company name or logo photo changes.
-  const lb = $('panel').querySelector('.logo-box');
-  if (lb && state.view === 'placement') lb.replaceWith(logoSection());
+  redrawLogoBox();
   // Keep the open section's own bar in step as the student types.
   const head = $('panel').querySelector('.stage-head');
   const s = head && sectionById(state.view);
@@ -426,7 +427,7 @@ function renderHome() {
         h('small', {}, company ? (answer('placement', 'dept') || 'Where I’m attached this week') : 'Where are you attached? Fill this in on Day 1.'),
         h('span', { class: 'h-dots' }, ...Array.from({ length: pl.c.of }, (_, i) => h('i', { class: i < pl.c.n ? 'on' : '' })),
           h('small', {}, `${pl.c.n} / ${pl.c.of} completed`))),
-      myLogo('h-place-art') ?? art('building', 'h-place-art'),
+      company ? myLogo('h-place-art') : art('building', 'h-place-art'),
       h('span', { class: 'btn h-go' }, pl.done ? 'Review' : pl.started ? 'Continue' : 'Start', icon('next', 16))),
 
     head('Days', 'One short reflection each day'),
@@ -549,27 +550,104 @@ function renderSection(s) {
         : h('button', { type: 'button', class: 'btn', onclick: () => go('portfolio') }, 'See my portfolio →')),
   );
   renderPhotos();
+  // Finished typing the company name? Look it up, unless a logo is already set.
+  $('q-placement-company')?.addEventListener('blur', () => {
+    const name = String(answer('placement', 'company')).trim();
+    const set = logoPhoto() || isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
+    if (name && !set && isOpen() && lookup.query !== name) runLookup();
+  });
 }
 
 // ---------- company logo ----------
 
+// Online lookup state survives the logo box being redrawn as the student types.
+const lookup = { query: '', status: '', results: [], ctrl: null };
+
+async function runLookup() {
+  const name = String(answer('placement', 'company')).trim();
+  if (!name) return;
+  lookup.ctrl?.abort();
+  const ctrl = new AbortController();
+  Object.assign(lookup, { query: name, status: 'searching', results: [], ctrl });
+  redrawLogoBox();
+  try {
+    const results = await findCompany(name, { signal: ctrl.signal });
+    if (lookup.ctrl !== ctrl) return;
+    Object.assign(lookup, { status: results.length ? 'results' : 'none', results });
+  } catch (err) {
+    if (ctrl.signal.aborted) return;
+    console.warn(err);
+    lookup.status = navigator.onLine === false ? 'offline' : 'error';
+  }
+  redrawLogoBox();
+}
+
+function setPlacement(id, value) {
+  queueSave('placement', id, value);
+  flushField(`placement__${id}`);
+  const input = $(`q-placement-${id}`);
+  if (input) input.value = value;
+}
+
+function useCompany(r) {
+  setPlacement('website', siteDomain(r.website) || '');
+  setPlacement('logoUrl', r.logoUrl || '');
+  Object.assign(lookup, { status: 'picked', results: [] });
+  redrawLogoBox();
+}
+
+function clearFound() {
+  setPlacement('website', '');
+  setPlacement('logoUrl', '');
+  Object.assign(lookup, { status: '', results: [] });
+  redrawLogoBox();
+}
+
+function redrawLogoBox() {
+  const lb = $('panel').querySelector('.logo-box');
+  if (lb && state.view === 'placement') lb.replaceWith(logoSection());
+}
+
 function logoSection() {
-  const hasName = String(answer('placement', 'company')).trim() !== '';
+  const name = String(answer('placement', 'company')).trim();
   const photo = logoPhoto();
+  const online = isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
   const picker = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: addLogo });
+  const note = photo ? 'Your photo of the real logo.'
+    : online ? 'Found online. Not the right one? Search again or snap a photo of the logo.'
+      : name ? 'Our school crest for now. Find the company’s logo online, or snap a photo of it.'
+        : 'Type your company name below, then find its logo.';
+  const results = lookup.status === 'results' && lookup.query === name
+    ? h('div', { class: 'lookup-list' },
+      h('small', { class: 'muted' }, 'Which one is it?'),
+      ...lookup.results.map((r) => h('button', { type: 'button', class: 'lookup-item', onclick: () => useCompany(r) },
+        companyLogo({ name: r.name, site: r.website, logoUrl: r.logoUrl }, 'sm', { school: false }),
+        h('span', {}, h('b', {}, r.name), h('small', {}, [r.about, siteDomain(r.website)].filter(Boolean).join(' · '))))),
+      h('button', { type: 'button', class: 'btn quiet small-btn', onclick: () => { lookup.status = 'none-picked'; redrawLogoBox(); } }, 'None of these'))
+    : null;
+  const status = {
+    searching: 'Searching online…',
+    none: 'Couldn’t find this company online. Type its website below, or snap a photo of the logo.',
+    'none-picked': 'No problem. Type the website below, or snap a photo of the logo.',
+    offline: 'You’re offline. Try again when you have signal.',
+    error: 'The search didn’t work. Try again in a moment.',
+  }[lookup.query === name ? lookup.status : ''];
   return h('section', { class: 'logo-box' },
-    myLogo('lg') ?? h('span', { class: 'co-logo lg empty' }, art('building')),
-    h('div', { class: 'logo-text' },
-      h('b', {}, 'Company logo'),
-      h('small', { class: 'muted' }, photo ? 'Your photo of the real logo.'
-        : siteDomain(answer('placement', 'website')) ? 'Using the logo from the company website, if it has one. Wrong or missing? Snap a photo of the real logo.'
-          : hasName ? 'Made from your company name. Add the website below to use the real logo, or snap a photo of it.'
-            : 'Type your company name below and we’ll make one.'),
-      isOpen() ? h('div', { class: 'logo-actions' },
-        h('button', { type: 'button', class: 'btn ghost small-btn', onclick: () => picker.click() }, photo ? 'Change photo' : 'Use the real logo'),
-        photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: removeLogo }, 'Use the made-up one') : null,
-        picker) : null,
-      h('p', { class: 'msg err logo-msg', hidden: true })));
+    h('div', { class: 'logo-top' },
+      myLogo('lg'),
+      h('div', { class: 'logo-text' },
+        h('b', {}, 'Company logo'),
+        h('small', { class: 'muted' }, note),
+        isOpen() ? h('div', { class: 'logo-actions' },
+          name && !photo ? h('button', { type: 'button', class: 'btn small-btn', disabled: lookup.status === 'searching' && lookup.query === name, onclick: runLookup },
+            online ? 'Search again' : 'Find logo online') : null,
+          h('button', { type: 'button', class: 'btn ghost small-btn', onclick: () => picker.click() }, photo ? 'Change photo' : 'Snap the logo'),
+          photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: removeLogo }, 'Remove photo') : null,
+          online && !photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: clearFound }, 'Clear') : null,
+          picker) : null)),
+    status ? h('p', { class: 'small muted lookup-status' }, status) : null,
+    results,
+    h('p', { class: 'msg err logo-msg', hidden: true }));
 }
 
 async function addLogo(e) {

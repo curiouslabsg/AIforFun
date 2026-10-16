@@ -154,12 +154,13 @@ service cloud.firestore {
           && request.resource.data.progress is map;
         allow update: if (ownsJournal(code, sid)
             && cohortOpen(code)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive', 'company', 'industry', 'website', 'photoCount'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive', 'company', 'industry', 'website', 'logoUrl', 'photoCount'])
             && request.resource.data.progress is map
             && request.resource.data.progress.size() <= 20
             && optString(request.resource.data, 'company', 100)
             && optString(request.resource.data, 'industry', 60)
             && optString(request.resource.data, 'website', 100)
+            && optString(request.resource.data, 'logoUrl', 300)
             && (!('photoCount' in request.resource.data) || request.resource.data.photoCount is int))
           // Teachers reset PINs, move a student to another teaching group and leave a note.
           || (isTeacher()

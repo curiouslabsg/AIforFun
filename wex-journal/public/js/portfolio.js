@@ -55,7 +55,7 @@ export function renderPortfolio(data, opts = {}) {
 
   return h('article', { class: 'portfolio' },
     h('header', { class: 'pf-head' },
-      companyLogo({ name: company, industry: a('placement', 'industry'), site: a('placement', 'website'), photo: logo }, 'pf-logo'),
+      companyLogo({ name: company, site: a('placement', 'website'), logoUrl: a('placement', 'logoUrl'), photo: logo }, 'pf-logo'),
       h('span', { class: 'label' }, `Work experience portfolio${cohort?.name ? ` · ${cohort.name}` : ''}`),
       h('h1', {}, student.name),
       h('p', { class: 'pf-where' }, where || 'Placement not filled in yet'),

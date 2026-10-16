@@ -333,7 +333,15 @@ th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; acc
 .co-logo.sm b { font-size: 0.75rem; }
 .co-logo.sm i { display: none; }
 .h-place-art.co-logo { justify-self: center; width: 5rem; height: 5rem; }
-.logo-box { display: flex; gap: 1rem; align-items: center; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.9rem; }
+.logo-box { display: flex; flex-direction: column; gap: 0.7rem; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.9rem; }
+.logo-top { display: flex; gap: 1rem; align-items: center; }
+.lookup-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.lookup-item { display: flex; align-items: center; gap: 0.7rem; text-align: left; border: 1.5px solid var(--rule); background: #fff; border-radius: 10px; padding: 0.55rem 0.7rem; cursor: pointer; }
+.lookup-item:hover { border-color: var(--accent); }
+.lookup-item span { display: flex; flex-direction: column; min-width: 0; }
+.lookup-item small { color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }
+.co-logo.school { border: 0; background: transparent; padding: 0.1rem; }
+.co-logo-slot { display: none; }
 .logo-text { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
 .logo-text small { font-size: 0.85rem; line-height: 1.35; }
 .logo-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.2rem; }
