@@ -347,3 +347,9 @@ textarea.code-box { font: 500 0.85rem/1.45 var(--f-mono); white-space: pre; over
 @media (max-width: 560px) {
   .save { order: 10; flex: 0 0 100%; min-width: 0; text-align: left; height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* "Use" buttons on feedback notes */
+.note-use { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.use-btn { border: 1.5px solid rgba(0, 0, 0, 0.25); background: rgba(255, 255, 255, 0.75); border-radius: 99px; padding: 0.3rem 0.65rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.use-btn:hover { background: #fff; }
+textarea.flash { box-shadow: 0 0 0 4px #facc15; transition: box-shadow 0.3s; }

@@ -1119,7 +1119,7 @@ function notesSection() {
   return h('section', { class: 'extra' },
     h('div', { class: 'extra-head' },
       h('h3', {}, 'Peer feedback wall'),
-      h('p', { class: 'muted small' }, 'During the gallery walk, tap Visitor mode and hand your laptop to each visitor. Their note sticks to your wall. You can’t delete notes, so your teacher sees everything.')),
+      h('p', { class: 'muted small' }, 'Notes other students leave you on the Gallery walk appear here by themselves, for everyone in your team. Tap “Use” on a note to copy it into your answers below. You can’t delete notes, so your teacher sees everything.')),
     h('p', { class: 'find-us' }, 'Visitors can find you on the Gallery walk as ', h('b', {}, `${state.student.class} · Team ${state.student.team}`),
       '. They can leave notes from their own laptops at the same time. No laptop? Use Visitor mode on yours.'),
     h('div', { class: 'extra-actions' },
@@ -1140,11 +1140,39 @@ function renderNotes() {
     wall.replaceChildren(h('p', { class: 'muted small' }, 'No feedback yet. Notes from visitors will appear here.'));
     return;
   }
-  wall.replaceChildren(...notes.map((n, i) => h('article', { class: 'note', style: `--nc:${NOTE_COLORS[i % NOTE_COLORS.length]};--tilt:${[-2, 1.5, -1, 2, -1.5, 1][i % 6]}deg` },
-    n.like ? h('p', {}, h('b', {}, 'I like '), n.like) : null,
-    n.wish ? h('p', {}, h('b', {}, 'I wish '), n.wish) : null,
-    n.whatif ? h('p', {}, h('b', {}, 'What if '), n.whatif) : null,
-    h('footer', {}, h('span', {}, `— ${n.from}`), n.use ? h('span', { class: `use use-${n.use}` }, USE_LABEL[n.use]) : null))));
+  const canUse = isOpen() && STAGES.some((s) => s.id === 'test' && s.prompts.some((p) => p.id === 'like'));
+  wall.replaceChildren(...notes.map((n, i) => {
+    const useful = [n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' · ');
+    return h('article', { class: 'note', style: `--nc:${NOTE_COLORS[i % NOTE_COLORS.length]};--tilt:${[-2, 1.5, -1, 2, -1.5, 1][i % 6]}deg` },
+      n.like ? h('p', {}, h('b', {}, 'I like '), n.like) : null,
+      n.wish ? h('p', {}, h('b', {}, 'I wish '), n.wish) : null,
+      n.whatif ? h('p', {}, h('b', {}, 'What if '), n.whatif) : null,
+      canUse ? h('div', { class: 'note-use' },
+        n.like ? h('button', { type: 'button', class: 'use-btn', onclick: () => useNote('like', `“I like ${n.like}” (${n.from})`) }, 'Use as “feedback I like” ↓') : null,
+        useful ? h('button', { type: 'button', class: 'use-btn', onclick: () => useNote('wish', `“${useful}” (${n.from})`) }, 'Use as “most useful” ↓') : null) : null,
+      h('footer', {}, h('span', {}, `— ${n.from}`), n.use ? h('span', { class: `use use-${n.use}` }, USE_LABEL[n.use]) : null));
+  }));
+}
+
+// Copy a note from the wall into one of the Peer Feedback answers (added below what's already there).
+function useNote(promptId, text) {
+  const stage = STAGES.find((s) => s.id === 'test');
+  const p = stage.prompts.find((x) => x.id === promptId);
+  const k = fieldKey(stage.id, p.id);
+  const box = document.getElementById(`q-${stage.id}-${p.id}`);
+  const other = lockOf(k);
+  if (other) { setSave(`${other.name} is typing in that box. Try again in a moment.`, true); return; }
+  const now = String(answerOf(stage.id, p) ?? '').trim();
+  if (now.includes(text)) { box?.focus(); return; }
+  const value = now ? `${now}\n${text}` : text;
+  queueFieldSave(stage.id, p, value);
+  flushField(k);
+  if (box) {
+    box.value = value;
+    box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    box.classList.add('flash');
+    setTimeout(() => box.classList.remove('flash'), 1200);
+  }
 }
 
 // target = null: a visitor uses this laptop (Visitor mode).

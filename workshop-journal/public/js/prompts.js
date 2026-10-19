@@ -131,8 +131,8 @@ export const STAGES = [
     sheet: 'W8',
     notesFirst: true,
     prompts: [
-      { id: 'like', q: 'One piece of feedback I like', hint: 'Copy it from the wall above' },
-      { id: 'wish', q: 'The most useful feedback, and why', hint: 'Usually an “I wish…” or “What if…” note' },
+      { id: 'like', q: 'One piece of feedback I like', hint: 'Tap “Use” on a note above, or type it in' },
+      { id: 'wish', q: 'The most useful feedback, and why', hint: 'Usually an “I wish…” or “What if…” note. Tap “Use” on it above, then add why it helps.' },
       { id: 'others', personal: true, q: 'One project that impressed me, and why' },
     ],
     retired: [
