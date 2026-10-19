@@ -325,3 +325,25 @@ th.sel input, td.sel input { width: 1.1rem; height: 1.1rem; cursor: pointer; acc
 .roster-box h4 { font-family: var(--f-display); font-size: 1rem; margin: 0.4rem 0; }
 .roster-box label.btn { cursor: pointer; }
 .roster-box details ul { margin: 0.4rem 0 0; padding-left: 1.2rem; color: var(--bad); }
+
+/* ---------- Code box, earlier answers ---------- */
+textarea.code-box { font: 500 0.85rem/1.45 var(--f-mono); white-space: pre; overflow-x: auto; tab-size: 2; min-height: 12rem; background: #fbfbfd; }
+.earlier { border: 1.5px dashed var(--rule); border-radius: 10px; padding: 0.6rem 0.9rem; background: #fafafa; }
+.earlier summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 0.9rem; }
+.earlier-qa { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.earlier-qa b { font-size: 0.88rem; }
+.earlier-qa p { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+.drawer .qa pre { margin: 0; font: 500 0.8rem/1.4 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; background: #f6f7f9; border-radius: 6px; padding: 0.5rem; max-height: 22rem; overflow: auto; }
+
+/* Phones: stage buttons keep their natural width and the row scrolls sideways. */
+@media (max-width: 800px) {
+  .stages { gap: 0.35rem; }
+  .stage-btn { flex: none; }
+}
+
+/* The save status changes as you type ("Saving…" → "Saved 10:42"). Give it a fixed slot so the
+   bar never re-wraps mid-tap; otherwise the first tap after typing lands on empty space. */
+.save { display: inline-block; min-width: 7.5rem; text-align: right; }
+@media (max-width: 560px) {
+  .save { order: 10; flex: 0 0 100%; min-width: 0; text-align: left; height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
+}

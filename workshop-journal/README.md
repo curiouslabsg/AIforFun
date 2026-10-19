@@ -12,11 +12,13 @@ A web journal for the **Code for Fun (Sec 1)** and **AI for Fun (Sec 2)** design
 | Learning log: "I learnt" and "I gathered" entries, tagged by topic | Anytime | — |
 | Empathise: problem chosen, interview notes, quotes, surprises | Day 1 | W2, W3 |
 | Define: How Might We question | Day 1 | W3 |
-| Ideate: best Crazy 8s ideas, chosen idea and why | Day 1 | W4 |
-| Design brief: input, rule, output, success test | Day 1 | W5 |
-| Prototype: what I built, bugs, fixes, the concept I used | Day 2 | W6 |
-| Test & feedback: results, gallery walk feedback | Day 2 | W6, W8 |
-| Reflect: what we'd change, 3-2-1 | Day 2 | W9 |
+| Ideate: list 3 ideas, chosen idea and why | Day 1 | W4 |
+| Design brief: input, rule, output, success test; **computation flowchart** and **connectivity diagram** (photo or drawn); Think · Pair · Share: 2 things that went well | Day 1 | W5 |
+| Prototype: **paste your code**; self-reflection (what went well, most challenging and how the team solved it, what could be improved); sketches and photos | Day 2 | W6 |
+| Peer Feedback Reflection (after the gallery walk): the feedback wall first, then one piece of feedback I like, the most useful feedback, one project that impressed me | Day 2 | W8 |
+| Self-Reflection: what we'd change, 3-2-1 | Day 2 | W9 |
+
+When a question is replaced, earlier answers aren't lost: the journal shows them read-only under "Earlier answers", and the dashboard and CSV mark them "(earlier question)". List replaced questions under `retired` in `public/js/prompts.js`.
 
 AI for Fun workshops show AI-specific versions of the design brief, prototype and test prompts (classes, training data, accuracy). Edit the prompts in `public/js/prompts.js`.
 

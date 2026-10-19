@@ -633,18 +633,28 @@ async function openStudent(st) {
     h('section', {}, h('h3', {}, `Learning log (${log.length})`),
       ...(log.length ? log.map((e) => h('div', { class: 'qa' },
         h('b', {}, `${e.type === 'gathered' ? 'Gathered' : 'Learnt'} · ${e.tag ?? 'Other'}`), h('p', {}, e.text))) : [h('p', { class: 'muted' }, 'No entries yet.')])),
-    ...STAGES.map((s) => h('section', {}, h('h3', {}, `${s.day} · ${s.title}`),
-      ...s.prompts.map((raw) => {
-        const p = promptFor(raw, trk);
-        const a = String(answer(s.id, p)).trim();
-        return h('div', { class: 'qa' }, h('b', {}, p.q, isPersonal(p) ? ' (own answer)' : ''), h('p', { class: a ? '' : 'empty' }, a || 'Not answered'));
-      }),
-      s.id === 'prototype' ? h('div', { class: 'thumbs' },
-        ...(images.length ? images.map((im) => h('button', { type: 'button', class: 'thumb', onclick: () => lightbox(im.data, im.caption) },
-          h('img', { src: im.data, alt: im.caption || 'Sketch' }), h('span', {}, im.caption || ''))) : [h('p', { class: 'muted small' }, 'No sketches or photos yet.')])) : null,
-      s.id === 'test' ? h('div', { class: 'stack-sm' },
+    ...STAGES.map((s) => {
+      const notesBox = s.id === 'test' ? h('div', { class: 'stack-sm' },
         h('b', {}, `Peer feedback notes (${notes.length})`),
-        ...(notes.length ? notes.map(noteEl) : [h('p', { class: 'muted small' }, 'No peer feedback yet.')])) : null)),
+        ...(notes.length ? notes.map(noteEl) : [h('p', { class: 'muted small' }, 'No peer feedback yet.')])) : null;
+      const earlier = (s.retired ?? []).map((p) => [p, String(answer(s.id, p)).trim()]).filter(([, a]) => a);
+      return h('section', {}, h('h3', {}, `${s.day} · ${s.title}`),
+        s.notesFirst ? notesBox : null,
+        ...s.prompts.map((raw) => {
+          const p = promptFor(raw, trk);
+          const a = String(answer(s.id, p)).trim();
+          return h('div', { class: 'qa' }, h('b', {}, p.q, isPersonal(p) ? ' (own answer)' : ''),
+            a && p.type === 'code' ? h('pre', {}, a) : h('p', { class: a ? '' : 'empty' }, a || 'Not answered'));
+        }),
+        ...(s.images ?? []).map((slot) => {
+          const pics = images.filter((im) => (im.stage ?? 'prototype') === slot.key);
+          return h('div', { class: 'stack-sm' }, h('b', {}, slot.title), h('div', { class: 'thumbs' },
+            ...(pics.length ? pics.map((im) => h('button', { type: 'button', class: 'thumb', onclick: () => lightbox(im.data, im.caption) },
+              h('img', { src: im.data, alt: im.caption || slot.title }), h('span', {}, im.caption || ''))) : [h('p', { class: 'muted small' }, 'Nothing yet.')])));
+        }),
+        s.notesFirst ? null : notesBox,
+        ...earlier.map(([p, a]) => h('div', { class: 'qa' }, h('b', {}, `${p.q} (earlier question)`), h('p', {}, a))));
+    }),
   );
   drawer.append(deleteStudentSection(st));
   drawer.scrollTop = 0;
@@ -760,8 +770,10 @@ $('ws-export').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Preparing…';
   try {
-    const cols = STAGES.flatMap((st) => st.prompts.map((p) => ({ stage: st, p })));
-    const header = ['Level', 'Teaching group', 'Class', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', 'Sketches / photos', 'Peer feedback'];
+    // Current questions, then any replaced ones (earlier answers), then picture counts per box.
+    const cols = STAGES.flatMap((st) => [...st.prompts, ...(st.retired ?? []).map((p) => ({ ...p, q: `${p.q} (earlier question)` }))].map((p) => ({ stage: st, p })));
+    const slots = STAGES.flatMap((st) => st.images ?? []);
+    const header = ['Level', 'Teaching group', 'Class', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', ...slots.map((sl) => `${sl.title} (pictures)`), 'Peer feedback'];
     const rows = [header];
     const teamCache = new Map();
     for (const st of visibleStudents()) {
@@ -769,7 +781,8 @@ $('ws-export').addEventListener('click', async () => {
       const join = (type) => log.filter((e) => (e.type ?? 'learnt') === type).map((e) => `[${e.tag}] ${e.text}`).join('\n');
       const fb = notes.map((n) => [`${n.from}${n.fromTg ? ` [${n.fromTg}]` : ''}${n.use ? ` (${n.use})` : ''}:`, n.like && `I like ${n.like}`, n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' ')).join('\n');
       rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', classOf(st), st.team, st.name, TRACK_LABEL[studentTrack(st)],
-        ...cols.map((c) => answer(c.stage.id, c.p)), join('learnt'), join('gathered'), images.length, fb]);
+        ...cols.map((c) => answer(c.stage.id, c.p)), join('learnt'), join('gathered'),
+        ...slots.map((sl) => images.filter((im) => (im.stage ?? 'prototype') === sl.key).length), fb]);
     }
     // BOM so Excel opens the file as UTF-8 (°C, names with accents).
     const csv = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');

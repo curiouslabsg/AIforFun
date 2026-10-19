@@ -629,31 +629,50 @@ function stageCount(stage) {
   return stageCounts(stage).total;
 }
 
+// The stage list is built once, then updated in place on every save. Rebuilding it while
+// someone taps would swallow the tap (and reset the sideways scroll on phones).
 function renderNav() {
   const nav = $('stages');
   const logCount = [...state.entries.values()].filter((e) => e.kind === 'learning').length;
-  const btn = (id, title, sub, dotClass, style) => h('button', {
-    class: 'stage-btn', type: 'button', 'aria-current': String(state.current === id), style: `--c:${style.color}`,
-    onclick: () => { state.current = id; renderNav(); renderPanel(); },
-  }, h('span', { class: `dot ${dotClass}` }, icon(dotClass === 'done' ? 'check' : style.icon, 16)), h('span', {}, title, h('small', {}, sub)));
-
-  const items = [h('div', { class: 'stage-sep' }, 'Anytime'),
-    btn(LOG_ID, 'Learning log', `${logCount} ${logCount === 1 ? 'entry' : 'entries'}`, logCount ? 'part' : '', LOG_STYLE),
-    btn(GALLERY_ID, 'Gallery walk', 'Give other teams feedback', '', GALLERY_STYLE)];
+  const rows = [
+    { sep: 'Anytime' },
+    { id: LOG_ID, title: 'Learning log', sub: `${logCount} ${logCount === 1 ? 'entry' : 'entries'}`, dot: logCount ? 'part' : '', style: LOG_STYLE },
+    { id: GALLERY_ID, title: 'Gallery walk', sub: 'Give other teams feedback', dot: '', style: GALLERY_STYLE },
+  ];
   let day = null;
   let done = 0;
   let answeredAll = 0;
   let totalAll = 0;
   STAGES.forEach((s) => {
-    if (s.day !== day) { day = s.day; items.push(h('div', { class: 'stage-sep' }, day)); }
+    if (s.day !== day) { day = s.day; rows.push({ sep: day }); }
     const n = Math.min(stageCount(s), s.prompts.length);
     const total = s.prompts.length;
     if (n >= total) done++;
     answeredAll += n;
     totalAll += total;
-    items.push(btn(s.id, s.title, n >= total ? 'Complete!' : `${n}/${total} answered`, n >= total ? 'done' : n ? 'part' : '', s));
+    rows.push({ id: s.id, title: s.title, sub: n >= total ? 'Complete!' : `${n}/${total} answered`, dot: n >= total ? 'done' : n ? 'part' : '', style: s });
   });
-  nav.replaceChildren(...items);
+  const sig = rows.map((r) => r.id ?? `|${r.sep}`).join(',');
+  if (nav.dataset.sig !== sig) {
+    nav.dataset.sig = sig;
+    nav.replaceChildren(...rows.map((r) => (r.sep ? h('div', { class: 'stage-sep' }, r.sep) : h('button', {
+      class: 'stage-btn', type: 'button', 'data-id': r.id, style: `--c:${r.style.color}`,
+      onclick: () => { state.current = r.id; renderNav(); renderPanel(); },
+    }, h('span', { class: 'dot' }), h('span', {}, r.title, h('small', {}))))));
+  }
+  for (const r of rows) {
+    if (r.sep) continue;
+    const b = nav.querySelector(`[data-id="${r.id}"]`);
+    b.setAttribute('aria-current', String(state.current === r.id));
+    const dot = b.querySelector('.dot');
+    const iconName = r.dot === 'done' ? 'check' : r.style.icon;
+    if (dot.className !== `dot ${r.dot}` || dot.dataset.icon !== iconName) {
+      dot.className = `dot ${r.dot}`;
+      dot.dataset.icon = iconName;
+      dot.replaceChildren(icon(iconName, 16));
+    }
+    b.querySelector('small').textContent = r.sub;
+  }
 
   const pct = Math.round((answeredAll / totalAll) * 100);
   $('progress-fill').style.width = `${pct}%`;
@@ -676,27 +695,40 @@ function renderStage(stage) {
     const p = promptFor(raw, track());
     const id = `q-${stage.id}-${p.id}`;
     if (p.type === 'problem') return problemPicker(stage, p, id);
+    const code = p.type === 'code';
     return h('label', { class: 'field', for: id },
       h('span', { class: 'q-line' }, p.q, h('em', { class: `scope ${isPersonal(p) ? 'me' : 'team'}` }, isPersonal(p) ? 'Just me' : 'Team')),
       p.hint ? h('small', {}, p.hint) : null,
       h('span', { class: 'lock-badge', hidden: true }),
       lockable(h('textarea', {
-        id, 'data-prompt': p.id, 'data-stage': stage.id, maxLength: 1500, disabled: !isOpen(), value: answerOf(stage.id, p),
+        id, 'data-prompt': p.id, 'data-stage': stage.id, maxLength: code ? 20000 : 1500, disabled: !isOpen(), value: answerOf(stage.id, p),
+        class: code ? 'code-box' : null, spellcheck: code ? 'false' : null, rows: code ? '10' : null,
         oninput: (e) => queueFieldSave(stage.id, p, e.target.value),
       }), stage.id, p));
   });
+  // Questions that were replaced: show what was written before, read-only, so nothing is lost.
+  const earlier = (stage.retired ?? []).map((p) => [p, String(answerOf(stage.id, p) ?? '').trim()]).filter(([, a]) => a);
+  const retiredBox = earlier.length ? h('details', { class: 'earlier' },
+    h('summary', {}, `Earlier answers (${earlier.length}) from questions that have changed`),
+    ...earlier.map(([p, a]) => h('div', { class: 'earlier-qa' }, h('b', {}, p.q), h('p', {}, a)))) : null;
+  const pictures = (stage.images ?? []).map((slot) => imagesSection(slot));
+  const notes = stage.id === 'test' ? notesSection() : null;
   const go = (j) => { state.current = STAGES[j].id; renderNav(); renderPanel(); };
   $('panel').style.setProperty('--stage', stage.color);
-  $('panel').replaceChildren(
+  // replaceChildren() would print null as text, so drop the empty slots.
+  $('panel').replaceChildren(...[
     stageHeader(stage.icon, `${stage.day} · Worksheet ${stage.sheet} · Stage ${i + 1} of ${STAGES.length}`, stage.title, stage.blurb),
+    stage.notesFirst ? notes : null,
     ...fields,
-    ...(stage.id === 'prototype' ? [imagesSection()] : []),
-    ...(stage.id === 'test' ? [notesSection()] : []),
+    ...pictures,
+    stage.notesFirst ? null : notes,
+    retiredBox,
     h('div', { class: 'nav' },
       i > 0 ? h('button', { class: 'btn ghost', type: 'button', onclick: () => go(i - 1) }, `← ${STAGES[i - 1].title}`) : h('span'),
       i < STAGES.length - 1 ? h('button', { class: 'btn', type: 'button', onclick: () => go(i + 1) }, `${STAGES[i + 1].title} →`) : null),
-  );  if (stage.id === 'prototype') renderImages();
-  if (stage.id === 'test') renderNotes();
+  ].filter(Boolean));
+  if (pictures.length) renderImages();
+  if (notes) renderNotes();
   applyLockState();
 }
 
@@ -869,46 +901,53 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
 
 const MAX_IMAGE_CHARS = 880000; // Firestore docs max out at 1 MiB; rules allow 900,000 characters.
 
-function imagesSection() {
+// slot = { key, title, help }: one box of photos / sketches, e.g. the prototype or a flowchart.
+// Older pictures have no stage, or stage 'prototype', and belong to the prototype box.
+const slotOf = (im) => im.stage ?? 'prototype';
+
+function imagesSection(slot) {
   const file = h('input', {
-    type: 'file', accept: 'image/png,image/jpeg,image/webp', id: 'img-file', hidden: true,
+    type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true,
     onchange: async (e) => {
       const f = e.target.files?.[0];
       e.target.value = '';
       if (!f) return;
       try {
-        await saveImage(await compressImage(f), 'photo');
+        await saveImage(await compressImage(f), 'photo', slot);
       } catch (err) {
         console.error(err);
-        imageMessage(err.message || 'That picture could not be added. Try a JPG or PNG.');
+        imageMessage(slot, err.message || 'That picture could not be added. Try a JPG or PNG.');
       }
     },
   });
-  return h('section', { class: 'extra' },
-    h('div', { class: 'extra-head' },
-      h('h3', {}, 'Sketches and photos'),
-      h('p', { class: 'muted small' }, 'Draw your prototype and label the sensor, the micro:bit (or model) and where the user is. Draw on paper and take a photo, or draw right here.')),
+  return h('section', { class: 'extra', 'data-img-key': slot.key },
+    h('div', { class: 'extra-head' }, h('h3', {}, slot.title), h('p', { class: 'muted small' }, slot.help)),
     h('div', { class: 'extra-actions' },
-      h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openSketchPad() }, icon('design', 18), ' Draw here'),
+      h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openSketchPad(slot) }, icon('design', 18), ' Draw here'),
       h('button', { class: 'btn ghost', type: 'button', disabled: !isOpen(), onclick: () => file.click() }, icon('prototype', 18), ' Upload a photo'),
       file),
-    h('p', { id: 'img-msg', class: 'msg err', hidden: true }),
-    h('div', { id: 'img-grid', class: 'img-grid' }));
+    h('p', { class: 'msg err img-msg', hidden: true }),
+    h('div', { class: 'img-grid' }));
 }
 
-function imageMessage(text) {
-  const m = $('img-msg');
+function imageMessage(slot, text) {
+  const m = $('panel').querySelector(`[data-img-key="${slot.key}"] .img-msg`);
   if (!m) return;
   m.textContent = text;
   m.hidden = !text;
 }
 
 function renderImages() {
-  const grid = $('img-grid');
-  if (!grid) return;
-  const items = [...state.images.values()].sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+  for (const box of $('panel').querySelectorAll('[data-img-key]')) renderImageGrid(box);
+}
+
+function renderImageGrid(box) {
+  const grid = box.querySelector('.img-grid');
+  const key = box.dataset.imgKey;
+  const items = [...state.images.values()].filter((im) => slotOf(im) === key)
+    .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
   if (!items.length) {
-    grid.replaceChildren(h('p', { class: 'muted small' }, 'No sketches yet. Your drawings and photos will show here.'));
+    grid.replaceChildren(h('p', { class: 'muted small' }, 'Nothing here yet. Your drawings and photos will show here.'));
     return;
   }
   grid.replaceChildren(...items.map((im) => h('figure', { class: 'img-card' },
@@ -926,10 +965,12 @@ function renderImages() {
       }, 'Delete') : null))));
 }
 
-async function saveImage(dataUrl, source) {
-  imageMessage('');
+async function saveImage(dataUrl, source, slot) {
+  imageMessage(slot, '');
+  const n = [...state.images.values()].filter((im) => slotOf(im) === slot.key).length + 1;
   await saving(addDoc(collection(db, teamPath('/images')), {
-    stage: 'prototype', source, by: state.student.name, caption: `${source === 'sketch' ? 'Sketch' : 'Photo'} ${state.images.size + 1}`,
+    stage: slot.key, source, by: state.student.name,
+    caption: slot.key === 'prototype' ? `${source === 'sketch' ? 'Sketch' : 'Photo'} ${n}` : `${slot.title}${n > 1 ? ` ${n}` : ''}`,
     data: dataUrl, createdAt: serverTimestamp(),
   }));
 }
@@ -971,7 +1012,7 @@ function lightbox(src, caption) {
   document.body.append(box);
 }
 
-function openSketchPad() {
+function openSketchPad(slot) {
   const W = 1200;
   const H = 800;
   const COLORS = ['#15231f', '#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed'];
@@ -1036,7 +1077,7 @@ function openSketchPad() {
   const overlay = h('div', { class: 'sketch-overlay', role: 'dialog', 'aria-label': 'Sketch pad' },
     h('div', { class: 'sketch-box' },
       h('div', { class: 'sketch-tools' },
-        h('b', {}, 'Sketch your prototype'),
+        h('b', {}, slot.key === 'prototype' ? 'Sketch your prototype' : `Draw your ${slot.title.toLowerCase()}`),
         h('div', { class: 'tool-group' }, ...swatches),
         h('div', { class: 'tool-group' }, ...sizes),
         eraser,
@@ -1056,7 +1097,7 @@ function openSketchPad() {
               let q = 0.85;
               let data = canvas.toDataURL('image/jpeg', q);
               while (data.length > MAX_IMAGE_CHARS && q > 0.4) { q -= 0.15; data = canvas.toDataURL('image/jpeg', q); }
-              await saveImage(data, 'sketch');
+              await saveImage(data, 'sketch', slot);
               close();
             } catch (err) {
               console.error(err);
