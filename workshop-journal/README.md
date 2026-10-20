@@ -49,6 +49,8 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 **Team links.** On the Prototype page each team shares its presentation slides link (and, for AI for Fun, its web app link). Teachers see them in the **Links** column, in each student's panel, and under **Links** at the top of a workshop (filter by teaching group, then **Copy all links** to paste into Excel or Sheets). They're in the CSV too, and on the team's Gallery walk card.
 
+**Chart view.** Switch **Table | Chart** above a workshop to see one panel per teaching group: a row per team, a square per stage (white = not started, light blue = started, mid blue = half or more, dark blue ✓ = done) and a bar for the whole journal. Hover over (or tab to) a square or bar for details: each member's count, last active, links shared. Click one to open the journal. The teaching group and class filters apply.
+
 **Survey results.** **Survey results** at the top of a workshop shows averages and counts for the shown students; each student's answers are in their journal and the CSV.
 
 **Gallery walk pairings.** Students only see teams from their own teaching group and its partner, set in `GALLERY_PAIRS` in `public/js/school.js` (e.g. SC1A1 with SC1A2). Groups not listed see every team.

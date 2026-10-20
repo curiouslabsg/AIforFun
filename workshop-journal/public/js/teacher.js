@@ -16,7 +16,7 @@ const state = {
   // Class lists: roster = teaching group -> { level, students }; details = group -> { classes } (teachers only).
   roster: new Map(), details: new Map(),
   workshops: [], ws: null, students: [], unsub: null,
-  tg: readPref('tg', ''), cls: readPref('cls', ''),
+  tg: readPref('tg', ''), cls: readPref('cls', ''), view: readPref('view', 'table'),
 };
 
 // Form class and teacher come from the class list (teacher-only), keyed by teaching group + name.
@@ -343,7 +343,12 @@ function renderFilters() {
     el.value = state[key];
     return el;
   };
+  const seg = (v, label) => h('button', {
+    type: 'button', class: 'seg-btn', 'aria-pressed': String(state.view === v),
+    onclick: () => { state.view = v; writePref('view', v); renderFilters(); renderRows(); },
+  }, label);
   const parts = [
+    h('div', { class: 'seg', role: 'group', 'aria-label': 'View' }, seg('table', 'Table'), seg('chart', 'Chart')),
     select('Filter by teaching group', 'tg', tgs, 'All teaching groups'),
     select('Filter by class', 'cls', classes, 'All classes'),
   ];
@@ -457,11 +462,15 @@ function renderRows() {
   renderRequests();
   // Keep the open Links list up to date as teams add links or the filters change.
   if ($('ws-extra').dataset.show === 'links' && !$('ws-extra').hidden) renderLinks($('ws-extra'));
+  const chart = state.view === 'chart';
+  $('ws-table').hidden = chart;
+  $('ws-chart').hidden = !chart;
+  if (chart) renderChart();
   const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
   const list = visibleStudents();
   const teams = new Set(list.map((s) => teamKeyOf(s))).size;
   const joinedText = joinedSummary();
-  $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · click a row to read a journal`;
+  $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} ${state.students.length === 1 ? 'student' : 'students'} · ${teams} ${teams === 1 ? 'team' : 'teams'} · updates live · ${chart ? 'hover a square for details, click to open a journal' : 'click a row to read a journal'}`;
   if (!list.length) {
     const why = state.students.length
       ? 'No students in this teaching group or class yet.'
@@ -1181,4 +1190,126 @@ async function renderSurvey(box) {
     h('div', { class: 'inline-row' }, h('b', {}, `Survey: ${responded} of ${students.length} students answered`),
       h('span', { class: 'small muted' }, 'Follows the filters above. Each student’s answers are in their journal and the CSV.')),
     ...qs));
+}
+
+// ---------- chart view: team progress by teaching group ----------
+// One panel per teaching group. Rows are teams, columns are stages; each square's shade is
+// how much of that stage the team has done (team answers + each member's own, averaged).
+// The bar on the right is the team's overall progress. Hover or focus any mark for details.
+
+const SHORT = { empathise: 'Empath', define: 'Define', ideate: 'Ideate', design: 'Design', prototype: 'Proto', test: 'Peer FB', reflect: 'Reflect', survey: 'Survey' };
+const pct = (x) => `${Math.round(x * 100)}%`;
+const binOf = (f) => (f >= 1 ? 'b3' : f >= 0.5 ? 'b2' : f > 0 ? 'b1' : 'b0');
+
+function teamStats() {
+  const teams = new Map();
+  for (const st of visibleStudents()) {
+    const k = teamKeyOf(st);
+    if (!teams.has(k)) teams.set(k, { key: k, tg: st.class ?? '–', team: st.team, members: [] });
+    teams.get(k).members.push(st);
+  }
+  const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
+  for (const t of teams.values()) {
+    t.stages = STAGES.map((s) => {
+      const per = t.members.map((st) => ({ st, n: stageDone(st, s) }));
+      const avg = per.reduce((x, m) => x + m.n, 0) / per.length;
+      return { s, frac: avg / s.prompts.length, per };
+    });
+    t.overall = t.members.reduce((x, st) => x + STAGES.reduce((n, s) => n + stageDone(st, s), 0), 0) / (t.members.length * total);
+    t.last = Math.max(...t.members.map((st) => st.lastActive?.toMillis?.() ?? 0));
+    t.links = state.teams?.get(t.key) ?? {};
+  }
+  const byTg = new Map();
+  for (const t of [...teams.values()].sort((a, b) => a.team - b.team)) {
+    if (!byTg.has(t.tg)) byTg.set(t.tg, []);
+    byTg.get(t.tg).push(t);
+  }
+  return [...byTg.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
+}
+
+function renderChart() {
+  const box = $('ws-chart');
+  $('chart-tip').hidden = true;
+  const groups = teamStats();
+  if (!groups.length) { box.replaceChildren(h('p', { class: 'muted' }, 'No teams to show with these filters.')); return; }
+  const legend = h('div', { class: 'viz-legend', 'aria-label': 'Legend' },
+    h('span', {}, h('i', { class: 'cell b0' }), 'Not started'),
+    h('span', {}, h('i', { class: 'cell b1' }), 'Started'),
+    h('span', {}, h('i', { class: 'cell b2' }), 'Half or more'),
+    h('span', {}, h('i', { class: 'cell b3' }, '✓'), 'Done'),
+    h('span', { class: 'muted' }, 'Bar: whole journal'));
+  box.replaceChildren(legend, ...groups.map(([tg, teams]) => {
+    const avg = teams.reduce((x, t) => x + t.overall, 0) / teams.length;
+    const done = teams.filter((t) => t.overall >= 1).length;
+    const grid = h('div', { class: 'viz-grid', style: `--cols:${STAGES.length}` },
+      h('span', { class: 'viz-corner' }, 'Team'),
+      ...STAGES.map((s) => h('span', { class: 'viz-col', title: s.title }, SHORT[s.id] ?? s.title)),
+      h('span', { class: 'viz-col viz-col-bar' }, 'Overall'));
+    for (const t of teams) {
+      grid.append(h('span', { class: 'viz-row-label' }, `Team ${t.team}`));
+      for (const c of t.stages) {
+        const cell = h('button', { type: 'button', class: `cell ${binOf(c.frac)}`, 'aria-label': `Team ${t.team}, ${c.s.title}: ${pct(c.frac)}` }, c.frac >= 1 ? '✓' : '');
+        hoverTip(cell, () => cellTip(t, c));
+        cell.addEventListener('click', () => openStudent(t.members[0]));
+        grid.append(cell);
+      }
+      const bar = h('button', { type: 'button', class: 'viz-bar', 'aria-label': `Team ${t.team} overall: ${pct(t.overall)}` },
+        h('span', { class: 'viz-bar-track' }, h('i', { style: `width:${Math.max(t.overall > 0 ? 2 : 0, t.overall * 100)}%` })),
+        h('span', { class: 'viz-bar-val' }, pct(t.overall)));
+      hoverTip(bar, () => teamTip(t));
+      bar.addEventListener('click', () => openStudent(t.members[0]));
+      grid.append(bar);
+    }
+    return h('section', { class: 'viz-card' },
+      h('header', {}, h('h3', {}, tg),
+        h('span', { class: 'small muted' }, `${teams.length} ${teams.length === 1 ? 'team' : 'teams'} · average ${pct(avg)}${done ? ` · ${done} complete` : ''}`)),
+      grid);
+  }));
+}
+
+function tipRow(value, label) {
+  return h('div', { class: 'tip-row' }, h('b', {}, value), h('span', {}, label));
+}
+
+function cellTip(t, c) {
+  const n = c.s.prompts.length;
+  return [
+    h('div', { class: 'tip-head' }, `${t.tg} · Team ${t.team} · ${c.s.title}`),
+    tipRow(pct(c.frac), `of ${c.s.title} done (team average)`),
+    ...c.per.map(({ st, n: got }) => tipRow(`${got}/${n}`, st.name)),
+    h('div', { class: 'tip-foot' }, 'Click to open the journal'),
+  ];
+}
+
+function teamTip(t) {
+  const linkBits = [t.links.slides ? 'slides' : null, t.links.webapp ? 'web app' : null].filter(Boolean);
+  const stuck = t.stages.find((c) => c.frac < 1);
+  return [
+    h('div', { class: 'tip-head' }, `${t.tg} · Team ${t.team}`),
+    tipRow(pct(t.overall), 'of the whole journal'),
+    tipRow(String(t.members.length), t.members.map((st) => st.name).join(', ')),
+    stuck ? tipRow(stuck.s.title, 'first stage not finished') : tipRow('All', 'stages done'),
+    tipRow(t.last ? ago({ toMillis: () => t.last }) : '–', 'last active'),
+    tipRow(linkBits.length ? linkBits.join(' + ') : 'none', 'links shared'),
+    h('div', { class: 'tip-foot' }, 'Click to open the journal'),
+  ];
+}
+
+// One tooltip for every mark; shown on hover and on keyboard focus, filled with textContent only.
+function hoverTip(el, build) {
+  const tip = $('chart-tip');
+  const show = (x, y) => {
+    tip.replaceChildren(...build());
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    const left = Math.min(window.innerWidth - r.width - 8, Math.max(8, x + 14));
+    const top = y + 16 + r.height > window.innerHeight ? y - r.height - 12 : y + 16;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${Math.max(8, top)}px`;
+  };
+  const hide = () => { tip.hidden = true; };
+  el.addEventListener('pointermove', (e) => show(e.clientX, e.clientY));
+  el.addEventListener('pointerleave', hide);
+  el.addEventListener('focus', () => { const r = el.getBoundingClientRect(); show(r.left + r.width / 2, r.bottom); });
+  el.addEventListener('blur', hide);
 }
