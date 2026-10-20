@@ -42,7 +42,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .field span { font-weight: 700; font-size: 0.95rem; }
 .field small { color: var(--muted); font-size: 0.82rem; }
-input[type="text"], input[type="password"], input[type="number"], select, textarea {
+input[type="text"], input[type="email"], input[type="search"], input[type="password"], input[type="number"], select, textarea {
   width: 100%; border: 1.5px solid var(--rule); border-radius: 6px; padding: 0.65rem 0.75rem; background: var(--paper);
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
