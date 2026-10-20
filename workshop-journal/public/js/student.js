@@ -8,7 +8,7 @@ import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor, isPersonal } 
 import { PROBLEMS, OWN_IDEA, CATEGORY, problemLabel, findProblem } from './problems.js';
 import { icon } from './icons.js';
 import { celebrate } from './confetti.js';
-import { trackForLevel, galleryGroups } from './school.js';
+import { trackForLevel, galleryGroups, galleryConfig } from './school.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'journal.session';
@@ -1349,11 +1349,13 @@ async function renderGallery() {
     stageHeader(GALLERY_STYLE.icon, 'Anytime · Gallery walk', 'Gallery walk', 'Visit other teams, try their prototype, then leave a note from your own laptop. Lots of people can post at once. One note per team.'),
     h('div', { class: 'extra-actions' }, filter, h('button', { class: 'btn ghost', type: 'button', onclick: () => renderGallery() }, 'Refresh')),
     grid);
-  // Students see their own teaching group and its partner (see GALLERY_PAIRS in school.js).
-  // Reading only those teams also keeps database use down.
-  const groups = galleryGroups(state.student.class);
+  // Students see their own teaching group and its partner, as teachers set on the dashboard
+  // (settings/gallery; GALLERY_PAIRS in school.js until then). Reading only those teams keeps database use down.
+  let groups;
   let teams;
   try {
+    const cfg = await getDoc(doc(db, 'settings/gallery'));
+    groups = galleryGroups(state.student.class, galleryConfig(cfg.exists() ? cfg.data() : null));
     const col = collection(db, `workshops/${state.code}/teams`);
     const snaps = groups
       ? await Promise.all(groups.map((tg) => getDocs(query(col, where(documentId(), '>=', `${tg}-t`), where(documentId(), '<', `${tg}-u`)))))
@@ -1383,7 +1385,7 @@ async function renderGallery() {
     return card;
   });
   grid.replaceChildren(
-    ...(groups ? [h('p', { class: 'small muted', style: 'grid-column:1/-1' }, `Showing teams from ${groups.join(' and ')}.`)] : []),
+    h('p', { class: 'small muted', style: 'grid-column:1/-1' }, groups ? `Showing teams from ${groups.join(' and ')}.` : 'Showing every team in this workshop.'),
     ...(cards.length ? cards : [h('p', { class: 'muted small' }, 'No other teams yet. Check back once teams have started their journals.')]));
   filter.addEventListener('input', () => {
     const q = filter.value.trim().toLowerCase();

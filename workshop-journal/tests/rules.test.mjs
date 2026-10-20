@@ -517,3 +517,20 @@ test('team members share their slide and web app links; others cannot change the
   await assertSucceeds(getDoc(doc(c, tpath('1A-t1'))));
   await assertFails(setDoc(doc(c, tpath('1A-t1')), { slides: 'https://evil.example' }, { merge: true }));
 });
+
+test('gallery walk pairings: any teacher sets them, students only read', async () => {
+  const set = (who, email, data) => setDoc(doc(who, 'settings/gallery'), { updatedBy: email, updatedAt: serverTimestamp(), ...data });
+  await assertSucceeds(set(teacher(), 'teacher@school.test', { mode: 'pairs', pairs: ['1A+1B', 'SC2B1+SC2B5'] }));
+  await assertSucceeds(set(admin(), 'admin@school.test', { mode: 'all', pairs: ['1A+1B'] }));
+  await assertSucceeds(set(teacher(), 'teacher@school.test', { mode: 'pairs', pairs: [] }));
+  await assertSucceeds(getDoc(doc(device('a'), 'settings/gallery')));
+  await assertFails(set(device('a'), '', { mode: 'all', pairs: [] }));
+  await assertFails(set(stranger(), 'someone@else.test', { mode: 'all', pairs: [] }));
+  await assertFails(set(teacher(), 'admin@school.test', { mode: 'all', pairs: [] }));
+  await assertFails(set(teacher(), 'teacher@school.test', { mode: 'some', pairs: [] }));
+  await assertFails(set(teacher(), 'teacher@school.test', { mode: 'pairs', pairs: ['1A'] }));
+  await assertFails(set(teacher(), 'teacher@school.test', { mode: 'pairs', pairs: ['1A+1B+2C'] }));
+  await assertFails(set(teacher(), 'teacher@school.test', { mode: 'pairs', pairs: ['1A+<b>'] }));
+  await assertFails(set(teacher(), 'teacher@school.test', { mode: 'pairs', pairs: [], extra: 1 }));
+  await assertFails(deleteDoc(doc(teacher(), 'settings/gallery')));
+});

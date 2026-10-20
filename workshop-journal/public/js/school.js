@@ -23,6 +23,17 @@ export const GALLERY_PAIRS = [
   ['SC2A9', 'SC2B9'],
 ];
 
-export function galleryGroups(tg) {
-  return GALLERY_PAIRS.find((pair) => pair.includes(tg)) ?? null;
+// Teachers can change the pairs, or let everyone see everyone, on the dashboard (settings/gallery).
+// Until they save, GALLERY_PAIRS above is used.
+export function galleryConfig(data) {
+  if (!data) return { mode: 'pairs', pairs: GALLERY_PAIRS.map((p) => [...p]) };
+  return {
+    mode: data.mode === 'all' ? 'all' : 'pairs',
+    pairs: (data.pairs ?? []).map((p) => String(p).split('+')).filter((p) => p.length === 2),
+  };
+}
+
+export function galleryGroups(tg, config = galleryConfig()) {
+  if (config.mode === 'all') return null;
+  return config.pairs.find((pair) => pair.includes(tg)) ?? null;
 }

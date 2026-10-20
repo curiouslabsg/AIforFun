@@ -53,7 +53,7 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 
 **Survey results.** **Survey results** at the top of a workshop shows averages and counts for the shown students; each student's answers are in their journal and the CSV.
 
-**Gallery walk pairings.** Students only see teams from their own teaching group and its partner, set in `GALLERY_PAIRS` in `public/js/school.js` (e.g. SC1A1 with SC1A2). Groups not listed see every team.
+**Gallery walk pairings.** Any teacher can open a workshop and click **Gallery walk** to choose **Paired classes** (each teaching group sees its own teams and its partner's, e.g. SC1A1 with SC1A2) or **All classes see all**. It's saved in `settings/gallery` and applies to every workshop; students see the change when they open or refresh the Gallery walk. Groups not in a pair see every team. Until a teacher saves, the pairs in `GALLERY_PAIRS` in `public/js/school.js` are used.
 
 **Gallery walk.** Every journal has a *Gallery walk* tab listing the other teams and their projects. Visitors leave I like / I wish / What if notes from their own laptops, so a whole class can give feedback at once; each visitor can leave one note per team, signed with their name and teaching group. Visitor mode on the owner's laptop still works for anyone without a device.
 

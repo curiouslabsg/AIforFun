@@ -101,6 +101,20 @@ service cloud.firestore {
                     || request.resource.data.activeWorkshops.join(',').matches('^[A-Z0-9]{4,12}(,[A-Z0-9]{4,12}){0,4}$'))));
     }
 
+    // Gallery walk: which teaching groups see each other ("SC1A1+SC1A2"), or every team sees every team.
+    // Any teacher can change it; students only read it.
+    match /settings/gallery {
+      allow get: if signedIn();
+      allow create, update: if isTeacher()
+        && request.resource.data.keys().hasOnly(['mode', 'pairs', 'updatedAt', 'updatedBy'])
+        && request.resource.data.mode in ['pairs', 'all']
+        && request.resource.data.pairs is list
+        && request.resource.data.pairs.size() <= 40
+        && (request.resource.data.pairs.size() == 0
+            || request.resource.data.pairs.join(',').matches('^[A-Za-z0-9][A-Za-z0-9 -]{0,29}[+][A-Za-z0-9][A-Za-z0-9 -]{0,29}(,[A-Za-z0-9][A-Za-z0-9 -]{0,29}[+][A-Za-z0-9][A-Za-z0-9 -]{0,29})*$'))
+        && request.resource.data.updatedBy == request.auth.token.email;
+    }
+
     // Class list. Students see teaching groups and names only, to pick themselves when joining.
     match /roster/{tg} {
       allow get, list: if signedIn();

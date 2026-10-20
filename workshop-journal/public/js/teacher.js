@@ -6,7 +6,7 @@ import {
   doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, query, where, onSnapshot, serverTimestamp, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, pinHash } from './firebase.js';
-import { trackForLevel } from './school.js';
+import { trackForLevel, galleryConfig } from './school.js';
 import { parseRosterFiles, groupRows, TEMPLATE_CSV } from './roster.js';
 import { STAGES, TRACK_LABEL, promptFor, isPersonal } from './prompts.js';
 
@@ -1190,6 +1190,77 @@ async function renderSurvey(box) {
     h('div', { class: 'inline-row' }, h('b', {}, `Survey: ${responded} of ${students.length} students answered`),
       h('span', { class: 'small muted' }, 'Follows the filters above. Each student’s answers are in their journal and the CSV.')),
     ...qs));
+}
+
+// ---------- gallery walk pairings (any teacher) ----------
+// Saved in settings/gallery for every workshop. Students pick it up when they open or refresh the Gallery walk.
+
+$('ws-gallery').addEventListener('click', () => showExtra('gallery', renderGalleryPairs));
+
+async function renderGalleryPairs(box) {
+  box.replaceChildren(h('div', { class: 'links-panel' }, h('p', { class: 'muted' }, 'Loading gallery walk settings…')));
+  let saved = null;
+  try {
+    const snap = await getDoc(doc(db, 'settings/gallery'));
+    saved = snap.exists() ? snap.data() : null;
+  } catch (err) { console.error(err); }
+  if (box.dataset.show !== 'gallery') return;
+  const cfg = galleryConfig(saved);
+  let mode = cfg.mode;
+  const tgs = [...new Set([...state.roster.keys(), ...cfg.pairs.flat()])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const msg = h('p', { class: 'msg', hidden: true });
+  const list = h('div', { class: 'pair-list' });
+  const pick = (value) => h('select', { 'aria-label': 'Teaching group' },
+    h('option', { value: '' }, 'Choose…'), ...tgs.map((t) => h('option', { value: t, selected: t === value }, t)));
+  const addRow = (a = '', b = '') => {
+    const row = h('div', { class: 'pair-row' }, pick(a), h('span', { 'aria-hidden': 'true' }, '↔'), pick(b),
+      h('button', { class: 'btn quiet small-btn', type: 'button', onclick: () => row.remove() }, 'Remove'));
+    list.append(row);
+  };
+  cfg.pairs.forEach(([a, b]) => addRow(a, b));
+  const pairsBox = h('div', { class: 'pairs-box', hidden: mode === 'all' },
+    h('p', { class: 'small muted' }, 'Each pair sees each other’s teams (and their own). A teaching group that isn’t in a pair sees every team.'),
+    list,
+    h('div', {}, h('button', { class: 'btn ghost small-btn', type: 'button', onclick: () => addRow() }, '+ Add pair')));
+  const allNote = h('p', { class: 'small muted', hidden: mode !== 'all' }, 'Every student sees every team in their workshop, like before. Your pairs are kept for when you switch back.');
+  const segBtn = (v, label) => h('button', {
+    type: 'button', class: 'seg-btn', 'aria-pressed': String(mode === v),
+    onclick: (e) => {
+      mode = v;
+      for (const b of e.currentTarget.parentNode.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
+      pairsBox.hidden = v === 'all'; allNote.hidden = v !== 'all';
+    },
+  }, label);
+  const save = async () => {
+    const pairs = [...list.querySelectorAll('.pair-row')].map((r) => [...r.querySelectorAll('select')].map((x) => x.value));
+    const used = pairs.flat().filter(Boolean);
+    const twice = used.find((t, i) => used.indexOf(t) !== i);
+    let err = '';
+    if (pairs.some(([a, b]) => !a || !b)) err = 'Choose two teaching groups for every pair, or remove the empty one.';
+    else if (pairs.some(([a, b]) => a === b)) err = 'A teaching group can’t be paired with itself.';
+    else if (twice) err = `${twice} is in more than one pair. Put each teaching group in one pair only.`;
+    msg.hidden = false;
+    if (err && mode === 'pairs') { msg.className = 'msg err'; msg.textContent = err; return; }
+    try {
+      await setDoc(doc(db, 'settings/gallery'), {
+        mode, pairs: err ? cfg.pairs.map((p) => p.join('+')) : pairs.map((p) => p.join('+')),
+        updatedAt: serverTimestamp(), updatedBy: state.email,
+      });
+      msg.className = 'msg info';
+      msg.textContent = mode === 'all'
+        ? 'Saved. All classes now see all teams. Students see it when they open or refresh the Gallery walk.'
+        : `Saved ${pairs.length} ${pairs.length === 1 ? 'pair' : 'pairs'}. Students see it when they open or refresh the Gallery walk.`;
+    } catch (e) {
+      console.error(e);
+      msg.className = 'msg err'; msg.textContent = 'Could not save. Check your connection and try again.';
+    }
+  };
+  box.replaceChildren(h('div', { class: 'links-panel gallery-panel' },
+    h('div', { class: 'inline-row' }, h('b', {}, 'Gallery walk: who sees whom'),
+      h('span', { class: 'small muted' }, saved?.updatedBy ? `Last changed by ${saved.updatedBy}. Applies to every workshop.` : 'Applies to every workshop.')),
+    h('div', { class: 'seg', role: 'group', 'aria-label': 'Gallery walk mode' }, segBtn('pairs', 'Paired classes'), segBtn('all', 'All classes see all')),
+    allNote, pairsBox,
+    h('div', { class: 'inline-row' }, h('button', { class: 'btn', type: 'button', onclick: save }, 'Save'), msg)));
 }
 
 // ---------- chart view: team progress by teaching group ----------
