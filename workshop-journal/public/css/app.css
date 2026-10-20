@@ -353,3 +353,33 @@ textarea.code-box { font: 500 0.85rem/1.45 var(--f-mono); white-space: pre; over
 .use-btn { border: 1.5px solid rgba(0, 0, 0, 0.25); background: rgba(255, 255, 255, 0.75); border-radius: 99px; padding: 0.3rem 0.65rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
 .use-btn:hover { background: #fff; }
 textarea.flash { box-shadow: 0 0 0 4px #facc15; transition: box-shadow 0.3s; }
+
+/* ---------- Survey ---------- */
+.scale { display: flex; flex-direction: column; gap: 0.4rem; }
+.scale-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; max-width: 26rem; }
+.scale-btn { border: 2px solid var(--rule); background: #fff; border-radius: 10px; min-height: 48px; font: 700 1.15rem/1 var(--f-display); cursor: pointer; }
+.scale-btn[aria-pressed="true"] { background: var(--stage); border-color: var(--stage); color: #fff; }
+.scale-ends { display: flex; justify-content: space-between; gap: 1rem; max-width: 26rem; font-size: 0.8rem; color: var(--muted); }
+.scale-ends span:last-child { text-align: right; }
+.choices { display: flex; flex-direction: column; gap: 0.45rem; }
+.choice-btn { text-align: left; border: 2px solid var(--rule); background: #fff; border-radius: 10px; padding: 0.7rem 0.9rem; cursor: pointer; line-height: 1.4; }
+.choice-btn::before { content: "○ "; color: var(--muted); }
+.choice-btn[aria-pressed="true"] { border-color: var(--stage); background: color-mix(in srgb, var(--stage) 10%, #fff); font-weight: 700; }
+.choice-btn[aria-pressed="true"]::before { content: "● "; color: var(--stage); }
+.scale-btn:disabled, .choice-btn:disabled { cursor: default; opacity: 0.7; }
+
+/* ---------- Team links ---------- */
+input[type="url"] { width: 100%; border: 1.5px solid var(--rule); border-radius: 6px; padding: 0.65rem 0.75rem; background: var(--paper); font-size: 16px; }
+.links-box h3 { display: flex; align-items: center; gap: 0.3rem; }
+.link-row { display: flex; gap: 0.5rem; align-items: center; }
+.link-row input { flex: 1; min-width: 0; }
+.link-field small.bad { color: var(--bad); }
+.gal-links { display: flex; gap: 0.8rem; flex-wrap: wrap; font-weight: 700; font-size: 0.9rem; }
+.gal-links a { color: #92400e; }
+.links-panel { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.links-panel a { overflow-wrap: anywhere; }
+.survey-q { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.6rem 0; border-top: 1px solid var(--rule); }
+.survey-bar { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 2.5rem; gap: 0.5rem; align-items: center; font-size: 0.85rem; }
+.survey-bar i { display: block; height: 12px; border-radius: 4px; background: var(--accent); }
+.survey-choice { display: grid; grid-template-columns: minmax(0, 1fr) 6rem 2.5rem; gap: 0.5rem; align-items: center; font-size: 0.85rem; }
+.survey-choice i { display: block; height: 12px; border-radius: 4px; background: var(--accent); }

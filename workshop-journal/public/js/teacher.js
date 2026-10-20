@@ -284,7 +284,9 @@ function openWorkshop(code) {
   $('ws-head').replaceChildren(h('tr', {},
     h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
     h('th', {}, 'Teaching group'), h('th', {}, 'Class'), h('th', {}, 'Team'), h('th', {}, 'Name'), h('th', {}, 'PIN'), h('th', {}, 'Progress'),
-    ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Last active')));
+    ...STAGES.map((s) => h('th', {}, s.title)), h('th', {}, 'Links'), h('th', {}, 'Last active')));
+  $('ws-extra').hidden = true;
+  $('ws-extra').dataset.show = '';
   state.selected = new Set();
   renderFilters();
   view('t-ws');
@@ -453,6 +455,8 @@ function renderRows() {
   for (const sid of [...(state.selected ?? [])]) if (!shownIds.has(sid)) state.selected.delete(sid);
   renderBulk();
   renderRequests();
+  // Keep the open Links list up to date as teams add links or the filters change.
+  if ($('ws-extra').dataset.show === 'links' && !$('ws-extra').hidden) renderLinks($('ws-extra'));
   const total = STAGES.reduce((n, s) => n + s.prompts.length, 0);
   const list = visibleStudents();
   const teams = new Set(list.map((s) => teamKeyOf(s))).size;
@@ -462,7 +466,7 @@ function renderRows() {
     const why = state.students.length
       ? 'No students in this teaching group or class yet.'
       : `No one has joined yet. Students go to this site and enter ${state.ws.code}.`;
-    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 8), class: 'muted' }, why)));
+    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: String(STAGES.length + 9), class: 'muted' }, why)));
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
@@ -484,6 +488,7 @@ function renderRows() {
         const cls = n >= s.prompts.length ? 'done' : n ? 'part' : '';
         return h('td', {}, h('div', { class: 'bar', title: `${s.title}: ${n}/${s.prompts.length}` }, h('i', { class: cls })));
       }),
+      h('td', { class: 'small', onclick: (e) => e.stopPropagation() }, linkCells(state.teams?.get(teamKeyOf(st)))),
       h('td', { class: 'small muted' }, ago(st.lastActive)));
   }));
 }
@@ -630,6 +635,7 @@ async function openStudent(st) {
         h('p', { class: 'small muted' }, mates.length ? `Shares a team journal with ${mates.join(', ')}.` : 'No teammates have joined yet.')),
       h('button', { class: 'btn ghost', type: 'button', onclick: closeDrawer }, 'Close')),
     accountSection(st),
+    teamLinksSection(st),
     h('section', {}, h('h3', {}, `Learning log (${log.length})`),
       ...(log.length ? log.map((e) => h('div', { class: 'qa' },
         h('b', {}, `${e.type === 'gathered' ? 'Gathered' : 'Learnt'} · ${e.tag ?? 'Other'}`), h('p', {}, e.text))) : [h('p', { class: 'muted' }, 'No entries yet.')])),
@@ -643,8 +649,9 @@ async function openStudent(st) {
         ...s.prompts.map((raw) => {
           const p = promptFor(raw, trk);
           const a = String(answer(s.id, p)).trim();
+          const shown = a && p.type === 'scale' ? `${a} / 5  (1 = ${p.low}, 5 = ${p.high})` : a;
           return h('div', { class: 'qa' }, h('b', {}, p.q, isPersonal(p) ? ' (own answer)' : ''),
-            a && p.type === 'code' ? h('pre', {}, a) : h('p', { class: a ? '' : 'empty' }, a || 'Not answered'));
+            a && p.type === 'code' ? h('pre', {}, a) : h('p', { class: a ? '' : 'empty' }, shown || 'Not answered'));
         }),
         ...(s.images ?? []).map((slot) => {
           const pics = images.filter((im) => (im.stage ?? 'prototype') === slot.key);
@@ -773,7 +780,7 @@ $('ws-export').addEventListener('click', async () => {
     // Current questions, then any replaced ones (earlier answers), then picture counts per box.
     const cols = STAGES.flatMap((st) => [...st.prompts, ...(st.retired ?? []).map((p) => ({ ...p, q: `${p.q} (earlier question)` }))].map((p) => ({ stage: st, p })));
     const slots = STAGES.flatMap((st) => st.images ?? []);
-    const header = ['Level', 'Teaching group', 'Class', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', ...slots.map((sl) => `${sl.title} (pictures)`), 'Peer feedback'];
+    const header = ['Level', 'Teaching group', 'Class', 'Team', 'Name', 'Track', ...cols.map((c) => `${c.stage.title}: ${c.p.q}`), 'Learnt', 'Gathered', ...slots.map((sl) => `${sl.title} (pictures)`), 'Peer feedback', 'Slides link', 'Web app link'];
     const rows = [header];
     const teamCache = new Map();
     for (const st of visibleStudents()) {
@@ -782,7 +789,8 @@ $('ws-export').addEventListener('click', async () => {
       const fb = notes.map((n) => [`${n.from}${n.fromTg ? ` [${n.fromTg}]` : ''}${n.use ? ` (${n.use})` : ''}:`, n.like && `I like ${n.like}`, n.wish && `I wish ${n.wish}`, n.whatif && `What if ${n.whatif}`].filter(Boolean).join(' ')).join('\n');
       rows.push([st.level ? `Sec ${st.level}` : '', st.class ?? '', classOf(st), st.team, st.name, TRACK_LABEL[studentTrack(st)],
         ...cols.map((c) => answer(c.stage.id, c.p)), join('learnt'), join('gathered'),
-        ...slots.map((sl) => images.filter((im) => (im.stage ?? 'prototype') === sl.key).length), fb]);
+        ...slots.map((sl) => images.filter((im) => (im.stage ?? 'prototype') === sl.key).length), fb,
+        state.teams?.get(teamKeyOf(st))?.slides ?? '', state.teams?.get(teamKeyOf(st))?.webapp ?? '']);
     }
     // BOM so Excel opens the file as UTF-8 (°C, names with accents).
     const csv = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
@@ -1073,4 +1081,104 @@ function flash(text) {
   renderRows();
   clearTimeout(flash.timer);
   flash.timer = setTimeout(() => { state.flash = ''; if (!$('t-ws').hidden) renderRows(); }, 6000);
+}
+
+// ---------- team links (slides, web app) ----------
+
+const isLink = (v) => typeof v === 'string' && /^https?:\/\//.test(v);
+
+function linkCells(team) {
+  const out = [];
+  if (isLink(team?.slides)) out.push(h('a', { href: team.slides, target: '_blank', rel: 'noopener' }, 'Slides'));
+  if (isLink(team?.webapp)) out.push(h('a', { href: team.webapp, target: '_blank', rel: 'noopener' }, 'App'));
+  return out.length ? h('span', { class: 'inline-row' }, ...out) : '–';
+}
+
+function teamLinksSection(st) {
+  const t = state.teams?.get(teamKeyOf(st));
+  const line = (label, v) => h('div', { class: 'qa' }, h('b', {}, label),
+    isLink(v) ? h('a', { href: v, target: '_blank', rel: 'noopener' }, v) : h('p', { class: 'empty' }, 'Not shared yet'));
+  return h('section', {}, h('h3', {}, 'Team links'), line('Slides', t?.slides),
+    studentTrack(st) === 'ai' ? line('Web app', t?.webapp) : null);
+}
+
+// Teams shown with the current filters, with their members and links.
+function teamsShown() {
+  const byKey = new Map();
+  for (const st of visibleStudents()) {
+    const k = teamKeyOf(st);
+    if (!byKey.has(k)) byKey.set(k, { key: k, tg: st.class, team: st.team, members: [], team_: state.teams?.get(k) ?? {} });
+    byKey.get(k).members.push(st.name);
+  }
+  return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+}
+
+function showExtra(kind, render) {
+  const box = $('ws-extra');
+  if (!box.hidden && box.dataset.show === kind) { box.hidden = true; box.dataset.show = ''; return; }
+  box.dataset.show = kind;
+  box.hidden = false;
+  render(box);
+}
+
+$('ws-links').addEventListener('click', () => showExtra('links', renderLinks));
+
+function renderLinks(box) {
+  const teams = teamsShown();
+  const withAny = teams.filter((t) => isLink(t.team_.slides) || isLink(t.team_.webapp));
+  const tsv = ['Team\tMembers\tSlides\tWeb app', ...teams.map((t) => [`${t.tg} Team ${t.team}`, t.members.join(', '), t.team_.slides ?? '', t.team_.webapp ?? ''].join('\t'))].join('\n');
+  const copyBtn = h('button', {
+    class: 'btn small-btn', type: 'button',
+    onclick: async () => {
+      try { await navigator.clipboard.writeText(tsv); copyBtn.textContent = 'Copied! Paste into Excel or Sheets'; } catch { copyBtn.textContent = 'Copy failed: use Download CSV'; }
+      setTimeout(() => { copyBtn.textContent = 'Copy all links'; }, 3000);
+    },
+  }, 'Copy all links');
+  const cell = (v) => h('td', {}, isLink(v) ? h('a', { href: v, target: '_blank', rel: 'noopener' }, v) : '–');
+  box.replaceChildren(h('div', { class: 'links-panel' },
+    h('div', { class: 'inline-row' }, h('b', {}, `Team links: ${withAny.length} of ${teams.length} teams have shared`), copyBtn,
+      h('span', { class: 'small muted' }, 'Follows the filters above.')),
+    h('div', { class: 'tablewrap' }, h('table', {},
+      h('thead', {}, h('tr', {}, h('th', {}, 'Team'), h('th', {}, 'Members'), h('th', {}, 'Slides'), h('th', {}, 'Web app'))),
+      h('tbody', {}, ...teams.map((t) => h('tr', { style: 'cursor:default' },
+        h('td', {}, `${t.tg} · Team ${t.team}`), h('td', { class: 'small' }, t.members.join(', ')), cell(t.team_.slides), cell(t.team_.webapp))))))));
+}
+
+// ---------- survey results ----------
+
+$('ws-survey').addEventListener('click', () => showExtra('survey', renderSurvey));
+
+async function renderSurvey(box) {
+  const stage = STAGES.find((s) => s.id === 'survey');
+  if (!stage) { box.replaceChildren(h('p', { class: 'muted' }, 'No survey in this journal.')); return; }
+  const students = visibleStudents();
+  box.replaceChildren(h('div', { class: 'links-panel' }, h('p', { class: 'muted' }, `Loading survey answers from ${students.length} students…`)));
+  const answers = await Promise.all(students.map((st) => getDoc(doc(db, `workshops/${state.ws.code}/students/${st.sid}/entries/survey`))
+    .then((d) => d.data()?.answers ?? {}).catch(() => ({}))));
+  if (box.dataset.show !== 'survey') return;
+  const responded = answers.filter((a) => Object.values(a).some((v) => String(v).trim())).length;
+  const qs = stage.prompts.map((p) => {
+    const vals = answers.map((a) => String(a[p.id] ?? '').trim()).filter(Boolean);
+    if (p.type === 'scale') {
+      const nums = vals.map(Number).filter((n) => n >= 1 && n <= 5);
+      const avg = nums.length ? (nums.reduce((x, y) => x + y, 0) / nums.length).toFixed(1) : '–';
+      const max = Math.max(1, ...[1, 2, 3, 4, 5].map((n) => nums.filter((x) => x === n).length));
+      return h('div', { class: 'survey-q' }, h('b', {}, p.q),
+        h('span', { class: 'small muted' }, `Average ${avg} / 5 from ${nums.length} ${nums.length === 1 ? 'answer' : 'answers'} · 1 = ${p.low}, 5 = ${p.high}`),
+        ...[5, 4, 3, 2, 1].map((n) => {
+          const c = nums.filter((x) => x === n).length;
+          return h('div', { class: 'survey-bar' }, h('span', {}, String(n)), h('i', { style: `width:${(c / max) * 100}%` }), h('span', { class: 'num' }, String(c)));
+        }));
+    }
+    const max = Math.max(1, ...p.options.map((o) => vals.filter((v) => v === o).length));
+    return h('div', { class: 'survey-q' }, h('b', {}, p.q), h('span', { class: 'small muted' }, `${vals.length} ${vals.length === 1 ? 'answer' : 'answers'}`),
+      ...p.options.map((o) => {
+        const c = vals.filter((v) => v === o).length;
+        return h('div', { class: 'survey-choice' }, h('span', {}, o), h('i', { style: `width:${(c / max) * 100}%` }), h('span', { class: 'num' }, String(c)));
+      }));
+  });
+  box.replaceChildren(h('div', { class: 'links-panel' },
+    h('div', { class: 'inline-row' }, h('b', {}, `Survey: ${responded} of ${students.length} students answered`),
+      h('span', { class: 'small muted' }, 'Follows the filters above. Each student’s answers are in their journal and the CSV.')),
+    ...qs));
 }

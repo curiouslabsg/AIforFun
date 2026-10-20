@@ -8,6 +8,8 @@
 // `retired` lists questions no longer asked: earlier answers still show (read-only),
 // on the dashboard and in the CSV, so nothing students wrote disappears.
 // `type: 'code'` is a wide monospace box for pasted code.
+// `type: 'scale'` is a 1–5 rating (with `low` / `high` labels); `type: 'choice'` picks one of `options`.
+// `links: true` adds the team's "Share your links" box (slides, and web app for AI for Fun).
 
 export const STAGES = [
   {
@@ -99,6 +101,7 @@ export const STAGES = [
     title: 'Prototype',
     blurb: 'Paste your code, then look back on how building it went.',
     sheet: 'W6',
+    links: true,
     prompts: [
       {
         id: 'code', type: 'code', q: 'Paste your code', hint: 'MakeCode: switch to JavaScript, select all and copy, or paste your Share link',
@@ -155,6 +158,41 @@ export const STAGES = [
       },
       { id: 'design2', personal: true, q: '2 things I learnt about designing for real people' },
       { id: 'question1', personal: true, q: '1 question I still have' },
+    ],
+  },
+  {
+    id: 'survey',
+    color: '#0891b2',
+    icon: 'survey',
+    day: 'Day 2',
+    title: 'Survey',
+    blurb: 'Four quick questions about this project. Tap your answers; there are no right or wrong ones.',
+    prompts: [
+      {
+        id: 'confident', type: 'scale', personal: true,
+        q: 'How confident do you feel applying Design Thinking to solve real-world problems after this project?',
+        low: 'Not confident', high: 'Very confident',
+      },
+      {
+        id: 'app', type: 'scale', personal: true,
+        q: 'How useful was the ALP Web App in helping you document your project progress and give peer feedback?',
+        low: 'Hard to use / Not useful', high: 'Super helpful & easy to use',
+      },
+      {
+        id: 'gallery', type: 'scale', personal: true,
+        q: 'How much did the Gallery Walk Showcase enhance your overall learning experience in this project?',
+        low: 'Did not add to my learning', high: 'Greatly enhanced my learning experience!',
+      },
+      {
+        id: 'experience', type: 'choice', personal: true,
+        q: 'Which statement best describes your experience with Code for Fun / AI for Fun this year?',
+        options: [
+          'I understood what was taught and felt excited and engaged throughout the project.',
+          'I understood what was taught, but the overall activities didn’t capture my interest.',
+          'I found the project segment interesting, but I struggled with the coding/electronics.',
+          'I didn’t find Code for Fun / AI for Fun interesting or engaging at all.',
+        ],
+      },
     ],
   },
 ];

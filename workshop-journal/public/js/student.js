@@ -1,13 +1,14 @@
 import { signInAnonymously, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc, writeBatch, collection, onSnapshot, serverTimestamp,
+  query, where, documentId,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, rosterSid, pinHash } from './firebase.js';
 import { STAGES, LEARNING_TAGS, TRACK_LABEL, LOG_STYLE, promptFor, isPersonal } from './prompts.js';
 import { PROBLEMS, OWN_IDEA, CATEGORY, problemLabel, findProblem } from './problems.js';
 import { icon } from './icons.js';
 import { celebrate } from './confetti.js';
-import { trackForLevel } from './school.js';
+import { trackForLevel, galleryGroups } from './school.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'journal.session';
@@ -695,6 +696,7 @@ function renderStage(stage) {
     const p = promptFor(raw, track());
     const id = `q-${stage.id}-${p.id}`;
     if (p.type === 'problem') return problemPicker(stage, p, id);
+    if (p.type === 'scale' || p.type === 'choice') return pickField(stage, p, id);
     const code = p.type === 'code';
     return h('label', { class: 'field', for: id },
       h('span', { class: 'q-line' }, p.q, h('em', { class: `scope ${isPersonal(p) ? 'me' : 'team'}` }, isPersonal(p) ? 'Just me' : 'Team')),
@@ -713,12 +715,14 @@ function renderStage(stage) {
     ...earlier.map(([p, a]) => h('div', { class: 'earlier-qa' }, h('b', {}, p.q), h('p', {}, a)))) : null;
   const pictures = (stage.images ?? []).map((slot) => imagesSection(slot));
   const notes = stage.id === 'test' ? notesSection() : null;
+  const links = stage.links ? linksSection() : null;
   const go = (j) => { state.current = STAGES[j].id; renderNav(); renderPanel(); };
   $('panel').style.setProperty('--stage', stage.color);
   // replaceChildren() would print null as text, so drop the empty slots.
   $('panel').replaceChildren(...[
-    stageHeader(stage.icon, `${stage.day} · Worksheet ${stage.sheet} · Stage ${i + 1} of ${STAGES.length}`, stage.title, stage.blurb),
+    stageHeader(stage.icon, [stage.day, stage.sheet && `Worksheet ${stage.sheet}`, `Stage ${i + 1} of ${STAGES.length}`].filter(Boolean).join(' · '), stage.title, stage.blurb),
     stage.notesFirst ? notes : null,
+    links,
     ...fields,
     ...pictures,
     stage.notesFirst ? null : notes,
@@ -730,6 +734,69 @@ function renderStage(stage) {
   if (pictures.length) renderImages();
   if (notes) renderNotes();
   applyLockState();
+}
+
+// Survey answers: a 1–5 scale or one statement from a list. Saved straight away.
+function pickField(stage, p, id) {
+  const value = String(answerOf(stage.id, p) ?? '');
+  const pick = (v) => {
+    queueFieldSave(stage.id, p, v);
+    flushField(fieldKey(stage.id, p.id));
+    for (const el of box.querySelectorAll('[data-v]')) el.setAttribute('aria-pressed', String(el.dataset.v === v));
+  };
+  let box;
+  if (p.type === 'scale') {
+    box = h('div', { class: 'scale', role: 'group', 'aria-label': p.q, id },
+      h('div', { class: 'scale-row' }, ...['1', '2', '3', '4', '5'].map((v) => h('button', {
+        type: 'button', class: 'scale-btn', 'data-v': v, 'aria-pressed': String(value === v), disabled: !isOpen(), onclick: () => pick(v),
+      }, v))),
+      h('div', { class: 'scale-ends' }, h('span', {}, `1 · ${p.low}`), h('span', {}, `5 · ${p.high}`)));
+  } else {
+    box = h('div', { class: 'choices', role: 'group', 'aria-label': p.q, id },
+      ...p.options.map((o) => h('button', {
+        type: 'button', class: 'choice-btn', 'data-v': o, 'aria-pressed': String(value === o), disabled: !isOpen(), onclick: () => pick(o),
+      }, o)));
+  }
+  return h('div', { class: 'field' }, h('span', { class: 'q-line' }, p.q, h('em', { class: 'scope me' }, 'Just me')), box);
+}
+
+// The team's shared links: presentation slides, and (AI for Fun) the web app.
+function linksSection() {
+  const ref = doc(db, teamPath());
+  const row = (field, label, placeholder, help) => {
+    const input = h('input', { type: 'url', inputmode: 'url', placeholder, disabled: !isOpen(), 'aria-label': label, autocomplete: 'off' });
+    const status = h('small', {}, help);
+    const save = async () => {
+      const v = input.value.trim();
+      if (v && !/^https?:\/\/\S+$/.test(v)) { status.textContent = 'Paste the whole link, starting with https://'; status.className = 'bad'; return; }
+      if (v.length > 500) { status.textContent = 'That link is too long.'; status.className = 'bad'; return; }
+      status.className = '';
+      status.textContent = 'Saving…';
+      try {
+        await saving(setDoc(ref, { [field]: v, updatedAt: serverTimestamp() }, { merge: true }));
+        status.textContent = v ? 'Saved. Your teacher and teammates can see it.' : 'Removed.';
+      } catch { status.textContent = 'Not saved. Try again.'; status.className = 'bad'; }
+    };
+    input.addEventListener('change', save);
+    const open = h('a', { class: 'btn ghost small-btn', target: '_blank', rel: 'noopener', hidden: true }, 'Open');
+    input.addEventListener('input', () => { open.hidden = !/^https?:\/\//.test(input.value.trim()); open.href = input.value.trim(); });
+    return { el: h('label', { class: 'field link-field' }, h('span', {}, label), h('div', { class: 'link-row' }, input, open), status), input, open };
+  };
+  const slides = row('slides', 'Our presentation slides', 'https://docs.google.com/presentation/…', 'Google Slides / Canva / PowerPoint: Share → anyone with the link can view → copy link.');
+  const app = track() === 'ai'
+    ? row('webapp', 'Our web app', 'https://…', 'The link to your working AI web app, so others can try it.')
+    : null;
+  getDoc(ref).then((t) => {
+    for (const [r, f] of [[slides, 'slides'], [app, 'webapp']]) {
+      if (!r || r.input.value) continue;
+      r.input.value = t.data()?.[f] ?? '';
+      r.input.dispatchEvent(new Event('input'));
+    }
+  }).catch(() => {});
+  return h('section', { class: 'extra links-box' },
+    h('div', { class: 'extra-head' }, h('h3', {}, icon('link', 20), ' Share your links'),
+      h('p', { class: 'muted small' }, 'One link per team. Make sure it’s set so anyone with the link can view.')),
+    slides.el, app?.el);
 }
 
 function stageHeader(iconName, label, title, blurb) {
@@ -1282,10 +1349,16 @@ async function renderGallery() {
     stageHeader(GALLERY_STYLE.icon, 'Anytime · Gallery walk', 'Gallery walk', 'Visit other teams, try their prototype, then leave a note from your own laptop. Lots of people can post at once. One note per team.'),
     h('div', { class: 'extra-actions' }, filter, h('button', { class: 'btn ghost', type: 'button', onclick: () => renderGallery() }, 'Refresh')),
     grid);
+  // Students see their own teaching group and its partner (see GALLERY_PAIRS in school.js).
+  // Reading only those teams also keeps database use down.
+  const groups = galleryGroups(state.student.class);
   let teams;
   try {
-    const snap = await getDocs(collection(db, `workshops/${state.code}/teams`));
-    teams = snap.docs.map((d) => ({ key: d.id, ...d.data() })).filter((t) => t.key !== state.teamKey);
+    const col = collection(db, `workshops/${state.code}/teams`);
+    const snaps = groups
+      ? await Promise.all(groups.map((tg) => getDocs(query(col, where(documentId(), '>=', `${tg}-t`), where(documentId(), '<', `${tg}-u`)))))
+      : [await getDocs(col)];
+    teams = snaps.flatMap((snap) => snap.docs.map((d) => ({ key: d.id, ...d.data() }))).filter((t) => t.key !== state.teamKey);
   } catch (err) {
     console.error(err);
     grid.replaceChildren(h('p', { class: 'msg err' }, 'Could not load the teams. Check the Wi-Fi and tap Refresh.'));
@@ -1301,12 +1374,17 @@ async function renderGallery() {
     const card = h('article', { class: `gal-card${reviewed ? ' done' : ''}`, 'data-search': `${label} ${title}`.toLowerCase() },
       h('span', { class: 'label' }, label),
       h('h3', {}, title || 'Project not chosen yet'),
+      t.slides || t.webapp ? h('div', { class: 'gal-links' },
+        t.slides ? h('a', { href: t.slides, target: '_blank', rel: 'noopener' }, 'Slides ↗') : null,
+        t.webapp ? h('a', { href: t.webapp, target: '_blank', rel: 'noopener' }, 'Try the app ↗') : null) : null,
       reviewed
         ? h('p', { class: 'gal-done' }, icon('check', 16), ' You left feedback')
         : h('button', { class: 'btn', type: 'button', disabled: !isOpen(), onclick: () => openVisitorMode({ key: t.key, label, title }) }, 'Give feedback'));
     return card;
   });
-  grid.replaceChildren(...(cards.length ? cards : [h('p', { class: 'muted small' }, 'No other teams yet. Check back once teams have started their journals.')]));
+  grid.replaceChildren(
+    ...(groups ? [h('p', { class: 'small muted', style: 'grid-column:1/-1' }, `Showing teams from ${groups.join(' and ')}.`)] : []),
+    ...(cards.length ? cards : [h('p', { class: 'muted small' }, 'No other teams yet. Check back once teams have started their journals.')]));
   filter.addEventListener('input', () => {
     const q = filter.value.trim().toLowerCase();
     for (const c of grid.querySelectorAll('.gal-card')) c.hidden = q && !c.dataset.search.includes(q);

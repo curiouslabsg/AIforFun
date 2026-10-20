@@ -17,6 +17,7 @@ A web journal for the **Code for Fun (Sec 1)** and **AI for Fun (Sec 2)** design
 | Prototype: **paste your code**; self-reflection (what went well, most challenging and how the team solved it, what could be improved); sketches and photos | Day 2 | W6 |
 | Peer Feedback Reflection (after the gallery walk): the feedback wall first, then one piece of feedback I like, the most useful feedback, one project that impressed me | Day 2 | W8 |
 | Self-Reflection: what we'd change, 3-2-1 | Day 2 | W9 |
+| Survey: 3 ratings (1–5) and 1 statement about the project, the app and the gallery walk | Day 2 | — |
 
 When a question is replaced, earlier answers aren't lost: the journal shows them read-only under "Earlier answers", and the dashboard and CSV mark them "(earlier question)". List replaced questions under `retired` in `public/js/prompts.js`.
 
@@ -45,6 +46,12 @@ GitHub signs in to Google without a stored key (Workload Identity Federation): t
 **Team journals.** Students with the same workshop code, class and team number share one journal and see each other's answers live. Questions tagged *Team* are shared; *Just me* questions (what I built, the coding idea I used, the team that impressed me, and the Reflect 3-2-1) and the learning log stay personal. Sketches and the feedback wall are shared too. When someone clicks into a shared answer, it locks for teammates, who see "Name is typing…"; it unlocks when they click away, or after 45 seconds if their laptop closes.
 
 **Changing team.** Students can't change team on their own. They press *Change team*, type the new team number and an optional reason, and wait. Teachers see the request at the top of the workshop page (who, from which team to which, who's already in the new team) and press **Approve** or **Decline**, or *Approve all*. On approval the student's journal switches to the new team straight away; their personal answers and learning log come with them, and the old team keeps its shared pages. Teachers can also move a student directly from the student panel (*Move to: group, Team*).
+
+**Team links.** On the Prototype page each team shares its presentation slides link (and, for AI for Fun, its web app link). Teachers see them in the **Links** column, in each student's panel, and under **Links** at the top of a workshop (filter by teaching group, then **Copy all links** to paste into Excel or Sheets). They're in the CSV too, and on the team's Gallery walk card.
+
+**Survey results.** **Survey results** at the top of a workshop shows averages and counts for the shown students; each student's answers are in their journal and the CSV.
+
+**Gallery walk pairings.** Students only see teams from their own teaching group and its partner, set in `GALLERY_PAIRS` in `public/js/school.js` (e.g. SC1A1 with SC1A2). Groups not listed see every team.
 
 **Gallery walk.** Every journal has a *Gallery walk* tab listing the other teams and their projects. Visitors leave I like / I wish / What if notes from their own laptops, so a whole class can give feedback at once; each visitor can leave one note per team, signed with their name and teaching group. Visitor mode on the owner's laptop still works for anyone without a device.
 

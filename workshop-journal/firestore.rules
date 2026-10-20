@@ -265,13 +265,22 @@ service cloud.firestore {
           return resource.data.at < request.time - duration.value(45, 's');
         }
 
-        // Team docs hold only progress and the project title, so any student can browse
-        // them for the gallery walk. Answers stay in the members-only subcollections.
+        // Team docs hold only progress, the project title and the team's shared links (slides,
+        // web app), so any student can browse them for the gallery walk. Answers stay in the
+        // members-only subcollections.
+        function linkOk(field) {
+          return !(field in request.resource.data)
+            || (request.resource.data[field] is string
+                && request.resource.data[field].size() <= 500
+                && (request.resource.data[field] == '' || request.resource.data[field].matches('^https?://[^ ]+$')));
+        }
         allow get, list: if signedIn();
         allow create, update: if isMember()
           && workshopOpen(code)
-          && request.resource.data.keys().hasOnly(['progress', 'title', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['progress', 'title', 'slides', 'webapp', 'updatedAt'])
           && (!('title' in request.resource.data) || request.resource.data.title.size() <= 120)
+          && linkOk('slides')
+          && linkOk('webapp')
           && request.resource.data.progress is map
           && request.resource.data.progress.size() <= 20;
         allow delete: if isTeacher();

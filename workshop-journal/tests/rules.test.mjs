@@ -502,3 +502,18 @@ test('guest logins work like teachers until they expire', async () => {
   const unverified = env.authenticatedContext('u', { email: 'teacher@school.test', email_verified: false }).firestore();
   await assertFails(getDocs(collection(unverified, `workshops/${CODE}/students`)));
 });
+
+test('team members share their slide and web app links; others cannot change them', async () => {
+  const a = await joinStudent('a', 't1-aisha', 'Aisha', '1A', 1);
+  await member(a, '1A-t1', 'a', 't1-aisha', 'Aisha');
+  const t = doc(a, tpath('1A-t1'));
+  await assertSucceeds(setDoc(t, { progress: {}, slides: 'https://docs.google.com/presentation/d/abc/edit', webapp: 'https://example.web.app', updatedAt: 1 }, { merge: true }));
+  await assertSucceeds(setDoc(t, { slides: '' }, { merge: true }));
+  await assertFails(setDoc(t, { slides: 'javascript:alert(1)' }, { merge: true }));
+  await assertFails(setDoc(t, { webapp: 'not a link' }, { merge: true }));
+  await assertFails(setDoc(t, { slides: `https://x.com/${'a'.repeat(500)}` }, { merge: true }));
+  await assertFails(setDoc(t, { other: 'x' }, { merge: true }));
+  const c = await joinStudent('c', 't1-cara', 'Cara', '1B', 1);
+  await assertSucceeds(getDoc(doc(c, tpath('1A-t1'))));
+  await assertFails(setDoc(doc(c, tpath('1A-t1')), { slides: 'https://evil.example' }, { merge: true }));
+});
