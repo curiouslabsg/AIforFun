@@ -12,6 +12,9 @@ import { findCompany, isOkLogoUrl } from './lookup.js';
 import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
+const START_PIN = '1234'; // every student's PIN until they choose their own
+// Name lists are often in capitals: "TAN JIAMIN" → "Tan Jiamin" for greetings.
+const nice = (v) => String(v ?? '').toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
 const SESSION_KEY = 'wex-journal-session';
 
 const state = {
@@ -212,10 +215,10 @@ async function onNamePicked() {
     return;
   }
   $('j-pin-field').hidden = false;
-  $('j-pin-label').textContent = existing ? 'Your PIN' : 'Make up a 4-digit PIN';
+  $('j-pin-label').textContent = 'Your PIN';
   $('j-pin-hint').textContent = existing
-    ? 'Welcome back! Type the PIN you made. Forgot it? Your teacher can see it.'
-    : 'Write it down somewhere safe: you’ll need it next year to open this journal for your EAE interview.';
+    ? 'Type your PIN. Still on the first PIN? It’s 1234. Forgot it? Your teacher can see it.'
+    : 'First time? Your PIN is 1234. You can choose your own once you’re in.';
   $('j-btn').disabled = false;
   $('j-pin').focus();
 }
@@ -233,6 +236,7 @@ async function onJoin(e) {
   if (!/^\d{4}$/.test(pin)) return joinMessage('Your PIN must be exactly 4 digits.');
 
   const sid = rosterSid(tg, name);
+  if (joinState.existing === false && pin !== START_PIN) return joinMessage('First time? Your PIN is 1234.');
   $('j-btn').disabled = true;
   try {
     const hash = await pinHash(sid, pin);
@@ -244,7 +248,7 @@ async function onJoin(e) {
       // This phone already owns the journal.
     } else if (snap) {
       const batch = writeBatch(db);
-      batch.set(studentRef, { name, level: group.level, class: tg, pin, pinHash: hash, createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp() });
+      batch.set(studentRef, { name, level: group.level, class: tg, pin, pinHash: hash, mustChangePin: true, createdAt: serverTimestamp(), progress: {}, lastActive: serverTimestamp() });
       batch.set(claimRef, { pinHash: hash, at: serverTimestamp() });
       await batch.commit();
     } else {
@@ -270,14 +274,16 @@ async function onJoin(e) {
 async function openJournal(code, sid) {
   const [c, st] = await Promise.all([getDoc(doc(db, `cohorts/${code}`)), getDoc(doc(db, `cohorts/${code}/students/${sid}`))]);
   if (!c.exists() || !st.exists()) throw new Error('journal missing');
+  // The company's own number of days and industry, if set on its name list.
+  const company = await getDoc(doc(db, `roster/${st.data().class}`)).then((d) => d.data() ?? {}, () => ({}));
   unsubscribeAll();
   Object.assign(state, {
-    code, sid, cohort: c.data(), student: st.data(), sections: sectionsFor(c.data().days ?? 5),
-    answers: {}, view: 'home', opened: new Set(),
+    code, sid, cohort: c.data(), student: st.data(), company, sections: sectionsFor(company.days ?? c.data().days ?? 5),
+    answers: {}, view: st.data().mustChangePin && c.data().open ? 'pin' : 'home', opened: new Set(),
   });
   created.clear();
   lastProgress = '';
-  $('me-name').textContent = `Hi, ${state.student.name.split(' ')[0]}!`;
+  $('me-name').textContent = `Hi, ${nice(state.student.name.split(' ')[0])}!`;
   $('closed').hidden = isOpen();
   setSave('');
   const base = `cohorts/${code}/students/${sid}`;
@@ -296,6 +302,10 @@ async function openJournal(code, sid) {
         if (isOpen() && !state.answers.placement?.company && state.student.class) {
           queueSave('placement', 'company', state.student.class);
           flushField('placement__company');
+        }
+        if (isOpen() && !state.answers.placement?.industry && state.company.industry) {
+          queueSave('placement', 'industry', state.company.industry);
+          flushField('placement__industry');
         }
         render();
       } else refreshHome();
@@ -361,6 +371,7 @@ function render() {
   renderMeta();
   if (state.view === 'home') return renderHome();
   if (state.view === 'portfolio') return renderPortfolioView();
+  if (state.view === 'pin') return renderPinView();
   return renderSection(sectionById(state.view));
 }
 
@@ -392,7 +403,7 @@ function renderHome() {
   const { done, pct } = overall();
   // "Day 2 of 5": the first day that isn't finished yet.
   const today = Math.max(1, days.findIndex((s) => !statusOf(s).done) + 1 || days.length);
-  const first = (state.student.name ?? '').split(' ')[0];
+  const first = nice((state.student.name ?? '').split(' ')[0]);
 
   const head = (label, note) => h('div', { class: 'h-head' }, h('span', { class: 'group-label' }, label), note ? h('span', { class: 'h-note' }, note) : null);
 
@@ -410,7 +421,9 @@ function renderHome() {
         h('div', { class: 'h-journey' },
           h('p', {}, h('b', {}, `Day ${today}`), ` of ${days.length} · `, h('span', {}, `${pct}% complete`)),
           h('span', { class: 'mini-bar' }, h('i', { style: `width:${pct}%` }))),
-        h('button', { type: 'button', class: 'h-switch', onclick: () => $('switch').click() }, 'Not you? Switch student')),
+        h('div', { class: 'h-links' },
+          isOpen() ? h('button', { type: 'button', class: 'h-switch', onclick: () => go('pin') }, state.student.mustChangePin ? 'Choose my own PIN' : 'Change my PIN') : null,
+          h('button', { type: 'button', class: 'h-switch', onclick: () => $('switch').click() }, 'Not you? Switch student'))),
       art('hero', 'h-hero-art')),
 
     h('button', { type: 'button', class: `h-card h-place${pl.done ? ' done' : ''}`, onclick: () => go('placement') },
@@ -645,6 +658,50 @@ function logoSection() {
           online ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: clearFound }, 'Clear') : null) : null)),
     status ? h('p', { class: 'small muted lookup-status' }, status) : null,
     results);
+}
+
+// ---------- choosing a PIN ----------
+
+function renderPinView() {
+  $('panel').style.removeProperty('--stage');
+  const first = state.student.mustChangePin;
+  const a = h('input', { id: 'pin-a', type: 'password', inputmode: 'numeric', maxlength: '4', autocomplete: 'off' });
+  const b = h('input', { id: 'pin-b', type: 'password', inputmode: 'numeric', maxlength: '4', autocomplete: 'off' });
+  const msg = h('p', { class: 'msg', hidden: true });
+  const say = (text, kind = 'err') => { msg.textContent = text; msg.className = `msg ${kind}`; msg.hidden = !text; };
+  const save = h('button', { type: 'submit', class: 'btn big' }, 'Save my PIN');
+  const form = h('form', {
+    class: 'pin-card', novalidate: true,
+    onsubmit: async (e) => {
+      e.preventDefault();
+      const pin = a.value.trim();
+      if (!/^\d{4}$/.test(pin)) return say('Your PIN must be exactly 4 digits.');
+      if (pin === START_PIN) return say('Choose a PIN that isn’t 1234.');
+      if (pin !== b.value.trim()) return say('The two PINs don’t match. Try again.');
+      save.disabled = true;
+      try {
+        await updateDoc(doc(db, `cohorts/${state.code}/students/${state.sid}`), { pin, pinHash: await pinHash(state.sid, pin), mustChangePin: false });
+        state.student.mustChangePin = false;
+        celebrate('#1d4ed8', 'New PIN saved!');
+        go('home');
+      } catch (err) {
+        console.error(err);
+        say(err.code === 'permission-denied' ? 'Your journal is closed, so the PIN can’t be changed now.' : 'That didn’t save. Check your connection and try again.');
+        save.disabled = false;
+      }
+    },
+  },
+  art('clipboard', 'pin-art'),
+  h('h2', {}, first ? 'Welcome! Choose your own PIN' : 'Change my PIN'),
+  h('p', { class: 'muted' }, first
+    ? 'Everyone starts with 1234. Pick your own 4 digits so only you can open your journal. Write it down: you’ll need it next year for your EAE interview.'
+    : 'Pick a new 4-digit PIN. You’ll use it the next time you sign in on a phone.'),
+  h('label', { class: 'field' }, h('span', {}, 'New PIN'), a),
+  h('label', { class: 'field' }, h('span', {}, 'Type it again'), b),
+  msg, save,
+  h('button', { type: 'button', class: 'btn quiet', onclick: () => go('home') }, first ? 'Not now, keep 1234' : 'Cancel'));
+  $('panel').replaceChildren(form);
+  requestAnimationFrame(() => a.focus());
 }
 
 // ---------- portfolio ----------

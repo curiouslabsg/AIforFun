@@ -23,7 +23,14 @@ const state = {
 };
 
 const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
-const sections = () => sectionsFor(state.ws?.days ?? 5);
+// Each company can run for its own number of days (set on its name list); otherwise the group's.
+const sections = (st) => sectionsFor(state.roster.get(st?.class)?.days ?? state.ws?.days ?? 5);
+const progressOf = (st) => {
+  const secs = sections(st);
+  const total = secs.reduce((n, s) => n + sectionSize(s), 0);
+  const done = secs.reduce((n, s) => n + Math.min(sectionSize(s), st.progress?.[s.id] ?? 0), 0);
+  return { secs, pct: total ? done / total : 0 };
+};
 
 function readPref(key, fallback) {
   try { return localStorage.getItem(`wexdash.${key}`) ?? fallback; } catch { return fallback; }
@@ -327,19 +334,17 @@ function renderRows() {
   const shownIds = new Set(visibleStudents().map((x) => x.sid));
   for (const sid of [...state.selected]) if (!shownIds.has(sid)) state.selected.delete(sid);
   renderBulk();
-  const secs = sections();
-  const total = secs.reduce((n, s) => n + sectionSize(s), 0);
   const list = visibleStudents();
   const joinedText = joinedSummary();
   $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} · updates live · click a row to read a journal`;
-  renderStats(list, secs, total);
+  renderStats(list);
   if (!list.length) {
     $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: '6', class: 'muted' },
       state.students.length ? 'No students at this company or in this class yet.' : 'No one has started yet. Students open the journal link on their phones.')));
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
-    const answered = secs.reduce((n, s) => n + Math.min(sectionSize(s), st.progress?.[s.id] ?? 0), 0);
+    const { secs, pct } = progressOf(st);
     const pin = h('button', {
       class: 'pin-btn', type: 'button', title: 'Show PIN',
       onclick: (e) => { e.stopPropagation(); pin.textContent = pin.textContent === '••••' ? (st.pin ?? 'not set') : '••••'; },
@@ -360,20 +365,19 @@ function renderRows() {
           const n = Math.min(sectionSize(s), st.progress?.[s.id] ?? 0);
           return h('i', { class: n >= sectionSize(s) ? 'done' : n ? 'part' : '', title: `${s.title}: ${n} of ${sectionSize(s)}` });
         })),
-        h('span', { class: 'num small' }, `${Math.round((answered / total) * 100)}%`))),
+        h('span', { class: 'num small' }, `${Math.round(pct * 100)}%`))),
       h('td', { class: 'small muted' }, ago(st.lastActive)),
       h('td', {}, pin));
   }));
 }
 
 // Four summary tiles above the table, for the students currently shown.
-function renderStats(list, secs, total) {
-  const pct = (st) => secs.reduce((n, s) => n + Math.min(sectionSize(s), st.progress?.[s.id] ?? 0), 0) / total;
-  const avg = list.length ? Math.round((list.reduce((n, st) => n + pct(st), 0) / list.length) * 100) : 0;
-  const wrap = secs.find((s) => s.id === 'wrapup');
+function renderStats(list) {
+  const avg = list.length ? Math.round((list.reduce((n, st) => n + progressOf(st).pct, 0) / list.length) * 100) : 0;
+  const wrap = sections().find((s) => s.id === 'wrapup');
   const wrapped = list.filter((st) => (st.progress?.wrapup ?? 0) >= sectionSize(wrap)).length;
   // Each day's progress counts its reflection answers (mood isn't counted).
-  const written = list.reduce((n, st) => n + secs.filter((s) => s.pick).reduce((m, s) => m + (st.progress?.[s.id] ?? 0), 0), 0);
+  const written = list.reduce((n, st) => n + sections(st).filter((s) => s.pick).reduce((m, s) => m + (st.progress?.[s.id] ?? 0), 0), 0);
   const tile = (pic, value, label, bar) => h('div', { class: 'stat' },
     art(pic, 'stat-art'),
     h('div', {}, h('b', {}, value), h('small', {}, label),
@@ -479,7 +483,7 @@ async function openStudent(row) {
         h('button', { class: 'btn ghost small-btn', type: 'button', onclick: closeDrawer }, 'Close'))),
     accountSection(st),
     teacherNoteSection(st),
-    ...sections().map((s) => {
+    ...sections(st).map((s) => {
       // Of the five reflection questions, show only the ones the student chose to answer.
       const shown = s.prompts.filter((p) => !s.pick?.from.includes(p.id) || isAnswered(answers[s.id]?.[p.id]));
       return h('section', { class: 'drawer-sec' }, h('h3', {}, s.art ? art(s.art, 'drawer-art') : null, s.theme ? `${s.title} · ${s.theme}` : s.title),
@@ -848,7 +852,11 @@ async function saveRoster(groups) {
     if (!groups.has(old)) writes.push((b) => b.delete(doc(db, `roster/${old}`)), (b) => b.delete(doc(db, `rosterDetails/${old}`)));
   }
   for (const [tg, g] of groups) {
-    writes.push((b) => b.set(doc(db, `roster/${tg}`), { level: g.level, students: g.students, updatedAt: serverTimestamp(), updatedBy: state.email }));
+    // Keep each company's number of days and industry when its names are re-uploaded.
+    const { days, industry } = state.roster.get(tg) ?? {};
+    writes.push((b) => b.set(doc(db, `roster/${tg}`), {
+      level: g.level, students: g.students, ...(days ? { days } : {}), ...(industry ? { industry } : {}), updatedAt: serverTimestamp(), updatedBy: state.email,
+    }));
     writes.push((b) => b.set(doc(db, `rosterDetails/${tg}`), { classes: g.classes, updatedAt: serverTimestamp() }));
   }
   for (let i = 0; i < writes.length; i += 400) {

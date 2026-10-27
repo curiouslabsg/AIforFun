@@ -2,7 +2,7 @@
 // in an Early Admissions Exercise (EAE) interview a year later.
 
 export const INDUSTRIES = [
-  'Healthcare', 'Food & beverage / Hospitality', 'Retail', 'Education / Early childhood', 'Engineering / Manufacturing',
+  'Healthcare', 'Social service / Eldercare', 'Food & beverage / Hospitality', 'Retail', 'Education / Early childhood', 'Engineering / Manufacturing', 'Law / Legal',
   'IT / Tech', 'Media / Design', 'Business / Finance', 'Public service', 'Logistics / Transport', 'Science / Lab', 'Other',
 ];
 

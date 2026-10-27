@@ -101,9 +101,12 @@ service cloud.firestore {
     match /roster/{tg} {
       allow get, list: if signedIn();
       allow create, update: if isAdmin()
-        && tg.matches('^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$')
-        && request.resource.data.keys().hasOnly(['level', 'students', 'updatedAt', 'updatedBy'])
+        // Company names like "St Luke's Eldercare" or "Han & Lu Law Chambers LLP".
+        && tg.matches("^[A-Za-z0-9][A-Za-z0-9 &'().-]{0,39}$")
+        && request.resource.data.keys().hasOnly(['level', 'students', 'days', 'industry', 'updatedAt', 'updatedBy'])
         && request.resource.data.level in [1, 2, 3, 4, 5]
+        && (!('days' in request.resource.data) || (request.resource.data.days is int && request.resource.data.days >= 1 && request.resource.data.days <= 10))
+        && optString(request.resource.data, 'industry', 60)
         && request.resource.data.students is list
         && request.resource.data.students.size() <= 300;
       allow delete: if isAdmin();
@@ -142,7 +145,7 @@ service cloud.firestore {
         allow list: if isTeacher();
         allow create: if signedIn()
           && cohortOpen(code)
-          && request.resource.data.keys().hasOnly(['name', 'level', 'class', 'pin', 'pinHash', 'createdAt', 'progress', 'lastActive'])
+          && request.resource.data.keys().hasOnly(['name', 'level', 'class', 'pin', 'pinHash', 'mustChangePin', 'createdAt', 'progress', 'lastActive'])
           && shortString(request.resource.data.name, 60)
           // 'class' holds the teaching group; the name must be on that group's class list.
           && exists(/databases/$(database)/documents/roster/$(request.resource.data['class']))
@@ -154,7 +157,11 @@ service cloud.firestore {
           && request.resource.data.progress is map;
         allow update: if (ownsJournal(code, sid)
             && cohortOpen(code)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive', 'company', 'industry', 'website', 'logoUrl', 'photoCount'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progress', 'lastActive', 'company', 'industry', 'website', 'logoUrl', 'photoCount', 'pin', 'pinHash', 'mustChangePin'])
+            // Students may change their own PIN (everyone starts on 1234).
+            && request.resource.data.pin.matches('^[0-9]{4}$')
+            && request.resource.data.pinHash is string
+            && request.resource.data.pinHash.size() == 64
             && request.resource.data.progress is map
             && request.resource.data.progress.size() <= 20
             && optString(request.resource.data, 'company', 100)
@@ -164,7 +171,7 @@ service cloud.firestore {
             && (!('photoCount' in request.resource.data) || request.resource.data.photoCount is int))
           // Teachers reset PINs, move a student to another teaching group and leave a note.
           || (isTeacher()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'level', 'class', 'teacherNote', 'noteBy', 'noteAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pin', 'pinHash', 'mustChangePin', 'level', 'class', 'teacherNote', 'noteBy', 'noteAt'])
             && request.resource.data.pin.matches('^[0-9]{4}$')
             && request.resource.data.pinHash.size() == 64
             && optString(request.resource.data, 'teacherNote', 1500));

@@ -404,3 +404,9 @@ button.field.pick.extra { opacity: 0.75; }
 .pick-n { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: 0.5rem; border-radius: 50%; background: var(--accent); color: #fff; font: 700 0.8rem/1 var(--f-mono); vertical-align: 0.1em; }
 button.field.pick .pick-n { background: #dbeafe; color: var(--accent); }
 .pick-go { color: var(--accent); font-weight: 700; font-size: 0.92rem; }
+
+/* Choosing a PIN */
+.h-links { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; }
+.pin-card { display: flex; flex-direction: column; gap: 0.9rem; max-width: 26rem; margin: 0.5rem auto; background: var(--paper); border: 1.5px solid var(--rule); border-radius: 18px; padding: 1.3rem; }
+.pin-card input { font: 700 1.4rem/1 var(--f-mono); letter-spacing: 0.4em; text-align: center; }
+.pin-art { width: 3.6rem; height: 3.6rem; }

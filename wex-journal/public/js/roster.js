@@ -23,9 +23,9 @@ const COLS = {
   level: /^(level|sec|secondary|lvl)$/i,
 };
 
-// Group ids must be safe as Firestore doc ids and team keys: letters, digits, spaces, hyphens.
+// Company names keep their usual punctuation: "St Luke's Eldercare", "Han & Lu Law Chambers LLP".
 export function cleanGroup(v) {
-  return String(v ?? '').trim().replace(/[^A-Za-z0-9 -]+/g, '-').replace(/\s+/g, ' ').replace(/^-+|-+$/g, '').slice(0, 30);
+  return String(v ?? '').trim().replace(/[’‘]/g, "'").replace(/[^A-Za-z0-9 &'().-]+/g, '-').replace(/\s+/g, ' ').replace(/^[^A-Za-z0-9]+|[-\s]+$/g, '').slice(0, 40);
 }
 
 function levelFrom(...vals) {

@@ -160,6 +160,20 @@ test('class lists: students read names only; admins upload', async () => {
   await assertFails(setDoc(doc(teacher(), 'roster/SC3A2'), { level: 3, students: [] }));
   await assertSucceeds(setDoc(doc(admin(), 'roster/SC3A2'), { level: 3, students: ['Cara'] }));
   await assertFails(setDoc(doc(admin(), 'roster/SC3A2'), { level: 6, students: [] }));
+  // Companies are the groups now, with their own number of days.
+  await assertSucceeds(setDoc(doc(admin(), "roster/St Luke's Eldercare"), { level: 3, students: ['Dan'], days: 3, industry: 'Social service / Eldercare' }));
+  await assertSucceeds(setDoc(doc(admin(), 'roster/Han & Lu Law Chambers LLP'), { level: 3, students: ['Eve'], days: 5 }));
+  await assertFails(setDoc(doc(admin(), 'roster/Bad*Name'), { level: 3, students: [] }));
+  await assertFails(setDoc(doc(admin(), 'roster/SC3A3'), { level: 3, students: [], days: 11 }));
+});
+
+test('students change their own PIN; other phones cannot', async () => {
+  await join(device('a'), 'a');
+  await assertSucceeds(updateDoc(doc(device('a'), S()), { pin: '7391', pinHash: hash(SID, '7391'), mustChangePin: false }));
+  await assertFails(updateDoc(doc(device('a'), S()), { pin: '12', pinHash: hash(SID, '12') }));
+  await assertFails(updateDoc(doc(device('z'), S()), { pin: '0000', pinHash: hash(SID, '0000') }));
+  // The phone that changed it keeps access.
+  await assertSucceeds(getDoc(doc(device('a'), S())));
 });
 
 test('guest logins stop working after they expire; unverified emails never count', async () => {
