@@ -1,11 +1,6 @@
 // The questions students answer. Written so the answers can be reused, almost word for word,
 // in an Early Admissions Exercise (EAE) interview a year later.
 
-export const SKILLS = [
-  'Communication', 'Teamwork', 'Problem solving', 'Initiative', 'Adaptability', 'Responsibility',
-  'Customer service', 'Attention to detail', 'Time management', 'Creativity', 'Digital skills', 'Leadership',
-];
-
 export const INDUSTRIES = [
   'Healthcare', 'Food & beverage / Hospitality', 'Retail', 'Education / Early childhood', 'Engineering / Manufacturing',
   'IT / Tech', 'Media / Design', 'Business / Finance', 'Public service', 'Logistics / Transport', 'Science / Lab', 'Other',
@@ -39,46 +34,26 @@ const DAY_THEMES = [
   ['Getting started', 'clipboard'], ['Observe', 'observe'], ['Try', 'bolt'], ['Reflect', 'thought'], ['Look ahead', 'summit'],
 ];
 
-export function dayStage(n) {
+// The five reflection questions. On most days students answer any 3; on the last day, all 5.
+export const REFLECTION = [
+  { id: 'q1', type: 'text', q: 'What did I do or observe today?' },
+  { id: 'q2', type: 'text', q: 'What did I learn about work? Include a specific example.' },
+  { id: 'q3', type: 'text', q: 'What did I discover about my strengths, interests or areas for growth?' },
+  { id: 'q4', type: 'text', q: 'What challenged me, and how did I respond or use feedback?' },
+  { id: 'q5', type: 'text', q: 'What will I do differently tomorrow?' },
+];
+
+// days: how many days this run has, so the last one can ask for all five answers.
+export function dayStage(n, days = 5) {
   const [theme, art] = DAY_THEMES[n - 1] ?? ['Keep going', 'bolt'];
+  const last = n === days;
+  const need = last ? REFLECTION.length : 3;
   return {
     id: `day${n}`, title: `Day ${n}`, theme, art, icon: 'sun', color: ['#1d4ed8', '#2563eb', '#0284c7', '#1e40af', '#0369a1'][(n - 1) % 5],
-    blurb: 'A few photos of your work (no faces, nothing confidential), then a few lines.',
-    photos: true,
-    prompts: [
-      { id: 'did', type: 'text', q: 'What did I do today?', hint: 'Tasks, people you worked with, tools you used' },
-      { id: 'learnt', type: 'text', q: 'One thing I learnt about this job or industry', hint: 'Something you didn’t know this morning' },
-      { id: 'skills', type: 'chips', q: 'Skills I used today', options: SKILLS },
-      { id: 'example', type: 'text', q: 'An example: when did I use one of these skills?', hint: '“When a customer asked…, I…”' },
-      { id: 'moment', type: 'text', q: 'Today’s high point or biggest challenge, and what I did about it' },
-      { id: 'mood', type: 'mood', q: 'How did today feel?' },
-    ],
-  };
-}
-
-export const STAR_PROMPTS = [
-  { id: 'title', type: 'short', q: 'Give this story a title', hint: 'e.g. “The day the printer broke”', max: 80 },
-  { id: 's', type: 'text', q: 'Situation: where were you, what was going on?' },
-  { id: 't', type: 'text', q: 'Task: what did you need to do, or what was the problem?' },
-  { id: 'a', type: 'text', q: 'Action: what did YOU do, step by step?', hint: 'Say “I”, not “we”. This is the part interviewers care most about.' },
-  { id: 'r', type: 'text', q: 'Result: what happened? What did you learn?' },
-  { id: 'shows', type: 'chips', q: 'What does this story show about me?', options: SKILLS },
-];
-
-// Short titles for the home page; they match EAE questions 3–5 in INTERVIEW below.
-const STAR_TITLES = [['A challenge I faced', 'climb'], ['Working in a team', 'team'], ['Taking initiative', 'trophy']];
-
-const STAR_FOCUS = [
-  'A problem I solved or a challenge I handled',
-  'A time I worked well with others',
-  'A time I took initiative or learnt something new fast',
-];
-
-export function starStage(n) {
-  return {
-    id: `star${n}`, title: `Story ${n}`, theme: STAR_TITLES[n - 1][0], art: STAR_TITLES[n - 1][1], icon: 'star', color: '#2563eb',
-    blurb: `${STAR_FOCUS[n - 1]}. A small, real moment is fine.`,
-    prompts: STAR_PROMPTS,
+    blurb: last ? 'Last day: answer all five questions.' : 'Choose any 3 of the 5 questions to answer today.',
+    last,
+    pick: { from: REFLECTION.map((q) => q.id), need },
+    prompts: [...REFLECTION, { id: 'mood', type: 'mood', q: 'How did today feel?', optional: true }],
   };
 }
 
@@ -96,20 +71,28 @@ export const WRAPUP = {
 };
 
 export function sectionsFor(days = 5) {
-  return [PLACEMENT, ...Array.from({ length: days }, (_, i) => dayStage(i + 1)), starStage(1), starStage(2), starStage(3), WRAPUP];
+  return [PLACEMENT, ...Array.from({ length: days }, (_, i) => dayStage(i + 1, days)), WRAPUP];
 }
 
 export const isAnswered = (v) => String(v ?? '').trim() !== '';
-export const countable = (s) => s.prompts.filter((p) => !p.optional);
+// Questions that always count towards a section being done (the "choose 3" ones are counted separately).
+export const countable = (s) => s.prompts.filter((p) => !p.optional && !s.pick?.from.includes(p.id));
+
+// How many answers finish a section, and how many of those are given. Used by students and teachers.
+export const sectionTarget = (s) => countable(s).length + (s.pick?.need ?? 0);
+export function sectionDone(s, answers = {}) {
+  const fixed = countable(s).filter((p) => isAnswered(answers[p.id])).length;
+  const picked = s.pick ? Math.min(s.pick.need, s.pick.from.filter((id) => isAnswered(answers[id])).length) : 0;
+  return fixed + picked;
+}
 
 // Common EAE interview questions, each pointing at the journal answers that help.
+// from: wrap-up answers; days: the same reflection question, collected from every day.
 export const INTERVIEW = [
   { q: 'Tell us about yourself and your work experience.', from: [['wrapup', 'pitch']] },
   { q: 'Why are you interested in this course?', from: [['wrapup', 'course'], ['wrapup', 'industry']] },
-  { q: 'Describe a challenge you faced. How did you handle it?', star: 1 },
-  { q: 'Tell us about a time you worked in a team.', star: 2 },
-  { q: 'Give an example of when you showed initiative.', star: 3 },
-  { q: 'What are your strengths?', from: [['wrapup', 'strengths']] },
-  { q: 'What is one weakness, and what are you doing about it?', from: [['wrapup', 'improve']] },
-  { q: 'What did you learn from your work experience?', learnt: true },
+  { q: 'What did you learn from your work experience?', days: 'q2' },
+  { q: 'Describe a challenge you faced. How did you handle it?', days: 'q4' },
+  { q: 'What are your strengths?', from: [['wrapup', 'strengths']], days: 'q3' },
+  { q: 'What is one weakness, and what are you doing about it?', from: [['wrapup', 'improve']], days: 'q5' },
 ];

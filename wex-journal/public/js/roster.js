@@ -1,6 +1,7 @@
-// Reads class lists (CSV or Excel) into teaching groups.
-// Columns are matched loosely: "Teaching group"/"TG", "Name", "Class", optional "Level". Other columns are ignored.
-// If a file has no teaching group column, the sheet name (or file name) is used as the group.
+// Reads name lists (CSV or Excel) into companies: students pick their company, then their name.
+// Columns are matched loosely: "Company" (or the older "Teaching group"), "Name", optional "Class" and "Level".
+// Other columns are ignored. If a file has no company column, the sheet name (or file name) is used.
+// Level is Sec 3 unless a Level column (or a class like "3A") says otherwise.
 
 const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 
@@ -16,7 +17,7 @@ function loadXlsx() {
 }
 
 const COLS = {
-  tg: /^(teaching\s*group|tg|t\.?g\.?|group|teaching grp)$/i,
+  tg: /^(company|companies|organisation|organization|placement|teaching\s*group|tg|t\.?g\.?|group|teaching grp)$/i,
   name: /^(student\s*)?(full\s*)?name$|^name\s*of\s*student$/i,
   cls: /^(form\s*)?class$|^cls$|^form$/i,
   level: /^(level|sec|secondary|lvl)$/i,
@@ -74,10 +75,9 @@ export async function parseRosterFiles(files) {
         if (!name) continue;
         const tg = cleanGroup(get('tg') || fallbackTg);
         const cls = get('cls');
-        const level = levelFrom(get('level'), cls, tg);
+        const level = levelFrom(get('level'), cls) ?? 3;
         const row = { tg, name, cls, level, source: `${file.name}${wb.SheetNames.length > 1 ? ` › ${sheetName}` : ''}` };
-        if (!tg) row.error = 'No teaching group';
-        else if (!level) row.error = 'Level unknown (add a Level column, e.g. 3)';
+        if (!tg) row.error = 'No company';
         else if (name.length > 60) row.error = 'Name longer than 60 characters';
         rows.push(row);
       }
@@ -106,4 +106,4 @@ export function groupRows(rows) {
   return groups;
 }
 
-export const TEMPLATE_CSV = 'Teaching group,Name,Class,Level\nSC3A1,Aisha Tan,3A,3\nSC3A1,Ben Lim,3B,3\nSC3B2,Cara Ng,3C,3\n';
+export const TEMPLATE_CSV = 'Company,Name,Class\nMicron,Aisha Tan,3A\nMicron,Ben Lim,3B\nInfineon,Cara Ng,3C\n';

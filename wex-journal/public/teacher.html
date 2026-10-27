@@ -32,7 +32,7 @@
         <img class="t-crest" src="img/school.webp?v=1" alt="" width="34" height="40">
         <div class="who"><b>Work Experience Journal · Teachers</b><span class="label" id="t-email"></span></div>
         <span class="spacer"></span>
-        <button id="t-manage" class="btn quiet" type="button" hidden>Teachers &amp; class lists</button>
+        <button id="t-manage" class="btn quiet" type="button" hidden>Teachers &amp; name lists</button>
         <button id="t-password" class="btn quiet" type="button" hidden>Change password</button>
         <button id="t-signout" class="btn ghost small-btn" type="button">Sign out</button>
       </div>
@@ -52,7 +52,7 @@
       </div>
       <form id="t-create" class="create" novalidate hidden>
         <label class="field"><span>Name</span><input id="c-name" type="text" maxlength="80" placeholder="Sec 3 work experience, Nov 2026" required></label>
-        <label class="field" style="flex:0 1 170px"><span>Short ID (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. WEX26" autocomplete="off" style="text-transform:uppercase"></label>
+        <label class="field" style="flex:0 1 170px"><span>Short ID (optional)</span><input id="c-code" type="text" maxlength="12" placeholder="e.g. WEP26" autocomplete="off" style="text-transform:uppercase"></label>
         <label class="field" style="flex:0 1 140px"><span>Days</span><input id="c-days" type="number" min="1" max="10" value="5"></label>
         <button class="btn" type="submit">Create</button>
         <button id="c-cancel" class="btn quiet" type="button">Cancel</button>
@@ -90,11 +90,11 @@
     <main id="t-team" class="t-wrap" hidden>
       <div><button id="t-team-back" class="btn quiet" type="button">← All work experience groups</button></div>
       <div>
-        <h2>Teachers &amp; class lists</h2>
+        <h2>Teachers &amp; name lists</h2>
         <p class="muted">People on this list can sign in to the dashboard.</p>
         <ul class="small muted rights">
           <li><b>Teacher rights:</b> read every journal and photo, see and reset PINs, leave a note on a student’s portfolio, download CSVs, delete journals.</li>
-          <li><b>Admin rights:</b> everything teachers can do, plus create, open, close and delete work experience groups, add teachers and upload class lists.</li>
+          <li><b>Admin rights:</b> everything teachers can do, plus create, open, close and delete work experience groups, add teachers and upload name lists.</li>
         </ul>
       </div>
       <form id="t-add" class="create" novalidate>
@@ -109,15 +109,15 @@
       <p id="t-add-msg" class="msg" hidden></p>
       <section class="roster-box">
         <div>
-          <h3>Class lists</h3>
-          <p class="small muted">Students pick their <b>teaching group</b>, then their <b>name</b> from this list. Form class is only shown to teachers.</p>
+          <h3>Name lists</h3>
+          <p class="small muted">Students pick their <b>company</b>, then their <b>name</b> from this list. Class is only shown to teachers.</p>
         </div>
         <div class="extra-actions">
           <label class="btn" for="r-file">Choose files…</label>
           <input id="r-file" type="file" accept=".csv,.xlsx,.xls" multiple hidden>
           <button id="r-template" class="btn quiet" type="button">Download a template</button>
         </div>
-        <p class="small muted">CSV or Excel. Columns: <b>Teaching group</b>, <b>Name</b>, <b>Class</b>, and optionally <b>Level</b> (e.g. 3). You can pick several files at once. If a file has no teaching group column, its sheet or file name is used.</p>
+        <p class="small muted">CSV or Excel. Columns: <b>Company</b>, <b>Name</b>, and optionally <b>Class</b>. You can pick several files at once. If a file has no Company column, its sheet or file name is used as the company.</p>
         <p id="r-msg" class="msg" hidden></p>
         <div id="r-preview"></div>
         <div id="r-current"></div>

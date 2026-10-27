@@ -1,9 +1,9 @@
 import { signInAnonymously, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc, writeBatch, collection, onSnapshot, serverTimestamp,
+  doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, collection, onSnapshot, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, rosterSid, pinHash, h } from './firebase.js';
-import { sectionsFor, MOODS, isAnswered, countable } from './wex.js';
+import { sectionsFor, MOODS, sectionTarget, sectionDone, isAnswered } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
 import { icon } from './icons.js';
 import { art } from './art.js';
@@ -13,12 +13,10 @@ import { celebrate } from './confetti.js';
 
 const $ = (id) => document.getElementById(id);
 const SESSION_KEY = 'wex-journal-session';
-const MAX_PHOTOS = { placement: 2, day: 3 };
-const MAX_IMAGE_CHARS = 400000; // ~300 KB per photo keeps the free database plan roomy
 
 const state = {
   code: null, sid: null, cohort: null, student: null, sections: [],
-  answers: {}, photos: new Map(), view: 'home', unsubs: [],
+  answers: {}, view: 'home', unsubs: [], opened: new Set(),
 };
 
 // ---------- small helpers ----------
@@ -43,14 +41,11 @@ function joinMessage(text, kind = 'err') {
   m.hidden = !text;
 }
 const isOpen = () => state.cohort?.open === true;
-const answer = (section, id) => state.answers[section]?.[id] ?? '';
+// The company comes from the sign-in list until the student types something else.
+const answer = (section, id) => state.answers[section]?.[id]
+  ?? (section === 'placement' && id === 'company' ? (state.student?.class ?? '') : '');
 const sectionById = (id) => state.sections.find((s) => s.id === id);
-// The student's own photo of the company logo, if they added one (kept with the photos).
-const logoPhoto = () => photosOf('logo').at(-1)?.data;
-const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), site: answer('placement', 'website'), logoUrl: answer('placement', 'logoUrl'), photo: logoPhoto() }, cls);
-
-const photosOf = (section) => [...state.photos.values()].filter((p) => p.section === section)
-  .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
+const myLogo = (cls) => companyLogo({ name: answer('placement', 'company'), site: answer('placement', 'website'), logoUrl: answer('placement', 'logoUrl') }, cls);
 
 // ---------- saving ----------
 // Writes go to the phone's copy first and upload when there's signal, so the status line
@@ -113,11 +108,8 @@ function saveField(section, id, value) {
 }
 
 function sectionCount(s) {
-  const ps = countable(s);
-  let n = ps.filter((p) => isAnswered(answer(s.id, p.id))).length;
-  // A day counts its photo as one more thing to do.
-  if (s.photos) n += photosOf(s.id).length ? 1 : 0;
-  return { n, of: ps.length + (s.photos ? 1 : 0) };
+  const answers = Object.fromEntries(s.prompts.map((p) => [p.id, answer(s.id, p.id)]));
+  return { n: sectionDone(s, answers), of: sectionTarget(s) };
 }
 
 let lastProgress = '';
@@ -129,7 +121,6 @@ function saveProgress() {
     industry: String(answer('placement', 'industry')).slice(0, 60),
     website: String(answer('placement', 'website')).slice(0, 100),
     logoUrl: isOkLogoUrl(answer('placement', 'logoUrl')) ? answer('placement', 'logoUrl') : '',
-    photoCount: [...state.photos.values()].filter((p) => p.section !== 'logo').length,
   };
   const sig = JSON.stringify(data);
   if (sig === lastProgress) return;
@@ -170,7 +161,7 @@ async function loadJoinScreen() {
     const roster = await getDocs(collection(db, 'roster'));
     joinState.roster = new Map(roster.docs.map((d) => [d.id, d.data()]));
     const tgs = [...joinState.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    $('j-tg').replaceChildren(h('option', { value: '' }, tgs.length ? 'Choose your teaching group…' : 'No class lists yet. Ask your teacher.'),
+    $('j-tg').replaceChildren(h('option', { value: '' }, tgs.length ? 'Choose your company…' : 'No name lists yet. Ask your teacher.'),
       ...tgs.map((tg) => h('option', { value: tg }, tg)));
   } catch (err) {
     console.error(err);
@@ -190,7 +181,7 @@ function pickCohort(code) {
 function fillNames() {
   const tg = $('j-tg').value;
   const names = [...(joinState.roster.get(tg)?.students ?? [])].sort((a, b) => a.localeCompare(b));
-  $('j-name').replaceChildren(h('option', { value: '' }, tg ? 'Choose your name…' : 'Pick your teaching group first'),
+  $('j-name').replaceChildren(h('option', { value: '' }, tg ? 'Choose your name…' : 'Pick your company first'),
     ...names.map((n) => h('option', { value: n }, n)));
   $('j-name').disabled = !tg;
   onNamePicked();
@@ -238,7 +229,7 @@ async function onJoin(e) {
   const pin = $('j-pin').value.trim();
   const group = joinState.roster.get(tg);
   if (!code) return joinMessage(joinState.open.length > 1 ? 'Choose your work experience group first.' : 'Journals aren’t open right now.', 'warn');
-  if (!group || !name) return joinMessage('Choose your teaching group and your name.');
+  if (!group || !name) return joinMessage('Choose your company and your name.');
   if (!/^\d{4}$/.test(pin)) return joinMessage('Your PIN must be exactly 4 digits.');
 
   const sid = rosterSid(tg, name);
@@ -282,7 +273,7 @@ async function openJournal(code, sid) {
   unsubscribeAll();
   Object.assign(state, {
     code, sid, cohort: c.data(), student: st.data(), sections: sectionsFor(c.data().days ?? 5),
-    answers: {}, photos: new Map(), view: 'home',
+    answers: {}, view: 'home', opened: new Set(),
   });
   created.clear();
   lastProgress = '';
@@ -299,12 +290,15 @@ async function openJournal(code, sid) {
         const typing = Object.fromEntries([...timers.values()].filter((t) => t.section === d.id).map((t) => [t.id, t.value]));
         state.answers[d.id] = { ...(d.data().answers ?? {}), ...typing };
       }
-      if (first) { first = false; render(); } else refreshHome();
-    }, lost),
-    onSnapshot(collection(db, `${base}/photos`), (snap) => {
-      state.photos = new Map(snap.docs.map((d) => [d.id, { id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }]));
-      renderPhotos();
-      refreshHome();
+      if (first) {
+        first = false;
+        // Save the company from the sign-in list as the placement, so teachers and the portfolio see it.
+        if (isOpen() && !state.answers.placement?.company && state.student.class) {
+          queueSave('placement', 'company', state.student.class);
+          flushField('placement__company');
+        }
+        render();
+      } else refreshHome();
     }, lost),
     onSnapshot(doc(db, base), (snap) => { if (snap.exists()) { state.student = snap.data(); renderMeta(); } }, () => {}),
   ];
@@ -337,13 +331,13 @@ async function switchStudent() {
 
 function renderMeta() {
   const company = answer('placement', 'company') || state.student.company;
-  $('me-meta').textContent = [state.student.class, company, state.cohort?.name].filter(Boolean).join(' · ');
+  $('me-meta').textContent = [...new Set([company, state.student.class].filter(Boolean))].concat(state.cohort?.name ?? []).join(' · ');
   const all = state.sections.map(sectionCount);
   const done = all.reduce((n, c) => n + c.n, 0);
   const total = all.reduce((n, c) => n + c.of, 0);
   $('progress-fill').style.width = `${Math.round((done / total) * 100)}%`;
   $('progress-text').textContent = `${Math.round((done / total) * 100)}%`;
-  // Redraw the logo as the company name or logo photo changes.
+  // Redraw the logo as the company name changes.
   redrawLogoBox();
   // Keep the open section's own bar in step as the student types.
   const head = $('panel').querySelector('.stage-head');
@@ -395,7 +389,6 @@ function overall() {
 
 function renderHome() {
   const days = state.sections.filter((s) => s.id.startsWith('day'));
-  const stars = state.sections.filter((s) => s.id.startsWith('star'));
   const { done, pct } = overall();
   // "Day 2 of 5": the first day that isn't finished yet.
   const today = Math.max(1, days.findIndex((s) => !statusOf(s).done) + 1 || days.length);
@@ -424,13 +417,13 @@ function renderHome() {
       h('div', { class: 'h-place-text' },
         company ? h('span', { class: 'h-kicker' }, 'My placement') : null,
         h('b', { class: 'h-title' }, company || 'My placement'),
-        h('small', {}, company ? (answer('placement', 'dept') || 'Where I’m attached this week') : 'Where are you attached? Fill this in on Day 1.'),
+        h('small', {}, answer('placement', 'dept') || 'Get to know your workplace. Fill this in on Day 1.'),
         h('span', { class: 'h-dots' }, ...Array.from({ length: pl.c.of }, (_, i) => h('i', { class: i < pl.c.n ? 'on' : '' })),
           h('small', {}, `${pl.c.n} / ${pl.c.of} completed`))),
       company ? myLogo('h-place-art') : art('building', 'h-place-art'),
       h('span', { class: 'btn h-go' }, pl.done ? 'Review' : pl.started ? 'Continue' : 'Start', icon('next', 16))),
 
-    head('Days', 'One short reflection each day'),
+    head('Days', 'Answer 3 of 5 questions each day'),
     h('div', { class: 'h-days', style: `--n:${Math.min(days.length, 5)}` }, ...days.map((s) => {
       const { c, done: d, started } = statusOf(s);
       return h('button', {
@@ -441,17 +434,6 @@ function renderHome() {
       h('b', { class: 'h-day-theme' }, s.theme),
       art(s.art, 'h-day-art'),
       miniBar(c));
-    })),
-
-    head('Interview stories', 'Real moments to talk about'),
-    h('div', { class: 'h-stories' }, ...stars.map((s, i) => {
-      const { c, done: d } = statusOf(s);
-      return h('button', { type: 'button', class: `h-card h-story s${i + 1}${d ? ' done' : ''}`, onclick: () => go(s.id) },
-        h('span', { class: 'h-kicker' }, s.title),
-        h('b', { class: 'h-story-title' }, s.theme),
-        art(s.art, 'h-story-art'),
-        h('span', { class: 'h-story-go' }, d ? icon('check', 16) : icon('next', 16)),
-        miniBar(c));
     })),
 
     head('Last day', 'Bring it all together'),
@@ -466,7 +448,7 @@ function renderHome() {
     h('button', { type: 'button', class: 'h-portfolio', onclick: () => go('portfolio') },
       h('div', { class: 'h-pf-text' },
         h('b', {}, icon('portfolio', 24), ' My EAE portfolio'),
-        h('small', {}, 'Your reflections, stories and photos in one place.'),
+        h('small', {}, 'Your reflections, ready for EAE interviews.'),
         h('small', { class: 'h-pf-count' }, `${done} answer${done === 1 ? '' : 's'} collected`)),
       art('folder', 'h-pf-art'),
       h('span', { class: 'h-pf-btn' }, 'View portfolio', icon('next', 16))),
@@ -543,19 +525,41 @@ function renderSection(s) {
     h('button', { type: 'button', class: 'btn quiet back', onclick: () => go('home') }, icon('back', 16), ' My journal'),
     stageHead(s),
     ...(s.id === 'placement' ? [logoSection()] : []),
-    ...(s.photos || s.id === 'placement' ? [photoSection(s)] : []),
-    ...s.prompts.map((p) => field(s, p)),
+    ...s.prompts.map((p) => (s.pick?.from.includes(p.id) ? pickField(s, p) : field(s, p))),
     h('div', { class: 'nav' },
       next ? h('button', { type: 'button', class: 'btn', onclick: () => go(next.id) }, `Next: ${next.title} →`)
         : h('button', { type: 'button', class: 'btn', onclick: () => go('portfolio') }, 'See my portfolio →')),
   );
-  renderPhotos();
-  // Finished typing the company name? Look it up, unless a logo is already set.
-  $('q-placement-company')?.addEventListener('blur', () => {
+  // Look up the company's logo, unless one is already set: now, and again if they change the name.
+  const autoLookup = () => {
     const name = String(answer('placement', 'company')).trim();
-    const set = logoPhoto() || isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
+    const set = isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
     if (name && !set && isOpen() && lookup.query !== name) runLookup();
-  });
+  };
+  if (s.id === 'placement') autoLookup();
+  $('q-placement-company')?.addEventListener('blur', autoLookup);
+}
+
+// One of the five reflection questions. Students open the ones they choose to answer;
+// on the last day (or once written) a question stays open.
+function pickField(s, p) {
+  const key = `${s.id}__${p.id}`;
+  const written = isAnswered(answer(s.id, p.id));
+  const open = s.last || written || state.opened.has(key);
+  const n = s.pick.from.indexOf(p.id) + 1;
+  if (open) {
+    const f = field(s, p);
+    f.classList.add('pick', 'on');
+    f.querySelector('.q-line').prepend(h('span', { class: 'pick-n' }, String(n)));
+    return f;
+  }
+  const done = sectionCount(s).n >= s.pick.need;
+  return h('button', {
+    type: 'button', class: `field pick${done ? ' extra' : ''}`, disabled: !isOpen(),
+    onclick: () => { state.opened.add(key); render(); requestAnimationFrame(() => $(`q-${s.id}-${p.id}`)?.focus()); },
+  },
+  h('span', { class: 'q-line' }, h('span', { class: 'pick-n' }, String(n)), p.q),
+  h('span', { class: 'pick-go' }, done ? '+ Answer this too (optional)' : '+ Answer this'));
 }
 
 // ---------- company logo ----------
@@ -610,13 +614,10 @@ function redrawLogoBox() {
 
 function logoSection() {
   const name = String(answer('placement', 'company')).trim();
-  const photo = logoPhoto();
   const online = isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
-  const picker = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: addLogo });
-  const note = photo ? 'Your photo of the real logo.'
-    : online ? 'Found online. Not the right one? Search again or snap a photo of the logo.'
-      : name ? 'Our school crest for now. Find the company’s logo online, or snap a photo of it.'
-        : 'Type your company name below, then find its logo.';
+  const note = online ? 'Found online. Not the right one? Search again.'
+    : name ? 'Our school crest for now. Tap Find logo online, or type the company website below.'
+      : 'Type your company name below, then find its logo.';
   const results = lookup.status === 'results' && lookup.query === name
     ? h('div', { class: 'lookup-list' },
       h('small', { class: 'muted' }, 'Which one is it?'),
@@ -627,8 +628,8 @@ function logoSection() {
     : null;
   const status = {
     searching: 'Searching online…',
-    none: 'Couldn’t find this company online. Type its website below, or snap a photo of the logo.',
-    'none-picked': 'No problem. Type the website below, or snap a photo of the logo.',
+    none: 'Couldn’t find this company online. Type its website below, or keep the school crest.',
+    'none-picked': 'No problem. Type the website below, or keep the school crest.',
     offline: 'You’re offline. Try again when you have signal.',
     error: 'The search didn’t work. Try again in a moment.',
   }[lookup.query === name ? lookup.status : ''];
@@ -639,155 +640,11 @@ function logoSection() {
         h('b', {}, 'Company logo'),
         h('small', { class: 'muted' }, note),
         isOpen() ? h('div', { class: 'logo-actions' },
-          name && !photo ? h('button', { type: 'button', class: 'btn small-btn', disabled: lookup.status === 'searching' && lookup.query === name, onclick: runLookup },
+          name ? h('button', { type: 'button', class: 'btn small-btn', disabled: lookup.status === 'searching' && lookup.query === name, onclick: runLookup },
             online ? 'Search again' : 'Find logo online') : null,
-          h('button', { type: 'button', class: 'btn ghost small-btn', onclick: () => picker.click() }, photo ? 'Change photo' : 'Snap the logo'),
-          photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: removeLogo }, 'Remove photo') : null,
-          online && !photo ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: clearFound }, 'Clear') : null,
-          picker) : null)),
+          online ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: clearFound }, 'Clear') : null) : null)),
     status ? h('p', { class: 'small muted lookup-status' }, status) : null,
-    results,
-    h('p', { class: 'msg err logo-msg', hidden: true }));
-}
-
-async function addLogo(e) {
-  const f = e.target.files?.[0];
-  e.target.value = '';
-  if (!f) return;
-  const box = $('panel').querySelector('.logo-msg');
-  if (box) box.hidden = true;
-  try {
-    const data = await compressImage(f, [[480, 0.8], [360, 0.7]]);
-    const old = photosOf('logo');
-    await saving(addDoc(collection(db, `cohorts/${state.code}/students/${state.sid}/photos`), {
-      section: 'logo', caption: '', data, star: false, createdAt: serverTimestamp(),
-    }));
-    for (const p of old) saving(deleteDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`)));
-  } catch (err) {
-    console.error(err);
-    if (box) { box.textContent = err.message && !err.code ? err.message : 'That logo didn’t save. Try again.'; box.hidden = false; }
-  }
-}
-
-function removeLogo() {
-  for (const p of photosOf('logo')) saving(deleteDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`)));
-}
-
-// ---------- photos ----------
-
-function photoSection(s) {
-  const max = s.id === 'placement' ? MAX_PHOTOS.placement : MAX_PHOTOS.day;
-  // No `capture` attribute, so the phone itself offers "Camera" or "Photo library".
-  const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: (e) => addPhotos(s, e) });
-  return h('section', { class: 'photos', 'data-section': s.id },
-    h('div', { class: 'photo-head' },
-      h('b', {}, s.id === 'placement' ? 'Photo of your workplace' : 'Photos'),
-      h('small', { class: 'muted' }, `Up to ${max} · star the best for your portfolio`)),
-    isOpen() ? h('div', { class: 'photo-actions' },
-      h('button', { type: 'button', class: 'btn ghost cam', onclick: () => picker.click() }, art('camera', 'cam-art'), ' Add photo'),
-      picker) : null,
-    h('p', { class: 'msg err photo-msg', hidden: true }),
-    h('div', { class: 'photo-grid' }));
-}
-
-function photoMessage(text) {
-  const m = $('panel').querySelector('.photo-msg');
-  if (!m) return;
-  m.textContent = text;
-  m.hidden = !text;
-}
-
-async function addPhotos(s, e) {
-  const files = [...(e.target.files ?? [])];
-  e.target.value = '';
-  photoMessage('');
-  const max = s.id === 'placement' ? MAX_PHOTOS.placement : MAX_PHOTOS.day;
-  const room = max - photosOf(s.id).length;
-  if (room <= 0) { photoMessage(`You already have ${max} photos here. Delete one to add another.`); return; }
-  for (const f of files.slice(0, room)) {
-    try {
-      const data = await compressImage(f);
-      await saving(addDoc(collection(db, `cohorts/${state.code}/students/${state.sid}/photos`), {
-        section: s.id, caption: '', data, star: false, createdAt: serverTimestamp(),
-      }));
-    } catch (err) {
-      console.error(err);
-      photoMessage(err.message && !err.code ? err.message : 'That photo didn’t save. Try again.');
-    }
-  }
-  if (files.length > room) photoMessage(`Only ${room} more photo${room === 1 ? '' : 's'} fit here, so the rest were skipped.`);
-  saveProgress();
-}
-
-function renderPhotos() {
-  const grid = $('panel').querySelector('.photo-grid');
-  if (!grid) return;
-  const section = grid.closest('.photos').dataset.section;
-  const list = photosOf(section);
-  grid.replaceChildren(...list.map((p) => {
-    const caption = h('input', {
-      type: 'text', maxlength: '200', placeholder: 'What’s happening here?', value: p.caption ?? '', disabled: !isOpen(), 'aria-label': 'Photo caption',
-      onchange: (e) => saving(updateDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`), { caption: e.target.value.trim().slice(0, 200), star: !!p.star })),
-    });
-    const star = h('button', {
-      type: 'button', class: `star-btn${p.star ? ' on' : ''}`, disabled: !isOpen(), 'aria-pressed': String(!!p.star), title: 'Use in my portfolio',
-      onclick: () => saving(updateDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`), { star: !p.star, caption: p.caption ?? '' })),
-    }, icon('star', 18), p.star ? ' In portfolio' : ' Portfolio');
-    const del = h('button', {
-      type: 'button', class: 'btn quiet', disabled: !isOpen(),
-      onclick: (ev) => {
-        const b = ev.currentTarget;
-        if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to delete'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete'; }, 3000); return; }
-        saving(deleteDoc(doc(db, `cohorts/${state.code}/students/${state.sid}/photos/${p.id}`)));
-      },
-    }, 'Delete');
-    return h('figure', { class: 'photo' },
-      h('button', { type: 'button', class: 'photo-open', onclick: () => lightbox(p.data, p.caption) }, h('img', { src: p.data, alt: p.caption || 'Photo' })),
-      h('figcaption', {}, caption, h('div', { class: 'photo-tools' }, star, del)));
-  }));
-}
-
-// Shrink camera photos (often 3–5 MB) to a few hundred KB, so they upload quickly on mobile data.
-async function compressImage(fileObj, steps = [[1280, 0.72], [1100, 0.66], [960, 0.6], [800, 0.55]]) {
-  if (fileObj.type && !fileObj.type.startsWith('image/')) throw new Error('That isn’t a photo. Choose a JPG or PNG picture.');
-  const bitmap = await (window.createImageBitmap
-    ? createImageBitmap(fileObj, { imageOrientation: 'from-image' }).catch(() => null)
-    : Promise.resolve(null));
-  const url = bitmap ? null : URL.createObjectURL(fileObj);
-  try {
-    const img = bitmap ?? await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('That photo couldn’t be opened. Try taking it again, or choose a JPG.'));
-      i.src = url;
-    });
-    const w = img.naturalWidth ?? img.width;
-    const hgt = img.naturalHeight ?? img.height;
-    for (const [maxSide, quality] of steps) {
-      const scale = Math.min(1, maxSide / Math.max(w, hgt));
-      const c = document.createElement('canvas');
-      c.width = Math.round(w * scale);
-      c.height = Math.round(hgt * scale);
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      const data = c.toDataURL('image/jpeg', quality);
-      if (data.length <= MAX_IMAGE_CHARS) return data;
-    }
-    throw new Error('That photo is too big to save. Try again with less zoom.');
-  } finally {
-    if (url) URL.revokeObjectURL(url);
-    bitmap?.close?.();
-  }
-}
-
-function lightbox(src, caption) {
-  const close = () => box.remove();
-  const box = h('div', { class: 'lightbox', role: 'dialog', 'aria-label': caption || 'Photo', onclick: close },
-    h('img', { src, alt: caption || '' }), caption ? h('p', {}, caption) : null,
-    h('button', { class: 'btn', type: 'button', onclick: close }, 'Close'));
-  document.body.append(box);
+    results);
 }
 
 // ---------- portfolio ----------
@@ -795,7 +652,7 @@ function lightbox(src, caption) {
 function renderPortfolioView() {
   $('panel').style.setProperty('--stage', '#0f172a');
   const pf = renderPortfolio({
-    student: state.student, cohort: state.cohort, answers: state.answers, photos: [...state.photos.values()],
+    student: state.student, cohort: state.cohort, answers: state.answers,
   }, { goTo: (id) => go(id) });
   $('panel').replaceChildren(
     h('div', { class: 'pf-bar no-print' },

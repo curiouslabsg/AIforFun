@@ -394,3 +394,13 @@ body.teacher { background: var(--bg); }
 .h-portfolio { background: linear-gradient(135deg, #1d4ed8, #1e40af 60%, #1e3a8a); }
 .co-logo.photo { display: flex; align-items: center; justify-content: center; }
 .co-logo.photo img { min-height: 0; max-height: 100%; }
+
+/* The five reflection questions: closed ones are tap-to-answer cards */
+.field.pick { background: var(--paper); border: 1.5px solid var(--rule); border-radius: 14px; padding: 0.85rem 0.95rem; }
+.field.pick.on { border-color: #93c5fd; }
+button.field.pick { width: 100%; text-align: left; cursor: pointer; border-style: dashed; gap: 0.5rem; color: var(--ink); }
+button.field.pick:hover { border-color: var(--accent); background: #f8fbff; }
+button.field.pick.extra { opacity: 0.75; }
+.pick-n { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: 0.5rem; border-radius: 50%; background: var(--accent); color: #fff; font: 700 0.8rem/1 var(--f-mono); vertical-align: 0.1em; }
+button.field.pick .pick-n { background: #dbeafe; color: var(--accent); }
+.pick-go { color: var(--accent); font-weight: 700; font-size: 0.92rem; }

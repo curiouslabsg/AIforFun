@@ -7,7 +7,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { auth, db, configured, pinHash, h } from './firebase.js';
 import { parseRosterFiles, groupRows, TEMPLATE_CSV } from './roster.js';
-import { sectionsFor, isAnswered, countable, MOODS } from './wex.js';
+import { sectionsFor, isAnswered, sectionTarget, MOODS } from './wex.js';
 import { renderPortfolio } from './portfolio.js';
 import { companyLogo } from './logo.js';
 import { art } from './art.js';
@@ -16,7 +16,7 @@ const $ = (id) => document.getElementById(id);
 const MAX_ACTIVE = 5;
 const state = {
   email: null, role: null, active: [],
-  // Class lists: roster = teaching group -> { level, students }; details = group -> { classes } (teachers only).
+  // Name lists: roster = company -> { level, students }; details = company -> { classes } (teachers only).
   roster: new Map(), details: new Map(),
   cohorts: [], ws: null, students: [], unsub: null, selected: new Set(),
   tg: readPref('tg', ''), cls: readPref('cls', ''),
@@ -49,7 +49,7 @@ function ago(ts) {
 }
 function newCode() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  return `WEX${[...crypto.getRandomValues(new Uint32Array(4))].map((n) => chars[n % chars.length]).join('')}`;
+  return `WEP${[...crypto.getRandomValues(new Uint32Array(4))].map((n) => chars[n % chars.length]).join('')}`;
 }
 // Each page change bumps navSeq, so a slow load never pulls the teacher back from a page they opened since.
 let navSeq = 0;
@@ -223,7 +223,7 @@ $('t-create').addEventListener('submit', async (e) => {
   const custom = $('c-code').value.trim().toUpperCase();
   const days = Number.parseInt($('c-days').value, 10);
   if (!name) { msg('t-create-msg', 'Give the group a name, for example "Sec 3 work experience, Nov 2026".'); return; }
-  if (custom && !/^[A-Z0-9]{4,12}$/.test(custom)) { msg('t-create-msg', 'IDs use 4–12 letters or numbers only, for example WEX26.'); return; }
+  if (custom && !/^[A-Z0-9]{4,12}$/.test(custom)) { msg('t-create-msg', 'IDs use 4–12 letters or numbers only, for example WEP26.'); return; }
   if (!(days >= 1 && days <= 10)) { msg('t-create-msg', 'Days must be between 1 and 10.'); return; }
   try {
     let code = custom;
@@ -257,7 +257,7 @@ function openCohort(code) {
   renderToggle();
   $('ws-head').replaceChildren(h('tr', {},
     h('th', { class: 'sel' }, h('input', { type: 'checkbox', id: 'sel-all', 'aria-label': 'Select all students shown', onclick: (e) => toggleAll(e.target.checked) })),
-    h('th', {}, 'Student'), h('th', {}, 'Company'), h('th', {}, 'Progress'), h('th', {}, 'Photos'), h('th', {}, 'Last active'), h('th', {}, 'PIN')));
+    h('th', {}, 'Student'), h('th', {}, 'Company'), h('th', {}, 'Progress'), h('th', {}, 'Last active'), h('th', {}, 'PIN')));
   state.selected = new Set();
   view('t-ws');
   state.unsub?.();
@@ -298,7 +298,7 @@ function renderFilters() {
     el.value = state[key];
     return el;
   };
-  $('ws-filters').replaceChildren(select('Filter by teaching group', 'tg', tgs, 'All teaching groups'), select('Filter by class', 'cls', classes, 'All classes'));
+  $('ws-filters').replaceChildren(select('Filter by company', 'tg', tgs, 'All companies'), select('Filter by class', 'cls', classes, 'All classes'));
 }
 
 function visibleStudents() {
@@ -318,10 +318,10 @@ function joinedSummary() {
       if (joined.has(`${tg}|${name}`)) inn++;
     }
   }
-  return total ? `${inn} of ${total} students on the class lists have started` : '';
+  return total ? `${inn} of ${total} students on the name lists have started` : '';
 }
 
-const sectionSize = (s) => countable(s).length + (s.photos ? 1 : 0);
+const sectionSize = sectionTarget;
 
 function renderRows() {
   const shownIds = new Set(visibleStudents().map((x) => x.sid));
@@ -334,8 +334,8 @@ function renderRows() {
   $('ws-status').textContent = `${state.flash ? `${state.flash} · ` : ''}${joinedText ? `${joinedText} · ` : ''}Showing ${list.length} of ${state.students.length} · updates live · click a row to read a journal`;
   renderStats(list, secs, total);
   if (!list.length) {
-    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: '7', class: 'muted' },
-      state.students.length ? 'No students in this teaching group or class yet.' : 'No one has started yet. Students open the journal link on their phones.')));
+    $('ws-rows').replaceChildren(h('tr', {}, h('td', { colspan: '6', class: 'muted' },
+      state.students.length ? 'No students at this company or in this class yet.' : 'No one has started yet. Students open the journal link on their phones.')));
     return;
   }
   $('ws-rows').replaceChildren(...list.map((st) => {
@@ -351,8 +351,9 @@ function renderRows() {
           onchange: (e) => { if (e.target.checked) state.selected.add(st.sid); else state.selected.delete(st.sid); renderBulk(); },
         })),
       h('td', {}, h('div', { class: 'who-cell' }, h('b', {}, st.name),
-        h('span', { class: 'small muted' }, [st.class, classOf(st)].filter(Boolean).join(' · ') || '–'))),
-      h('td', { class: 'small' }, h('div', { class: 'co-cell' }, companyLogo({ name: st.company, site: st.website, logoUrl: st.logoUrl }, 'sm', { school: false }), st.company || '–')),
+        classOf(st) ? h('span', { class: 'small muted' }, classOf(st)) : null)),
+      // st.class is the company the student picked when signing in.
+      h('td', { class: 'small' }, h('div', { class: 'co-cell' }, companyLogo({ name: st.company || st.class, site: st.website, logoUrl: st.logoUrl }, 'sm', { school: false }), st.company || st.class || '–')),
       h('td', {}, h('div', { class: 'prog-cell' },
         // One small block per section: hover for its name and count.
         h('div', { class: 'bar' }, ...secs.map((s) => {
@@ -360,7 +361,6 @@ function renderRows() {
           return h('i', { class: n >= sectionSize(s) ? 'done' : n ? 'part' : '', title: `${s.title}: ${n} of ${sectionSize(s)}` });
         })),
         h('span', { class: 'num small' }, `${Math.round((answered / total) * 100)}%`))),
-      h('td', { class: 'num' }, String(st.photoCount ?? 0)),
       h('td', { class: 'small muted' }, ago(st.lastActive)),
       h('td', {}, pin));
   }));
@@ -372,7 +372,8 @@ function renderStats(list, secs, total) {
   const avg = list.length ? Math.round((list.reduce((n, st) => n + pct(st), 0) / list.length) * 100) : 0;
   const wrap = secs.find((s) => s.id === 'wrapup');
   const wrapped = list.filter((st) => (st.progress?.wrapup ?? 0) >= sectionSize(wrap)).length;
-  const photos = list.reduce((n, st) => n + (st.photoCount ?? 0), 0);
+  // Each day's progress counts its reflection answers (mood isn't counted).
+  const written = list.reduce((n, st) => n + secs.filter((s) => s.pick).reduce((m, s) => m + (st.progress?.[s.id] ?? 0), 0), 0);
   const tile = (pic, value, label, bar) => h('div', { class: 'stat' },
     art(pic, 'stat-art'),
     h('div', {}, h('b', {}, value), h('small', {}, label),
@@ -380,7 +381,7 @@ function renderStats(list, secs, total) {
   $('ws-stats').replaceChildren(
     tile('team', String(list.length), list.length === 1 ? 'student started' : 'students started'),
     tile('summit', `${avg}%`, 'average progress', avg),
-    tile('camera', String(photos), photos === 1 ? 'photo taken' : 'photos taken'),
+    tile('thought', String(written), written === 1 ? 'reflection written' : 'reflections written'),
     tile('finish', `${wrapped}`, `finished the wrap-up`));
 }
 
@@ -391,20 +392,10 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawe
 
 async function loadJournal(st) {
   const base = `cohorts/${state.ws.code}/students/${st.sid}`;
-  const [entries, photos] = await Promise.all([getDocs(collection(db, `${base}/entries`)), getDocs(collection(db, `${base}/photos`))]);
-  return {
-    answers: Object.fromEntries(entries.docs.map((d) => [d.id, d.data().answers ?? {}])),
-    photos: photos.docs.map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0)),
-  };
+  const entries = await getDocs(collection(db, `${base}/entries`));
+  return { answers: Object.fromEntries(entries.docs.map((d) => [d.id, d.data().answers ?? {}])) };
 }
 
-function lightbox(src, caption) {
-  const close = () => box.remove();
-  const box = h('div', { class: 'lightbox', role: 'dialog', 'aria-label': caption || 'Photo', onclick: close },
-    h('img', { src, alt: caption || '' }), caption ? h('p', {}, caption) : null, h('button', { class: 'btn', type: 'button', onclick: close }, 'Close'));
-  document.body.append(box);
-}
 
 function accountSection(st) {
   const note = h('span', { class: 'small muted' });
@@ -434,7 +425,7 @@ function accountSection(st) {
 
 function teacherNoteSection(st) {
   const note = h('span', { class: 'small muted' }, st.noteBy ? `Last saved by ${st.noteBy}` : 'Shown at the end of the student’s portfolio.');
-  const box = h('textarea', { maxlength: '1500', rows: '3', placeholder: 'e.g. Your STAR story about the printer is a great answer for “Describe a challenge”.' });
+  const box = h('textarea', { maxlength: '1500', rows: '3', placeholder: 'e.g. Your Day 3 reflection on using feedback is a great answer for “Describe a challenge”.' });
   box.value = st.teacherNote ?? '';
   const save = h('button', {
     class: 'btn small-btn', type: 'button',
@@ -462,13 +453,13 @@ async function openStudent(row) {
     drawer.replaceChildren(h('p', { class: 'msg err' }, 'Could not load this journal.'));
     return;
   }
-  const { answers, photos } = journal;
+  const { answers } = journal;
   const showPortfolio = () => {
     drawer.replaceChildren(
       h('div', { class: 'inline-row' },
         h('button', { class: 'btn ghost small-btn', type: 'button', onclick: () => openStudent(st) }, '← Journal'),
         h('button', { class: 'btn small-btn', type: 'button', onclick: () => window.print() }, 'Print / save as PDF')),
-      renderPortfolio({ student: state.students.find((x) => x.sid === st.sid) ?? st, cohort: state.ws, answers, photos }));
+      renderPortfolio({ student: state.students.find((x) => x.sid === st.sid) ?? st, cohort: state.ws, answers }));
     drawer.scrollTop = 0;
   };
   const show = (s, p) => {
@@ -479,9 +470,9 @@ async function openStudent(row) {
   drawer.replaceChildren(
     h('div', { style: 'display:flex;justify-content:space-between;gap:1rem;align-items:start' },
       h('div', { class: 'drawer-who' },
-        companyLogo({ name: st.company, site: st.website, logoUrl: st.logoUrl, photo: photos.filter((p) => p.section === 'logo').at(-1)?.data }, 'drawer-logo'),
+        companyLogo({ name: st.company || st.class, site: st.website, logoUrl: st.logoUrl }, 'drawer-logo'),
         h('div', {},
-          h('span', { class: 'label' }, [st.class, classOf(st), st.company, st.industry].filter(Boolean).join(' · ')),
+          h('span', { class: 'label' }, [st.company || st.class, classOf(st), st.industry].filter(Boolean).join(' · ')),
           h('h2', {}, st.name))),
       h('div', { class: 'inline-row' },
         h('button', { class: 'btn small-btn', type: 'button', onclick: showPortfolio }, 'View portfolio'),
@@ -489,12 +480,11 @@ async function openStudent(row) {
     accountSection(st),
     teacherNoteSection(st),
     ...sections().map((s) => {
-      // The student's photo of the company logo sits with their placement.
-      const pics = photos.filter((p) => p.section === s.id || (s.id === 'placement' && p.section === 'logo'));
+      // Of the five reflection questions, show only the ones the student chose to answer.
+      const shown = s.prompts.filter((p) => !s.pick?.from.includes(p.id) || isAnswered(answers[s.id]?.[p.id]));
       return h('section', { class: 'drawer-sec' }, h('h3', {}, s.art ? art(s.art, 'drawer-art') : null, s.theme ? `${s.title} · ${s.theme}` : s.title),
-        pics.length ? h('div', { class: 'thumbs' }, ...pics.map((p) => h('button', { type: 'button', class: 'thumb', onclick: () => lightbox(p.data, p.caption) },
-          h('img', { src: p.data, alt: p.caption || 'Photo' }), h('span', {}, p.section === 'logo' ? 'Company logo' : `${p.star ? '★ ' : ''}${p.caption || ''}`)))) : null,
-        ...s.prompts.map((p) => show(s, p)));
+        s.pick && shown.length === s.prompts.length - s.pick.from.length ? h('p', { class: 'empty small muted' }, 'No reflections yet.') : null,
+        ...shown.map((p) => show(s, p)));
     }),
     deleteStudentSection(st));
   drawer.scrollTop = 0;
@@ -544,7 +534,7 @@ function deleteStudentSection(st) {
     },
   }, 'Delete this journal');
   return h('section', {}, h('h3', {}, 'Delete'),
-    h('p', { class: 'small muted' }, 'Removes this student’s answers and photos. This can’t be undone. Download the CSV first if you need a copy.'),
+    h('p', { class: 'small muted' }, 'Removes this student’s answers. This can’t be undone. Download the CSV first if you need a copy.'),
     h('div', {}, btn), note);
 }
 
@@ -591,10 +581,10 @@ $('ws-export').addEventListener('click', async () => {
   btn.textContent = 'Preparing…';
   try {
     const cols = sections().flatMap((s) => s.prompts.map((p) => ({ s, p })));
-    const rows = [['Teaching group', 'Class', 'Name', ...cols.map((c) => `${c.s.title}: ${c.p.q}`), 'Photos', 'Teacher’s note']];
+    const rows = [['Company', 'Class', 'Name', ...cols.map((c) => `${c.s.title}: ${c.p.q}`), 'Teacher’s note']];
     for (const st of visibleStudents()) {
-      const { answers, photos } = await loadJournal(st);
-      rows.push([st.class ?? '', classOf(st), st.name, ...cols.map((c) => answers[c.s.id]?.[c.p.id] ?? ''), photos.length, st.teacherNote ?? '']);
+      const { answers } = await loadJournal(st);
+      rows.push([st.class ?? '', classOf(st), st.name, ...cols.map((c) => answers[c.s.id]?.[c.p.id] ?? ''), st.teacherNote ?? '']);
     }
     // BOM so Excel opens the file as UTF-8.
     const csv = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
@@ -775,14 +765,14 @@ function rosterMsg(text, kind = 'err') {
 function renderCurrentRoster() {
   const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (!tgs.length) {
-    $('r-current').replaceChildren(h('p', { class: 'muted small' }, 'No class lists yet. Students can’t start until you upload one.'));
+    $('r-current').replaceChildren(h('p', { class: 'muted small' }, 'No name lists yet. Students can’t start until you upload one.'));
     return;
   }
   const total = tgs.reduce((n, t) => n + (state.roster.get(t).students?.length ?? 0), 0);
   $('r-current').replaceChildren(
-    h('h4', {}, `Current class lists: ${tgs.length} teaching groups, ${total} students`),
+    h('h4', {}, `Current name lists: ${tgs.length} companies, ${total} students`),
     h('div', { class: 'tablewrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, h('th', {}, 'Teaching group'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Company'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'))),
       h('tbody', {}, ...tgs.map((t) => {
         const g = state.roster.get(t);
         const cls = [...new Set(Object.values(state.details.get(t)?.classes ?? {}))].sort().join(', ');
@@ -816,11 +806,11 @@ $('r-file').addEventListener('change', async (e) => {
   const groups = groupRows(parsed.rows);
   const bad = parsed.rows.filter((r) => r.error);
   rosterMsg(groups.size
-    ? `Found ${parsed.rows.length - bad.length} students in ${groups.size} teaching groups${bad.length ? `, plus ${bad.length} rows with problems (listed below, they won't be saved)` : ''}. Check, then press Replace.`
+    ? `Found ${parsed.rows.length - bad.length} students at ${groups.size} companies${bad.length ? `, plus ${bad.length} rows with problems (listed below, they won't be saved)` : ''}. Check, then press Replace.`
     : 'No students found. Check the files have a Name column.', groups.size ? 'info' : 'err');
   const sortNum = (a, b) => a.localeCompare(b, undefined, { numeric: true });
   const summary = h('div', { class: 'tablewrap' }, h('table', {},
-    h('thead', {}, h('tr', {}, h('th', {}, 'Teaching group'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'), h('th', {}, 'Example names'))),
+    h('thead', {}, h('tr', {}, h('th', {}, 'Company'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'), h('th', {}, 'Example names'))),
     h('tbody', {}, ...[...groups.keys()].sort(sortNum).map((tg) => {
       const g = groups.get(tg);
       return h('tr', { style: 'cursor:default' }, h('td', {}, tg), h('td', {}, `Sec ${g.level}`), h('td', { class: 'num' }, String(g.students.length)),
@@ -832,20 +822,20 @@ $('r-file').addEventListener('change', async (e) => {
     class: 'btn', type: 'button', disabled: !groups.size,
     onclick: async () => {
       replace.disabled = true;
-      rosterMsg('Saving class lists…', 'info');
+      rosterMsg('Saving name lists…', 'info');
       try {
         await saveRoster(groups);
         await loadRoster();
         $('r-preview').replaceChildren();
         renderCurrentRoster();
-        rosterMsg(`Saved ${groups.size} teaching groups. Students can now pick their group and name.`, 'info');
+        rosterMsg(`Saved ${groups.size} companies. Students can now pick their company and name.`, 'info');
       } catch (err) {
         console.error(err);
-        rosterMsg('Could not save the class lists. Only admins can upload them.');
+        rosterMsg('Could not save the name lists. Only admins can upload them.');
         replace.disabled = false;
       }
     },
-  }, `Replace class lists with these ${groups.size} groups`);
+  }, `Replace name lists with these ${groups.size} companies`);
   $('r-preview').replaceChildren(
     h('h4', {}, 'Preview'), summary,
     problems.length ? h('details', { open: true }, h('summary', {}, `${problems.length} problems`), h('ul', { class: 'small' }, ...problems)) : null,
