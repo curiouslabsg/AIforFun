@@ -1,6 +1,6 @@
 # Tests the Work Experience Journal's security rules on every push and pull request,
 # and deploys to Firebase (wex-journal-sg: wex-journal-sg.web.app and
-# work-experience-journal.web.app) when main changes and the tests pass.
+# work-experience-journal.web.app and wepspring.web.app) when main changes and the tests pass.
 #
 # No stored keys: GitHub proves its identity to Google with a short-lived OIDC token
 # (Workload Identity Federation). Google only accepts tokens from this repo's main branch.

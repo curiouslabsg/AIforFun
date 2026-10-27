@@ -188,7 +188,8 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     $('t-create').hidden = true;
     $('t-viewer-note').hidden = state.role === 'admin';
     // First sign-in with the starting password: offer to choose their own (they may keep it).
-    if (state.mustChangePassword && user.providerData.some((p) => p.providerId === 'password')) {
+    // Only when they signed in with the password this time, not with Google.
+    if (state.mustChangePassword && (await user.getIdTokenResult()).signInProvider === 'password') {
       screen('t-firstpw');
       await new Promise((done) => { firstPasswordDone = done; });
     }
