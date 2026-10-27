@@ -7,7 +7,7 @@ import { sectionsFor, MOODS, sectionTarget, sectionDone, isAnswered } from './we
 import { renderPortfolio } from './portfolio.js';
 import { icon } from './icons.js';
 import { art } from './art.js';
-import { companyLogo, siteDomain } from './logo.js';
+import { companyLogo, siteDomain, knownLogo } from './logo.js';
 import { findCompany, isOkLogoUrl } from './lookup.js';
 import { celebrate } from './confetti.js';
 
@@ -588,7 +588,7 @@ function renderSection(s) {
   // Look up the company's logo, unless one is already set: now, and again if they change the name.
   const autoLookup = () => {
     const name = String(answer('placement', 'company')).trim();
-    const set = isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
+    const set = knownLogo(name) || isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
     if (name && !set && isOpen() && lookup.query !== name) runLookup();
   };
   if (s.id === 'placement') autoLookup();
@@ -669,8 +669,10 @@ function redrawLogoBox() {
 
 function logoSection() {
   const name = String(answer('placement', 'company')).trim();
-  const online = isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website'));
-  const note = online ? 'Found online. Not the right one? Search again.'
+  const known = !!knownLogo(name);
+  const online = !known && (isOkLogoUrl(answer('placement', 'logoUrl')) || siteDomain(answer('placement', 'website')));
+  const note = known ? 'Your company’s logo, from your teachers.'
+    : online ? 'Found online. Not the right one? Search again.'
     : name ? 'Our school crest for now. Tap Find logo online, or type the company website below.'
       : 'Type your company name below, then find its logo.';
   const results = lookup.status === 'results' && lookup.query === name
@@ -694,7 +696,7 @@ function logoSection() {
       h('div', { class: 'logo-text' },
         h('b', {}, 'Company logo'),
         h('small', { class: 'muted' }, note),
-        isOpen() ? h('div', { class: 'logo-actions' },
+        isOpen() && !known ? h('div', { class: 'logo-actions' },
           name ? h('button', { type: 'button', class: 'btn small-btn', disabled: lookup.status === 'searching' && lookup.query === name, onclick: runLookup },
             online ? 'Search again' : 'Find logo online') : null,
           online ? h('button', { type: 'button', class: 'btn quiet small-btn', onclick: clearFound }, 'Clear') : null) : null)),

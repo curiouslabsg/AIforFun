@@ -47,13 +47,15 @@ export const REFLECTION = [
 export function dayStage(n, days = 5) {
   const [theme, art] = DAY_THEMES[n - 1] ?? ['Keep going', 'bolt'];
   const last = n === days;
-  const need = last ? REFLECTION.length : 3;
+  // "What will I do differently tomorrow?" doesn't fit the last day, so it asks the other four.
+  const qs = last ? REFLECTION.filter((q) => q.id !== 'q5') : REFLECTION;
+  const need = last ? qs.length : 3;
   return {
     id: `day${n}`, title: `Day ${n}`, theme, art, icon: 'sun', color: ['#1d4ed8', '#2563eb', '#0284c7', '#1e40af', '#0369a1'][(n - 1) % 5],
-    blurb: last ? 'Last day: answer all five questions.' : 'Choose any 3 of the 5 questions to answer today.',
+    blurb: last ? 'Last day: answer all four questions.' : 'Choose any 3 of the 5 questions to answer today.',
     last,
-    pick: { from: REFLECTION.map((q) => q.id), need },
-    prompts: [...REFLECTION, { id: 'mood', type: 'mood', q: 'How did today feel?', optional: true }],
+    pick: { from: qs.map((q) => q.id), need },
+    prompts: [...qs, { id: 'mood', type: 'mood', q: 'How did today feel?', optional: true }],
   };
 }
 

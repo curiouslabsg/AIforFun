@@ -410,3 +410,5 @@ button.field.pick .pick-n { background: #dbeafe; color: var(--accent); }
 .pin-card { display: flex; flex-direction: column; gap: 0.9rem; max-width: 26rem; margin: 0.5rem auto; background: var(--paper); border: 1.5px solid var(--rule); border-radius: 18px; padding: 1.3rem; }
 .pin-card input { font: 700 1.4rem/1 var(--f-mono); letter-spacing: 0.4em; text-align: center; }
 .pin-art { width: 3.6rem; height: 3.6rem; }
+/* School-supplied company logos are wide: give them the whole box */
+.co-logo.photo.brand { padding: 0.15rem; background: #fff; }

@@ -16,6 +16,16 @@ const found = new Map(); // domain -> true/false, so each site is only checked o
 
 const SCHOOL = 'img/school.webp?v=1';
 
+// Logos the school supplied for this year's companies (files in img/logos).
+const KNOWN = {
+  'Anewtech Systems Pte Ltd': 'anewtech',
+  'Bethesda Care Services': 'bethesda',
+  'Filos (Eldercare)': 'filos',
+  'Han & Lu Law Chambers LLP': 'han-lu',
+  'Marymount Bakehouse': 'marymount',
+};
+export const knownLogo = (name) => (KNOWN[String(name ?? '').trim()] ? `img/logos/${KNOWN[String(name).trim()]}.webp?v=1` : '');
+
 // If a logo from the internet fails to load (bad link, no signal), show the school crest instead.
 function photoLogo(src, name, cls) {
   const img = h('img', { src, alt: `${name || 'Company'} logo` });
@@ -23,10 +33,11 @@ function photoLogo(src, name, cls) {
   return h('span', { class: `co-logo photo ${cls}`.trim() }, img);
 }
 
-// Order: the student's photo, then the logo found online, then the website's icon,
-// then (if asked for) the school crest. Returns null when there's nothing to show.
+// Order: the student's photo, the school's logo for that company, the logo found online,
+// the website's icon, then (if asked for) the school crest. Returns null when there's nothing to show.
 export function companyLogo({ name, photo, site, logoUrl } = {}, cls = '', { school = true } = {}) {
   if (photo) return photoLogo(photo, name, cls);
+  if (knownLogo(name)) return photoLogo(knownLogo(name), name, `${cls} brand`.trim());
   if (isOkLogoUrl(logoUrl)) return photoLogo(logoUrl, name, cls);
   const domain = siteDomain(site);
   if (domain && found.get(domain)) return photoLogo(siteIcon(domain), name, cls);
