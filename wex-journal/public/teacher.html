@@ -103,9 +103,12 @@
         <label class="field" style="flex:0 1 180px"><span>Rights</span>
           <select id="a-role"><option value="teacher">Teacher rights</option><option value="admin">Admin rights</option></select>
         </label>
+        <label class="field" style="flex:0 1 230px"><span>How they sign in</span>
+          <select id="a-login"><option value="password">Email + password (starts as Password2026)</option><option value="google">Google account</option></select>
+        </label>
         <button class="btn" type="submit">Add teacher</button>
       </form>
-      <p class="small muted">Adding someone here gives them access. They also need a login: a Google account with that email, or an email + password login created by your admin.</p>
+      <p class="small muted"><b>Email + password:</b> their login is made straight away with the password <b>Password2026</b>; they’re offered a chance to change it the first time they sign in. <b>Google account:</b> use the email of their Google account (e.g. a Gmail address) and they press “Sign in with Google”.</p>
       <p id="t-add-msg" class="msg" hidden></p>
       <section class="roster-box">
         <div>
@@ -130,6 +133,19 @@
       </div>
     </main>
   </div>
+
+  <main id="t-firstpw" class="center" hidden>
+    <form id="fp-form" class="pin-card" novalidate>
+      <img src="img/clipboard.webp?v=2" alt="" class="pin-art">
+      <h2>Welcome! Choose your own password</h2>
+      <p class="muted">You signed in with the starting password. Pick your own so only you can open the dashboard: it has students’ journals in it.</p>
+      <label class="field"><span>New password (at least 8 characters)</span><input id="fp-a" type="password" autocomplete="new-password"></label>
+      <label class="field"><span>Type it again</span><input id="fp-b" type="password" autocomplete="new-password"></label>
+      <p id="fp-msg" class="msg err" hidden></p>
+      <button class="btn big" type="submit">Save my password</button>
+      <button id="fp-keep" class="btn quiet" type="button">Keep the starting password</button>
+    </form>
+  </main>
 
   <aside id="drawer" class="drawer" hidden aria-label="Student journal"></aside>
 

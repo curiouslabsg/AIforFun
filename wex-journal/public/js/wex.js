@@ -19,7 +19,7 @@ export const PLACEMENT = {
   id: 'placement', title: 'My placement', icon: 'building', color: '#1d4ed8',
   blurb: 'Fill this in on Day 1.',
   prompts: [
-    { id: 'company', type: 'short', q: 'Company or organisation', hint: 'e.g. Sunshine Family Clinic', max: 100 },
+    { id: 'company', type: 'company', q: 'Company or organisation', hint: 'Wrong company? Choose the right one here.', max: 100 },
     { id: 'website', type: 'short', q: 'Company website', hint: 'e.g. starbucks.com.sg (we’ll use its logo)', max: 100, optional: true },
     { id: 'industry', type: 'select', q: 'Industry', options: INDUSTRIES },
     { id: 'dept', type: 'short', q: 'Department or team I am in', hint: 'e.g. Front desk, Kitchen, IT support', max: 100 },

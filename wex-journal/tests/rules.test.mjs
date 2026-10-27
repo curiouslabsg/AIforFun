@@ -189,6 +189,22 @@ test('guest logins stop working after they expire; unverified emails never count
   await assertFails(getDocs(collection(unverified, 'cohorts')));
 });
 
+test('email + password logins created by an admin count without a verified email', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'teachers/new@school.test'), { role: 'admin', pwAccount: true, mustChangePassword: true });
+    await setDoc(doc(ctx.firestore(), 'teachers/gmail@school.test'), { role: 'admin' });
+  });
+  const pw = (email) => env.authenticatedContext(email, { email, email_verified: false, firebase: { sign_in_provider: 'password' } }).firestore();
+  await assertSucceeds(getDocs(collection(pw('new@school.test'), 'teachers')));
+  // Without pwAccount (a Google-only teacher), an unverified password login gets nothing.
+  await assertFails(getDocs(collection(pw('gmail@school.test'), 'teachers')));
+  // They can switch off their own reminder, but not turn it on or change their rights.
+  await assertSucceeds(updateDoc(doc(pw('new@school.test'), 'teachers/new@school.test'), { mustChangePassword: false }));
+  await assertFails(updateDoc(doc(pw('new@school.test'), 'teachers/new@school.test'), { mustChangePassword: true }));
+  await assertFails(updateDoc(doc(pw('new@school.test'), 'teachers/new@school.test'), { pwAccount: false }));
+  await assertSucceeds(setDoc(doc(admin(), 'teachers/later@school.test'), { role: 'admin', addedBy: 'admin@school.test', addedAt: 1, pwAccount: true, mustChangePassword: true }));
+});
+
 test('admins manage teachers but cannot remove themselves', async () => {
   const a = admin();
   await assertSucceeds(setDoc(doc(a, 'teachers/new@school.test'), { name: 'New', role: 'teacher', addedBy: 'admin@school.test', addedAt: 1 }));

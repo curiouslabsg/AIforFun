@@ -28,12 +28,21 @@ service cloud.firestore {
       return /databases/$(database)/documents/teachers/$(request.auth.token.email);
     }
 
+    // Google logins come with a verified email. An email + password login counts when an admin
+    // created it from the dashboard (pwAccount): the address was taken by that login at that moment,
+    // so nobody else can have registered it.
+    function verifiedLogin() {
+      return request.auth.token.get('email_verified', false) == true
+        || (request.auth.token.firebase.sign_in_provider == 'password'
+          && get(teacherDoc()).data.get('pwAccount', false) == true);
+    }
+
     function isTeacher() {
       // Anonymous student accounts have no email, so read it with a default.
       return signedIn()
         && request.auth.token.get('email', '') != ''
-        && request.auth.token.get('email_verified', false) == true
         && exists(teacherDoc())
+        && verifiedLogin()
         && (!('expiresAt' in get(teacherDoc()).data) || get(teacherDoc()).data.expiresAt > request.time);
     }
 
@@ -71,8 +80,10 @@ service cloud.firestore {
       allow create: if isAdmin()
         && email == email.lower()
         && email.matches('^[^@/ ]+@[^@/ ]+[.][^@/ ]+$')
-        && request.resource.data.keys().hasOnly(['name', 'role', 'addedBy', 'addedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'role', 'addedBy', 'addedAt', 'pwAccount', 'mustChangePassword'])
         && request.resource.data.role in ['teacher', 'admin']
+        && request.resource.data.get('pwAccount', false) is bool
+        && request.resource.data.get('mustChangePassword', false) is bool
         && optString(request.resource.data, 'name', 60)
         && request.resource.data.addedBy == request.auth.token.email;
       // An admin can't remove or demote themselves, so there is always at least one admin.
@@ -82,8 +93,10 @@ service cloud.firestore {
           && request.resource.data.role in ['teacher', 'admin'])
         || (isTeacher()
           && email == request.auth.token.email
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
-          && optString(request.resource.data, 'name', 60));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'mustChangePassword'])
+          && optString(request.resource.data, 'name', 60)
+          // Teachers can only switch the "choose your own password" reminder off.
+          && request.resource.data.get('mustChangePassword', false) == false);
       allow delete: if isAdmin() && email != request.auth.token.email;
     }
 

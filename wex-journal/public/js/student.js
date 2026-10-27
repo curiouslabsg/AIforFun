@@ -274,11 +274,13 @@ async function onJoin(e) {
 async function openJournal(code, sid) {
   const [c, st] = await Promise.all([getDoc(doc(db, `cohorts/${code}`)), getDoc(doc(db, `cohorts/${code}/students/${sid}`))]);
   if (!c.exists() || !st.exists()) throw new Error('journal missing');
-  // The company's own number of days and industry, if set on its name list.
-  const company = await getDoc(doc(db, `roster/${st.data().class}`)).then((d) => d.data() ?? {}, () => ({}));
+  // Every company on the name list, with its own number of days and industry. A student who
+  // corrected their company on My placement follows that one.
+  const companies = await getDocs(collection(db, 'roster')).then((q) => new Map(q.docs.map((d) => [d.id, d.data()])), () => new Map());
+  const company = companies.get(st.data().company) ?? companies.get(st.data().class) ?? {};
   unsubscribeAll();
   Object.assign(state, {
-    code, sid, cohort: c.data(), student: st.data(), company, sections: sectionsFor(company.days ?? c.data().days ?? 5),
+    code, sid, cohort: c.data(), student: st.data(), companies, company, sections: sectionsFor(company.days ?? c.data().days ?? 5),
     answers: {}, view: st.data().mustChangePin && c.data().open ? 'pin' : 'home', opened: new Set(),
   });
   created.clear();
@@ -510,6 +512,7 @@ function field(s, p) {
     return h('div', { class: 'field' }, h('span', { class: 'q-line' }, p.q), hint, row);
   }
   let input;
+  if (p.type === 'company') return companyField(s, p, id, value, disabled, label, placeholder);
   if (p.type === 'select') {
     input = h('select', { id, disabled, onchange: (e) => { queueSave(s.id, p.id, e.target.value); flushField(`${s.id}__${p.id}`); } },
       h('option', { value: '' }, 'Choose…'), ...p.options.map((o) => h('option', { value: o }, o)));
@@ -522,6 +525,45 @@ function field(s, p) {
   }
   input.addEventListener('blur', () => flushField(`${s.id}__${p.id}`));
   return h('div', { class: 'field' }, label, hint, input);
+}
+
+// Company: the list's companies (theirs chosen already), or "Other" to type a name.
+function companyField(s, p, id, value, disabled, label, hint) {
+  const names = [...state.companies.keys()].sort((a, b) => a.localeCompare(b));
+  const other = !!value && !state.companies.has(value);
+  const typed = h('input', {
+    type: 'text', maxlength: String(p.max ?? 100), value: other ? value : '', placeholder: 'Type the company name', disabled, hidden: !other, 'aria-label': 'Company name',
+    oninput: (e) => queueSave(s.id, p.id, e.target.value),
+  });
+  typed.addEventListener('blur', () => flushField(`${s.id}__${p.id}`));
+  const pick = h('select', {
+    id, disabled,
+    onchange: (e) => {
+      if (e.target.value === '__other') { typed.hidden = false; typed.focus(); return; }
+      typed.hidden = true;
+      queueSave(s.id, p.id, e.target.value);
+      flushField(`${s.id}__${p.id}`);
+      switchCompany(e.target.value);
+    },
+  }, ...names.map((n) => h('option', { value: n }, n)), h('option', { value: '__other' }, 'Other (type it)'));
+  pick.value = other ? '__other' : value;
+  return h('div', { class: 'field' }, label, h('small', {}, hint), pick, typed);
+}
+
+// Switching company changes the number of days (and fills in the industry if it's empty).
+function switchCompany(name) {
+  const c = state.companies.get(name);
+  if (!c) return;
+  state.company = c;
+  state.sections = sectionsFor(c.days ?? state.cohort.days ?? 5);
+  if (c.industry && !state.answers.placement?.industry) {
+    queueSave('placement', 'industry', c.industry);
+    flushField('placement__industry');
+  }
+  // The logo found for the old company no longer fits; look up the new one.
+  if (answer('placement', 'logoUrl') || answer('placement', 'website')) { setPlacement('logoUrl', ''); setPlacement('website', ''); }
+  lookup.query = '';
+  render();
 }
 
 function grow(el) {

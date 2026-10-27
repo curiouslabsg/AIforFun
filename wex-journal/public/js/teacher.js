@@ -1,7 +1,9 @@
 import {
-  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
-  signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword,
+  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getAuth,
+  signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, createUserWithEmailAndPassword,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { firebaseConfig } from './firebase-config.js';
 import {
   doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, onSnapshot, serverTimestamp, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -24,7 +26,8 @@ const state = {
 
 const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
 // Each company can run for its own number of days (set on its name list); otherwise the group's.
-const sections = (st) => sectionsFor(state.roster.get(st?.class)?.days ?? state.ws?.days ?? 5);
+// Students can correct their company on My placement, so prefer that one when it's on the list.
+const sections = (st) => sectionsFor((state.roster.get(st?.company) ?? state.roster.get(st?.class))?.days ?? state.ws?.days ?? 5);
 const progressOf = (st) => {
   const secs = sections(st);
   const total = secs.reduce((n, s) => n + sectionSize(s), 0);
@@ -39,7 +42,7 @@ function writePref(key, value) {
   try { localStorage.setItem(`wexdash.${key}`, value); } catch { /* private mode */ }
 }
 function screen(id) {
-  for (const s of ['t-loading', 't-signin', 't-app']) $(s).hidden = s !== id;
+  for (const s of ['t-loading', 't-signin', 't-app', 't-firstpw']) $(s).hidden = s !== id;
 }
 function msg(id, text) {
   $(id).textContent = text;
@@ -105,6 +108,7 @@ $('t-password').addEventListener('click', async () => {
   if (next.length < 8) { window.alert('Use at least 8 characters.'); return; }
   try {
     await updatePassword(auth.currentUser, next);
+    await clearPasswordReminder();
     window.alert('Password changed. Use it next time you sign in.');
   } catch (err) {
     console.error(err);
@@ -113,6 +117,44 @@ $('t-password').addEventListener('click', async () => {
       : 'Could not change the password. Try again.');
   }
 });
+
+const START_PASSWORD = 'Password2026';
+let firstPasswordDone = () => {};
+
+async function clearPasswordReminder() {
+  if (!state.mustChangePassword) return;
+  try {
+    await updateDoc(doc(db, `teachers/${auth.currentUser.email}`), { mustChangePassword: false });
+    state.mustChangePassword = false;
+  } catch (err) { console.warn('Could not clear the password reminder', err); }
+}
+
+$('fp-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const a = $('fp-a').value;
+  if (a.length < 8) { msg('fp-msg', 'Use at least 8 characters.'); return; }
+  if (a === START_PASSWORD) { msg('fp-msg', 'Choose something other than the starting password.'); return; }
+  if (a !== $('fp-b').value) { msg('fp-msg', 'The two passwords don’t match.'); return; }
+  try {
+    await updatePassword(auth.currentUser, a);
+    await clearPasswordReminder();
+    $('fp-form').reset();
+    firstPasswordDone();
+  } catch (err) {
+    console.error(err);
+    msg('fp-msg', 'Could not change the password. Try again.');
+  }
+});
+$('fp-keep').addEventListener('click', async () => { await clearPasswordReminder(); firstPasswordDone(); });
+
+// Makes an email + password login for a new teacher without signing the admin out: a second,
+// separate Firebase connection creates it, then signs itself out.
+let maker;
+async function createPasswordLogin(email) {
+  maker ??= getAuth(initializeApp(firebaseConfig, 'login-maker'));
+  await createUserWithEmailAndPassword(maker, email, START_PASSWORD);
+  await signOut(maker);
+}
 
 if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
   screen('t-signin');
@@ -126,6 +168,7 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
       if (!me.exists()) throw Object.assign(new Error('not teacher'), { code: 'permission-denied' });
       state.role = me.data().role ?? 'teacher';
       state.name = me.data().name ?? '';
+      state.mustChangePassword = me.data().mustChangePassword === true;
     } catch (err) {
       screen('t-signin');
       msg('t-signin-msg', err.code === 'permission-denied'
@@ -144,6 +187,11 @@ if (!configured && !['localhost', '127.0.0.1'].includes(location.hostname)) {
     $('t-new').hidden = state.role !== 'admin';
     $('t-create').hidden = true;
     $('t-viewer-note').hidden = state.role === 'admin';
+    // First sign-in with the starting password: offer to choose their own (they may keep it).
+    if (state.mustChangePassword && user.providerData.some((p) => p.providerId === 'password')) {
+      screen('t-firstpw');
+      await new Promise((done) => { firstPasswordDone = done; });
+    }
     screen('t-app');
     view('t-list');
     await loadSettings();
@@ -721,15 +769,31 @@ $('t-add').addEventListener('submit', async (e) => {
   const email = $('a-email').value.trim().toLowerCase();
   const name = $('a-name').value.trim();
   const role = $('a-role').value;
+  const withPassword = $('a-login').value === 'password';
   if (!/^[^@/\s]+@[^@/\s]+\.[^@/\s]+$/.test(email)) { addMsg('Enter a full email address, like ms.tan@school.edu.sg.'); return; }
   try {
     if ((await getDoc(doc(db, `teachers/${email}`))).exists()) { addMsg(`${email} is already on the list.`, 'warn'); return; }
+    // Make the login first. If that email already has a login we didn't make, don't trust it.
+    if (withPassword) {
+      try {
+        await createPasswordLogin(email);
+      } catch (err) {
+        console.warn(err);
+        addMsg(err.code === 'auth/email-already-in-use'
+          ? `${email} already has a login, so it can’t be given the starting password. Add them with “Google account”, or ask Lloyd to reset it.`
+          : 'Could not make their login. Check the email and try again.');
+        return;
+      }
+    }
     const data = { role, addedBy: state.email, addedAt: serverTimestamp() };
     if (name) data.name = name;
+    if (withPassword) Object.assign(data, { pwAccount: true, mustChangePassword: true });
     await setDoc(doc(db, `teachers/${email}`), data);
     $('t-add').reset();
     await loadTeachers();
-    addMsg(`Added ${email}. They also need a login (Google, or an email + password your admin creates).`, 'info');
+    addMsg(withPassword
+      ? `Added ${email}. They sign in with this email and the password ${START_PASSWORD}, and can choose their own the first time.`
+      : `Added ${email}. They press “Sign in with Google” using that Google account.`, 'info');
   } catch (err) {
     console.error(err);
     addMsg('Could not add that teacher. Check the email and try again.');
