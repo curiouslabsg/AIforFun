@@ -1,5 +1,5 @@
-// The logo for a student's placement: their own photo of it, the one found online,
-// the website's icon, or the school crest.
+// The logo for a student's placement. This year's 8 companies have their logos built in;
+// any other company is looked up online, and the school crest shows when nothing is found.
 import { h } from './firebase.js';
 import { isOkLogoUrl } from './lookup.js';
 
@@ -16,13 +16,16 @@ const found = new Map(); // domain -> true/false, so each site is only checked o
 
 const SCHOOL = 'img/school.webp?v=1';
 
-// Logos the school supplied for this year's companies (files in img/logos).
+// Logos for this year's companies (files in img/logos). Names must match the name list exactly.
 const KNOWN = {
   'Anewtech Systems Pte Ltd': 'anewtech',
   'Bethesda Care Services': 'bethesda',
   'Filos (Eldercare)': 'filos',
   'Han & Lu Law Chambers LLP': 'han-lu',
   'Marymount Bakehouse': 'marymount',
+  'Mr Bean': 'mr-bean',
+  'Sparkletots': 'sparkletots',
+  "St Luke's Eldercare": 'st-lukes',
 };
 export const knownLogo = (name) => (KNOWN[String(name ?? '').trim()] ? `img/logos/${KNOWN[String(name).trim()]}.webp?v=1` : '');
 
