@@ -157,6 +157,8 @@ test('class lists: students read names only; admins upload', async () => {
   await assertSucceeds(getDocs(collection(device('a'), 'roster')));
   await assertFails(getDoc(doc(device('a'), 'rosterDetails/SC3A1')));
   await assertSucceeds(getDoc(doc(teacher(), 'rosterDetails/SC3A1')));
+  await assertSucceeds(setDoc(doc(admin(), 'rosterDetails/SC3A1'), { classes: { 'Aisha Tan': '3A' }, cca: { 'Aisha Tan': 'Netball' }, phones: { 'Aisha Tan': '81234567' } }));
+  await assertFails(setDoc(doc(admin(), 'rosterDetails/SC3A1'), { classes: {}, secret: 1 }));
   await assertFails(setDoc(doc(teacher(), 'roster/SC3A2'), { level: 3, students: [] }));
   await assertSucceeds(setDoc(doc(admin(), 'roster/SC3A2'), { level: 3, students: ['Cara'] }));
   await assertFails(setDoc(doc(admin(), 'roster/SC3A2'), { level: 6, students: [] }));
@@ -170,6 +172,9 @@ test('class lists: students read names only; admins upload', async () => {
 test('students change their own PIN; other phones cannot', async () => {
   await join(device('a'), 'a');
   await assertSucceeds(updateDoc(doc(device('a'), S()), { pin: '7391', pinHash: hash(SID, '7391'), mustChangePin: false }));
+  // Their own contact number, for teachers.
+  await assertSucceeds(updateDoc(doc(device('a'), S()), { phone: '8123 4567' }));
+  await assertFails(updateDoc(doc(device('a'), S()), { phone: 'x'.repeat(30) }));
   await assertFails(updateDoc(doc(device('a'), S()), { pin: '12', pinHash: hash(SID, '12') }));
   await assertFails(updateDoc(doc(device('z'), S()), { pin: '0000', pinHash: hash(SID, '0000') }));
   // The phone that changed it keeps access.

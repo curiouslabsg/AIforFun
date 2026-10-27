@@ -26,6 +26,7 @@ export const PLACEMENT = {
     { id: 'supervisor', type: 'short', q: 'My supervisor’s job title (not their name)', hint: 'e.g. Clinic manager', max: 100 },
     { id: 'hope', type: 'text', q: 'What do I hope to learn or find out this week?' },
     { id: 'why', type: 'text', q: 'Why this placement? How do I feel about it on Day 1?' },
+    { id: 'phone', type: 'short', q: 'My contact number', hint: 'e.g. 8123 4567 (only your teachers see it)', max: 20, optional: true },
   ],
 };
 

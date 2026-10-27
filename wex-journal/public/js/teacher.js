@@ -25,6 +25,9 @@ const state = {
 };
 
 const classOf = (st) => state.details.get(st.class)?.classes?.[st.name] ?? '';
+const ccaOf = (st) => state.details.get(st.class)?.cca?.[st.name] ?? '';
+// A number the student typed in their journal wins over the one on the name list.
+const phoneOf = (st) => st.phone || state.details.get(st.class)?.phones?.[st.name] || '';
 // Each company can run for its own number of days (set on its name list); otherwise the group's.
 // Students can correct their company on My placement, so prefer that one when it's on the list.
 const sections = (st) => sectionsFor((state.roster.get(st?.company) ?? state.roster.get(st?.class))?.days ?? state.ws?.days ?? 5);
@@ -526,7 +529,8 @@ async function openStudent(row) {
         companyLogo({ name: st.company || st.class, site: st.website, logoUrl: st.logoUrl }, 'drawer-logo'),
         h('div', {},
           h('span', { class: 'label' }, [st.company || st.class, classOf(st), st.industry].filter(Boolean).join(' · ')),
-          h('h2', {}, st.name))),
+          h('h2', {}, st.name),
+          h('span', { class: 'small muted' }, [ccaOf(st) && `CCA: ${ccaOf(st)}`, phoneOf(st) && `Contact: ${phoneOf(st)}${st.phone ? ' (from student)' : ''}`].filter(Boolean).join(' · ')))),
       h('div', { class: 'inline-row' },
         h('button', { class: 'btn small-btn', type: 'button', onclick: showPortfolio }, 'View portfolio'),
         h('button', { class: 'btn ghost small-btn', type: 'button', onclick: closeDrawer }, 'Close'))),
@@ -634,10 +638,10 @@ $('ws-export').addEventListener('click', async () => {
   btn.textContent = 'Preparing…';
   try {
     const cols = sections().flatMap((s) => s.prompts.map((p) => ({ s, p })));
-    const rows = [['Company', 'Class', 'Name', ...cols.map((c) => `${c.s.title}: ${c.p.q}`), 'Teacher’s note']];
+    const rows = [['Company', 'Class', 'Name', 'CCA', 'Contact number', ...cols.map((c) => `${c.s.title}: ${c.p.q}`), 'Teacher’s note']];
     for (const st of visibleStudents()) {
       const { answers } = await loadJournal(st);
-      rows.push([st.class ?? '', classOf(st), st.name, ...cols.map((c) => answers[c.s.id]?.[c.p.id] ?? ''), st.teacherNote ?? '']);
+      rows.push([st.class ?? '', classOf(st), st.name, ccaOf(st), phoneOf(st), ...cols.map((c) => answers[c.s.id]?.[c.p.id] ?? ''), st.teacherNote ?? '']);
     }
     // BOM so Excel opens the file as UTF-8.
     const csv = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
@@ -711,7 +715,7 @@ function flash(text) {
 
 // ---------- teachers (admins) ----------
 
-$('t-manage').addEventListener('click', () => { state.unsub?.(); closeDrawer(); loadTeachers(); });
+$('t-manage').addEventListener('click', () => { state.unsub?.(); closeDrawer(); listJournals = null; loadTeachers(); });
 $('t-team-back').addEventListener('click', () => loadCohorts());
 
 function addMsg(text, kind = 'err') {
@@ -831,22 +835,45 @@ function rosterMsg(text, kind = 'err') {
   $('r-msg').hidden = !text;
 }
 
+// Journals in the groups students can see, for the "started?" column of the name list.
+let listJournals = null;
+async function loadListJournals() {
+  const all = await Promise.all(state.active.map((code) => getDocs(collection(db, `cohorts/${code}/students`)).catch(() => null)));
+  listJournals = new Map(all.filter(Boolean).flatMap((q) => q.docs.map((d) => [`${d.data().class}|${d.data().name}`, d.data()])));
+  renderCurrentRoster();
+}
+
 function renderCurrentRoster() {
   const tgs = [...state.roster.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (!tgs.length) {
     $('r-current').replaceChildren(h('p', { class: 'muted small' }, 'No name lists yet. Students can’t start until you upload one.'));
     return;
   }
+  if (!listJournals) { listJournals = new Map(); loadListJournals(); }
   const total = tgs.reduce((n, t) => n + (state.roster.get(t).students?.length ?? 0), 0);
+  // One fold-out per company: each student's class, CCA, contact number and whether they've started.
   $('r-current').replaceChildren(
     h('h4', {}, `Current name lists: ${tgs.length} companies, ${total} students`),
-    h('div', { class: 'tablewrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, h('th', {}, 'Company'), h('th', {}, 'Level'), h('th', {}, 'Students'), h('th', {}, 'Classes'))),
-      h('tbody', {}, ...tgs.map((t) => {
-        const g = state.roster.get(t);
-        const cls = [...new Set(Object.values(state.details.get(t)?.classes ?? {}))].sort().join(', ');
-        return h('tr', { style: 'cursor:default' }, h('td', {}, t), h('td', {}, `Sec ${g.level}`), h('td', { class: 'num' }, String(g.students?.length ?? 0)), h('td', { class: 'small' }, cls || '–'));
-      })))));
+    h('p', { class: 'small muted' }, 'Click a company to see its students. A number marked “from student” was typed in by the student in their journal.'),
+    ...tgs.map((t) => {
+      const g = state.roster.get(t);
+      const d = state.details.get(t) ?? {};
+      const names = [...(g.students ?? [])].sort((a, b) => a.localeCompare(b));
+      const started = names.filter((n) => listJournals.has(`${t}|${n}`)).length;
+      return h('details', { class: 'co-list' },
+        h('summary', {}, companyLogo({ name: t }, 'sm', { school: false }), h('b', {}, t),
+          h('span', { class: 'small muted' }, `${names.length} students · ${g.days ?? 5} days · ${started} started`)),
+        h('div', { class: 'tablewrap' }, h('table', {},
+          h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Class'), h('th', {}, 'CCA'), h('th', {}, 'Contact number'), h('th', {}, 'Journal'))),
+          h('tbody', {}, ...names.map((n) => {
+            const j = listJournals.get(`${t}|${n}`);
+            const phone = j?.phone || d.phones?.[n] || '';
+            return h('tr', { style: 'cursor:default' },
+              h('td', {}, n), h('td', {}, d.classes?.[n] || '–'), h('td', {}, d.cca?.[n] || '–'),
+              h('td', { class: 'num' }, phone || '–', j?.phone ? h('span', { class: 'small muted' }, ' (from student)') : null),
+              h('td', { class: 'small' }, j ? `Started · ${j.mustChangePin ? 'PIN 1234' : 'own PIN'}` : h('span', { class: 'muted' }, 'Not yet')));
+          })))));
+    }));
 }
 
 $('r-template').addEventListener('click', () => {
@@ -922,7 +949,10 @@ async function saveRoster(groups) {
     writes.push((b) => b.set(doc(db, `roster/${tg}`), {
       level: g.level, students: g.students, ...(days ? { days } : {}), ...(industry ? { industry } : {}), updatedAt: serverTimestamp(), updatedBy: state.email,
     }));
-    writes.push((b) => b.set(doc(db, `rosterDetails/${tg}`), { classes: g.classes, updatedAt: serverTimestamp() }));
+    // A file without CCA or contact columns keeps the ones already saved.
+    const old = state.details.get(tg) ?? {};
+    const keep = (fresh, prev) => (Object.keys(fresh ?? {}).length ? fresh : (prev ?? {}));
+    writes.push((b) => b.set(doc(db, `rosterDetails/${tg}`), { classes: g.classes, cca: keep(g.cca, old.cca), phones: keep(g.phones, old.phones), updatedAt: serverTimestamp() }));
   }
   for (let i = 0; i < writes.length; i += 400) {
     const batch = writeBatch(db);

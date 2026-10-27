@@ -124,6 +124,8 @@ function saveProgress() {
     industry: String(answer('placement', 'industry')).slice(0, 60),
     website: String(answer('placement', 'website')).slice(0, 100),
     logoUrl: isOkLogoUrl(answer('placement', 'logoUrl')) ? answer('placement', 'logoUrl') : '',
+    // Teachers see this number on the dashboard instead of the one on the name list.
+    phone: String(answer('placement', 'phone')).replace(/[^0-9+ ]/g, '').trim().slice(0, 20),
   };
   const sig = JSON.stringify(data);
   if (sig === lastProgress) return;

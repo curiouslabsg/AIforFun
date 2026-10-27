@@ -412,3 +412,10 @@ button.field.pick .pick-n { background: #dbeafe; color: var(--accent); }
 .pin-art { width: 3.6rem; height: 3.6rem; }
 /* School-supplied company logos are wide: give them the whole box */
 .co-logo.photo.brand { padding: 0.15rem; background: #fff; }
+
+/* Name list fold-outs (Teachers & name lists) */
+.co-list { border: 1.5px solid var(--rule); border-radius: 12px; background: var(--paper); }
+.co-list summary { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.8rem; cursor: pointer; flex-wrap: wrap; }
+.co-list summary .small { margin-left: auto; }
+.co-list[open] summary { border-bottom: 1px solid var(--rule); }
+.co-list .tablewrap { border: 0; border-radius: 0 0 12px 12px; }

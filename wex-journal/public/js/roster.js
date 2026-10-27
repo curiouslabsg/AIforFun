@@ -1,5 +1,6 @@
 // Reads name lists (CSV or Excel) into companies: students pick their company, then their name.
-// Columns are matched loosely: "Company" (or the older "Teaching group"), "Name", optional "Class" and "Level".
+// Columns are matched loosely: "Company" (or the older "Teaching group"), "Name", optional "Class", "CCA",
+// "Contact number" and "Level".
 // Other columns are ignored. If a file has no company column, the sheet name (or file name) is used.
 // Level is Sec 3 unless a Level column (or a class like "3A") says otherwise.
 
@@ -21,6 +22,8 @@ const COLS = {
   name: /^(student\s*)?(full\s*)?name$|^name\s*of\s*student$/i,
   cls: /^(form\s*)?class$|^cls$|^form$/i,
   level: /^(level|sec|secondary|lvl)$/i,
+  cca: /^cca$|^co-?curricular/i,
+  phone: /^(contact|contact\s*(no\.?|number)|phone|mobile|hp|tel)$/i,
 };
 
 // Company names keep their usual punctuation: "St Luke's Eldercare", "Han & Lu Law Chambers LLP".
@@ -76,7 +79,7 @@ export async function parseRosterFiles(files) {
         const tg = cleanGroup(get('tg') || fallbackTg);
         const cls = get('cls');
         const level = levelFrom(get('level'), cls) ?? 3;
-        const row = { tg, name, cls, level, source: `${file.name}${wb.SheetNames.length > 1 ? ` › ${sheetName}` : ''}` };
+        const row = { tg, name, cls, level, cca: get('cca'), phone: get('phone').replace(/[^0-9+ ]/g, '').trim().slice(0, 20), source: `${file.name}${wb.SheetNames.length > 1 ? ` › ${sheetName}` : ''}` };
         if (!tg) row.error = 'No company';
         else if (name.length > 60) row.error = 'Name longer than 60 characters';
         rows.push(row);
@@ -93,15 +96,17 @@ export async function parseRosterFiles(files) {
   return { rows, problems };
 }
 
-// { tg: { level, students[], classes{} } } from the valid rows.
+// { tg: { level, students[], classes{}, cca{}, phones{} } } from the valid rows.
 export function groupRows(rows) {
   const groups = new Map();
   for (const r of rows) {
     if (r.error) continue;
-    if (!groups.has(r.tg)) groups.set(r.tg, { level: r.level, students: [], classes: {} });
+    if (!groups.has(r.tg)) groups.set(r.tg, { level: r.level, students: [], classes: {}, cca: {}, phones: {} });
     const g = groups.get(r.tg);
     g.students.push(r.name);
     if (r.cls) g.classes[r.name] = r.cls;
+    if (r.cca) g.cca[r.name] = r.cca;
+    if (r.phone) g.phones[r.name] = r.phone;
   }
   return groups;
 }
